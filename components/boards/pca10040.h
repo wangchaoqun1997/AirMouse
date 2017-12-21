@@ -70,11 +70,11 @@ extern "C" {
 #define BUTTONS_NUMBER 4
 
 #define BUTTON_START   13
-#define BUTTON_1       13
-#define BUTTON_2       14
-#define BUTTON_3       15
-#define BUTTON_4       16
-#define BUTTON_STOP    16
+#define BUTTON_1       12 //TOUCH interrupt pin12
+#define BUTTON_2       5  //HOMEKEY pin5
+#define BUTTON_3       17 //POWERKEY pin17
+#define BUTTON_4       6  //RGB_INT pin6
+#define BUTTON_STOP    20
 #define BUTTON_PULL    NRF_GPIO_PIN_PULLUP
 
 #define BUTTONS_ACTIVE_STATE 0

@@ -93,7 +93,7 @@
 
 #define SHIFT_BUTTON_ID                  1                                          /**< Button used as 'SHIFT' Key. */
 
-#define DEVICE_NAME                      "Nordic_Keyboard"                          /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                      "SHADOW_CREATOR"                          /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME                "NordicSemiconductor"                      /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL      APP_TIMER_TICKS(2000)                      /**< Battery level measurement interval (ticks). */
@@ -234,9 +234,9 @@ static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_HUMAN_INTERFACE_DEVICE_SERVICE, BLE
 
 static uint8_t m_sample_key_press_scan_str[] = /**< Key pattern to be sent when the key press button has been pushed. */
 {
-    0x0b,                                      /* Key h */
+    0x0b,      //home                                /* Key h */
     0x08,                                      /* Key e */
-    0x0f,                                      /* Key l */
+    0x0f,//down                                      /* Key l */
     0x0f,                                      /* Key l */
     0x12,                                      /* Key o */
     0x28                                       /* Key Return */
@@ -575,6 +575,8 @@ static void gap_params_init(void)
     APP_ERROR_CHECK(err_code);
 
     err_code = sd_ble_gap_appearance_set(BLE_APPEARANCE_HID_KEYBOARD);
+    //err_code = sd_ble_gap_appearance_set(BLE_APPEARANCE_HID_GAMEPAD);
+
     APP_ERROR_CHECK(err_code);
 
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
@@ -903,6 +905,7 @@ static uint32_t send_key_scan_press_release(ble_hids_t * p_hids,
         {
             data[MODIFIER_KEY_POS] |= SHIFT_KEY_CODE;
         }
+
 
         if (!m_in_boot_mode)
         {
@@ -1564,7 +1567,45 @@ static void bsp_event_handler(bsp_event_t event)
                 }
             }
             break;
-
+        case BSP_EVENT_KEY_1:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+                keys_send(1, p_key);
+                p_key++;
+                size++;
+                if (size == MAX_KEYS_IN_ONE_REPORT)
+                {
+                    p_key = m_sample_key_press_scan_str;
+                    size  = 0;
+                }
+            }
+            break;
+        case BSP_EVENT_KEY_2:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+                keys_send(1, p_key);
+                p_key++;
+                size++;
+                if (size == MAX_KEYS_IN_ONE_REPORT)
+                {
+                    p_key = m_sample_key_press_scan_str;
+                    size  = 0;
+                }
+            }
+            break;
+        case BSP_EVENT_KEY_3:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+                keys_send(1, p_key);
+                p_key++;
+                size++;
+                if (size == MAX_KEYS_IN_ONE_REPORT)
+                {
+                    p_key = m_sample_key_press_scan_str;
+                    size  = 0;
+                }
+            }
+            break;
         default:
             break;
     }
@@ -1655,7 +1696,8 @@ static void buttons_leds_init(bool * p_erase_bonds)
     ret_code_t err_code;
     bsp_event_t startup_event;
 
-    err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS, bsp_event_handler);
+    //err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS, bsp_event_handler);
+    err_code = bsp_init( BSP_INIT_BUTTONS, bsp_event_handler);
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_btn_ble_init(NULL, &startup_event);
@@ -1681,15 +1723,24 @@ static void power_manage(void)
     ret_code_t err_code = sd_app_evt_wait();
     APP_ERROR_CHECK(err_code);
 }
+/****************add start **********/
 
+ #define USE_SHADOW_CREATE
+ #ifdef USE_SHADOW_CREATE
+
+ #endif
+ 
+
+/****************add end  */
 
 /**@brief Function for application main entry.
  */
 int main(void)
 {
-    bool erase_bonds;
 
-    // Initialize.
+    bool erase_bonds;
+    // Initialize
+	
     log_init();
     timers_init();
     buttons_leds_init(&erase_bonds);
@@ -1708,6 +1759,7 @@ int main(void)
     NRF_LOG_INFO("HID Keyboard example started.\r\n");
     timers_start();
 
+    erase_bonds = true;
     advertising_start(erase_bonds);
 
     // Enter main loop.
