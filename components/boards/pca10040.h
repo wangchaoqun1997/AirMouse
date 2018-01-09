@@ -70,8 +70,8 @@ extern "C" {
 #define BUTTONS_NUMBER 4
 
 #define BUTTON_START   13
-#define BUTTON_1       12 //TOUCH interrupt pin12
-#define BUTTON_2       5  //HOMEKEY pin5
+#define BUTTON_1       4 //TOUCH interrupt pin12
+#define BUTTON_2       5  //back pin5
 #define BUTTON_3       17 //POWERKEY pin17
 #define BUTTON_4       6  //RGB_INT pin6
 #define BUTTON_STOP    20
@@ -143,8 +143,8 @@ extern "C" {
 
 
 // Arduino board mappings
-#define ARDUINO_SCL_PIN             27    // SCL signal pin
-#define ARDUINO_SDA_PIN             26    // SDA signal pin
+#define ARDUINO_SCL_PIN             7    // SCL signal pin
+#define ARDUINO_SDA_PIN             8    // SDA signal pin
 #define ARDUINO_AREF_PIN            2     // Aref pin
 #define ARDUINO_13_PIN              25    // Digital pin 13
 #define ARDUINO_12_PIN              24    // Digital pin 12

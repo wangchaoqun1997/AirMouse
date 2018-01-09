@@ -192,6 +192,7 @@ static void on_timeout(ble_evt_t const * p_ble_evt)
         return;
     }
 
+    NRF_LOG_INFO(" ----  timeout ret = %d\r\n",ret);
     // Start advertising in the next mode.
     ret = ble_advertising_start(adv_mode_next_get(m_adv_mode_current));
 
@@ -352,11 +353,14 @@ static ret_code_t set_adv_mode_fast(ble_gap_adv_params_t * p_adv_params)
 static ret_code_t set_adv_mode_slow(ble_gap_adv_params_t * p_adv_params)
 {
     ret_code_t ret;
-
+/*
     p_adv_params->interval = m_adv_modes_config.ble_adv_slow_interval;
     p_adv_params->timeout  = m_adv_modes_config.ble_adv_slow_timeout;
+*/
+    p_adv_params->interval = m_adv_modes_config.ble_adv_fast_interval;
+    p_adv_params->timeout  = m_adv_modes_config.ble_adv_fast_timeout;
 
-    if ((m_adv_modes_config.ble_adv_whitelist_enabled) &&
+	if ((m_adv_modes_config.ble_adv_whitelist_enabled) &&
         (!m_whitelist_temporarily_disabled) &&
         (whitelist_has_entries()))
     {
@@ -484,7 +488,8 @@ uint32_t ble_advertising_init(ble_advdata_t                   const * p_advdata,
     return ret;
 }
 
-
+uint8_t bond_error=0;
+void sleep_mode_enter(void);
 uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
 {
     uint32_t             ret;
@@ -520,10 +525,15 @@ uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
         {
             m_peer_addr_reply_expected = false;
         }
+		bond_error++;
+		if(bond_error == 20)
+			sleep_mode_enter();
     }
 
+NRF_LOG_INFO("advertis start mode start== %d\r\n",advertising_mode);
     m_adv_mode_current = adv_mode_next_avail_get(advertising_mode);
 
+NRF_LOG_INFO("advertis start mode start== %d\r\n",m_adv_mode_current);
     // Fetch the whitelist.
     if ((m_evt_handler != NULL) &&
         (m_adv_mode_current == BLE_ADV_MODE_FAST || m_adv_mode_current == BLE_ADV_MODE_SLOW) &&
@@ -547,6 +557,7 @@ uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
     adv_params.type = BLE_GAP_ADV_TYPE_ADV_IND;
     adv_params.fp   = BLE_GAP_ADV_FP_ANY;
 
+NRF_LOG_INFO("advertis start mode start== %d\r\n",advertising_mode);
     // Set advertising parameters and events according to selected advertising mode.
     switch (m_adv_mode_current)
     {
@@ -563,6 +574,7 @@ uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
             break;
 
         case BLE_ADV_MODE_SLOW:
+            //ret = set_adv_mode_fast(&adv_params);
             ret = set_adv_mode_slow(&adv_params);
             break;
 
@@ -583,6 +595,7 @@ uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
         }
     }
 
+NRF_LOG_INFO("advertis start mode end== %d\r\n",m_adv_evt);
     if (m_evt_handler != NULL)
     {
         m_evt_handler(m_adv_evt);

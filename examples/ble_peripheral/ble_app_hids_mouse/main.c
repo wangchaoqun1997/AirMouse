@@ -91,7 +91,7 @@
 #endif
 
 
-#define DEVICE_NAME                     "Nordic_Mouse"                              /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "Mini_mouse_5"                              /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                       /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                        /**< Battery level measurement interval (ticks). */
@@ -124,16 +124,22 @@
 #define SEC_PARAM_MAX_KEY_SIZE          16                                          /**< Maximum encryption key size. */
 
 #define MOVEMENT_SPEED                  5                                           /**< Number of pixels by which the cursor is moved each time a button is pushed. */
-#define INPUT_REPORT_COUNT              3                                           /**< Number of input reports in this application. */
+#define INPUT_REPORT_COUNT              5                                           /**< Number of input reports in this application. */
 #define INPUT_REP_BUTTONS_LEN           3                                           /**< Length of Mouse Input Report containing button data. */
 #define INPUT_REP_MOVEMENT_LEN          3                                           /**< Length of Mouse Input Report containing movement data. */
 #define INPUT_REP_MEDIA_PLAYER_LEN      1                                           /**< Length of Mouse Input Report containing media player data. */
+#define INPUT_REP_CUSTOM1_LEN      1
+#define INPUT_REP_CUSTOM2_LEN      1
 #define INPUT_REP_BUTTONS_INDEX         0                                           /**< Index of Mouse Input Report containing button data. */
 #define INPUT_REP_MOVEMENT_INDEX        1                                           /**< Index of Mouse Input Report containing movement data. */
 #define INPUT_REP_MPLAYER_INDEX         2                                           /**< Index of Mouse Input Report containing media player data. */
+#define INPUT_REP_CUSTOM1_INDEX    3
+#define INPUT_REP_CUSTOM2_INDEX    4
 #define INPUT_REP_REF_BUTTONS_ID        1                                           /**< Id of reference to Mouse Input Report containing button data. */
 #define INPUT_REP_REF_MOVEMENT_ID       2                                           /**< Id of reference to Mouse Input Report containing movement data. */
 #define INPUT_REP_REF_MPLAYER_ID        3                                           /**< Id of reference to Mouse Input Report containing media player data. */
+#define INPUT_REP_REF_CUSTOM1_ID   4
+#define INPUT_REP_REF_CUSTOM2_ID   5
 
 #define BASE_USB_HID_SPEC_VERSION       0x0101                                      /**< Version number of base USB HID Specification implemented by this application. */
 
@@ -152,7 +158,7 @@
 #define APP_ADV_FAST_INTERVAL           0x0028                                      /**< Fast advertising interval (in units of 0.625 ms. This value corresponds to 25 ms.). */
 #define APP_ADV_SLOW_INTERVAL           0x0C80                                      /**< Slow advertising interval (in units of 0.625 ms. This value corrsponds to 2 seconds). */
 #define APP_ADV_FAST_TIMEOUT            30                                          /**< The duration of the fast advertising period (in seconds). */
-#define APP_ADV_SLOW_TIMEOUT            180                                         /**< The duration of the slow advertising period (in seconds). */
+#define APP_ADV_SLOW_TIMEOUT            10                                         /**< The duration of the slow advertising period (in seconds). */
 
 
 static ble_hids_t     m_hids;                                                       /**< Structure used to identify the HID service. */
@@ -174,6 +180,16 @@ static pm_peer_id_t   m_whitelist_peers[BLE_GAP_WHITELIST_ADDR_MAX_COUNT];      
 static uint32_t       m_whitelist_peer_cnt;                                         /**< Number of peers currently in the whitelist. */
 static bool           m_is_wl_changed;                                              /**< Indicates if the whitelist has been changed since last time it has been updated in the Peer Manager. */
 
+static uint8_t report_key;
+static uint8_t m_sample_key_press_scan_str[] = /**< Key pattern to be sent when the key press button has been pushed. */
+{
+    0x0b,      //home                                /* Key h */
+    0x08,                                      /* Key e */
+    0x0f,//down                                      /* Key l */
+    0x0f,                                      /* Key l */
+    0x12,                                      /* Key o */
+    0x28                                       /* Key Return */
+};
 static void on_hids_evt(ble_hids_t * p_hids, ble_hids_evt_t * p_evt);
 
 
@@ -645,7 +661,53 @@ static void hids_init(void)
         0x81, 0x06,       // Input (Data,Value,Relative,Bit Field)
         0x0A, 0x24, 0x02, // Usage (AC Back)
         0x81, 0x06,       // Input (Data,Value,Relative,Bit Field)
-        0xC0              // End Collection
+        0xC0,              // End Collection
+				
+        // Report ID 4: Advanced buttons
+        0x85, 0x04,       // Report Id (4)		
+        0x05, 0x01,       // Usage Page (Generic Destop)
+        0x09, 0x06,       // Usage (Keyboard)
+        0xA1, 0x01,       // Collection (Application)
+        0x95, 0x01,       // Report Count (1)
+        0x75, 0x08,       // Report Size (8)
+        0x15, 0x00,       // Logical minimum (01)
+        0x25, 0xFF,       // Logical maximum (255)
+				0x05, 0x07,       // Usage Page (key Codes)
+        0x19, 0x00,       // Usage Minimum (0)
+        0x29, 0x65,       // Usage Maximum (101)
+        0x81, 0x00,       // Input (Data,Variable,Absoulte)
+        0xC0,              // End Collection
+/*				
+        0xA1, 0x01, // Collection (Application)
+        0x05, 0x0C,       // Usage Page (Consumer)
+        0x09, 0x01,       // Usage (Consumer Control)
+        0xA1, 0x01,       // Collection (Application)
+        0x85, 0x05,       // Report Id (5)
+		0x19, 0x24,0x02,
+		0x29, 0x24,0x02,
+        0x15, 0x00,       // Logical minimum (0)
+        0x25, 0x01,       // Logical maximum (1)
+        0x75, 0x01,       // Report Size (8)
+        0x95, 0x01,       // Report Count (1)
+        0x0A, 0x24, 0x02, // Usage (AC Back)
+        0x81, 0x02,       // Input (Data,Value,Relative,Bit Field)
+        0xC0,              // End Collection
+        0xC0,             // End Collection (Application)	
+*/
+
+        0x85, 0x05,       // Report Id (5)
+        0x05, 0x0C,       // Usage Page (Consumer)
+        0x09, 0x01,       // Usage (Consumer Control)
+        0xA1, 0x01,       // Collection (Application)
+				0x19, 0x24,0x02,
+				0x29, 0x24,0x02,
+        0x15, 0x00,       // Logical minimum (0)
+        0x25, 0x01,       // Logical maximum (1)
+        0x75, 0x01,       // Report Size (8)
+        0x95, 0x01,       // Report Count (1)
+        0x0A, 0x24, 0x02, // Usage (AC Back)
+        0x81, 0x02,       // Input (Data,Value,Relative,Bit Field)
+        0xC0,             // End Collection (Application)	
     };
 
     memset(inp_rep_array, 0, sizeof(inp_rep_array));
@@ -654,7 +716,6 @@ static void hids_init(void)
     p_input_report->max_len             = INPUT_REP_BUTTONS_LEN;
     p_input_report->rep_ref.report_id   = INPUT_REP_REF_BUTTONS_ID;
     p_input_report->rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
-
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.cccd_write_perm);
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.write_perm);
@@ -663,7 +724,6 @@ static void hids_init(void)
     p_input_report->max_len             = INPUT_REP_MOVEMENT_LEN;
     p_input_report->rep_ref.report_id   = INPUT_REP_REF_MOVEMENT_ID;
     p_input_report->rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
-
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.cccd_write_perm);
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.write_perm);
@@ -672,13 +732,28 @@ static void hids_init(void)
     p_input_report->max_len             = INPUT_REP_MEDIA_PLAYER_LEN;
     p_input_report->rep_ref.report_id   = INPUT_REP_REF_MPLAYER_ID;
     p_input_report->rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
-
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.cccd_write_perm);
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.write_perm);
 
+    p_input_report                      = &inp_rep_array[INPUT_REP_CUSTOM1_INDEX];
+    p_input_report->max_len             = INPUT_REP_CUSTOM1_LEN;
+    p_input_report->rep_ref.report_id   = INPUT_REP_REF_CUSTOM1_ID;
+    p_input_report->rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.cccd_write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.write_perm);
     hid_info_flags = HID_INFO_FLAG_REMOTE_WAKE_MSK | HID_INFO_FLAG_NORMALLY_CONNECTABLE_MSK;
 
+    p_input_report                      = &inp_rep_array[INPUT_REP_CUSTOM2_INDEX];
+    p_input_report->max_len             = INPUT_REP_CUSTOM2_LEN;
+    p_input_report->rep_ref.report_id   = INPUT_REP_REF_CUSTOM2_ID;
+    p_input_report->rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.cccd_write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&p_input_report->security_mode.write_perm);
+		
+    hid_info_flags = HID_INFO_FLAG_REMOTE_WAKE_MSK | HID_INFO_FLAG_NORMALLY_CONNECTABLE_MSK;
     memset(&hids_init_obj, 0, sizeof(hids_init_obj));
 
     hids_init_obj.evt_handler                    = on_hids_evt;
@@ -743,7 +818,210 @@ static void sensor_simulator_init(void)
     sensorsim_init(&m_battery_sim_state, &m_battery_sim_cfg);
 }
 
+/****************add start **********/
 
+ #define USE_SHADOW_CREATE
+ #ifdef USE_SHADOW_CREATE
+#include "nrf_drv_twi.h"
+#include "nrf_delay.h"
+/* TWI instance. */
+/* TWI instance ID. */
+#define TWI_INSTANCE_ID     0
+uint8_t Mode_3D =false;
+static const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
+void twi_init (void)
+{
+    ret_code_t err_code;
+
+    const nrf_drv_twi_config_t twi_lm75b_config = {
+       .scl                = ARDUINO_SCL_PIN,
+       .sda                = ARDUINO_SDA_PIN,
+       .frequency          = NRF_TWI_FREQ_100K,
+       .interrupt_priority = APP_IRQ_PRIORITY_HIGH,
+       .clear_bus_init     = false
+    };
+
+   // err_code = nrf_drv_twi_init(&m_twi, &twi_lm75b_config, twi_handler, NULL);
+		err_code = nrf_drv_twi_init(&m_twi, &twi_lm75b_config, NULL, NULL);
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_twi_enable(&m_twi);
+}
+
+#define TWI_INSTANCE_ID_1     1
+static const nrf_drv_twi_t m_twi1 = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID_1);
+void twi_init_1 (void)
+{
+    ret_code_t err_code;
+
+    const nrf_drv_twi_config_t twi_1_config = {
+       .scl                = 14,//ARDUINO_SCL_PIN,
+       .sda                = 13,//ARDUINO_SDA_PIN,
+       .frequency          = NRF_TWI_FREQ_100K,
+       .interrupt_priority = APP_IRQ_PRIORITY_HIGH,
+       .clear_bus_init     = false
+    };
+
+   // err_code = nrf_drv_twi_init(&m_twi, &twi_1_config, twi_handler, NULL);
+		err_code = nrf_drv_twi_init(&m_twi1, &twi_1_config, NULL, NULL);
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_twi_enable(&m_twi1);
+}
+
+typedef struct _Touch_format{
+uint8_t Touch_Category;
+uint8_t Touch_Status;
+uint8_t Finger_ID;
+uint16_t X_Axis;
+uint16_t Y_Axis;
+uint8_t Z_Pressure;
+uint8_t Touch_Radius;
+
+}Touch_Event,*PTouch_Event;
+Touch_Event Touch_Info;
+#define PACK_INFO    0x0210
+#define PACK_CONTENT 0x0211
+
+#define TOUCH_RST_PIN 11
+#define TOUCH_INT_PIN 12
+#define SENSOR_INT_PIN 15
+#define TOUCH_ADDRESS 0x48
+
+#define WD3153_ADDRESS 0x45
+uint8_t sample_data[16];
+void I2C_Read_Addr16(	const uint8_t slave_addr,const uint16_t read_addr,uint8_t *data,uint8_t data_num)
+{
+		uint8_t addr[2];
+		ret_code_t err_code;
+		addr[0] = (uint8_t)((read_addr & 0xFF00) >> 8);
+		addr[1] = (uint8_t) (read_addr & 0x00FF);
+		
+	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, addr, sizeof(addr), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+		err_code = nrf_drv_twi_rx(&m_twi, slave_addr, data, data_num);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+}
+
+void I2C_Read_Addr8(	const uint8_t slave_addr,const uint8_t read_addr,uint8_t *data,uint8_t data_num)
+{
+		ret_code_t err_code;
+		
+	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, &read_addr, sizeof(read_addr), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+		err_code = nrf_drv_twi_rx(&m_twi, slave_addr, data, data_num);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+}
+void I2C_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t write_value)
+{
+		ret_code_t err_code;
+	  uint8_t write[2]={write_addr,write_value};	
+	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, write, sizeof(write), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+}
+
+
+/* register address */
+#define WD_REG_RESET			0x00
+#define WD_REG_GLOBAL_CONTROL		0x01
+#define WD_REG_LED_STATUS		0x02
+#define WD_REG_LED_ENABLE		0x30
+#define WD_REG_LED_CONFIG_BASE		0x31
+#define WD_REG_LED_BRIGHTNESS_BASE	0x34
+#define WD_REG_TIMESET0_BASE		0x37
+#define WD_REG_TIMESET1_BASE		0x38
+/* register bits */
+#define WD3153_CHIPID			0x33
+#define WD_LED_MOUDLE_ENABLE_MASK	0x01
+#define WD_LED_FADE_OFF_MASK		0x40
+#define WD_LED_FADE_ON_MASK		0x20
+#define WD_LED_BREATHE_MODE_MASK	0x10
+#define WD_LED_RESET_MASK		0x55
+
+#define OUT_CURRENT 0x02
+
+#define LED_RED 0x01
+#define LED_GREEN 0x02
+#define LED_BLUE 0x04
+
+#define RISE_TIME 0x2
+#define FALL_TIME 0x2
+#define HOLD_TIME 0x1
+#define OFF_TIME  0x2
+
+void sw3153_config(void)
+{
+
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_RESET, WD_LED_RESET_MASK);
+		nrf_delay_us(8);
+	
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_GLOBAL_CONTROL, WD_LED_MOUDLE_ENABLE_MASK);
+		nrf_delay_us(8);
+	
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE,   WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE,   RISE_TIME<<4 | HOLD_TIME);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE,   FALL_TIME<<4 | OFF_TIME);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3, RISE_TIME<<4 | HOLD_TIME);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3, FALL_TIME<<4 | OFF_TIME);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, RISE_TIME<<4 | HOLD_TIME);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, FALL_TIME<<4 | OFF_TIME);
+		nrf_delay_us(8);
+	
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x44);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+1, 0x44);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+2, 0x44);
+		nrf_delay_us(8);
+		
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE);
+}
+void sw3153_blink_off(void)
+{
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE,   WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |0x00 | OUT_CURRENT);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |0x00 | OUT_CURRENT);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |0x00 | OUT_CURRENT);
+
+}
+void sw3153_blink_on(void)
+{
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE,   WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+}
+void sw3153_green(void)
+{
+		sw3153_blink_off();
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_GREEN);
+}
+void sw3153_blue(void)
+{
+		sw3153_blink_off();
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE);
+}
+void sw3153_red(void)
+{
+		sw3153_blink_off();
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_RED);
+}
+void sw3153_off(void)
+{
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, 0x00);
+}
+#endif  //end USE_SHADOW_CREATE
 /**@brief Function for handling a Connection Parameters error.
  *
  * @param[in]   nrf_error   Error code containing information about what went wrong.
@@ -792,20 +1070,24 @@ static void timers_start(void)
  *
  * @note This function will not return.
  */
-static void sleep_mode_enter(void)
+void sleep_mode_enter(void)
 {
     ret_code_t err_code;
 
-    err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-    APP_ERROR_CHECK(err_code);
+    //err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+    //APP_ERROR_CHECK(err_code);
 
     // Prepare wakeup buttons.
+		sw3153_off();
+    NRF_LOG_INFO("Enter sleep mode ........\r\n");
     err_code = bsp_btn_ble_sleep_mode_prepare();
-    APP_ERROR_CHECK(err_code);
+    NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
+    //APP_ERROR_CHECK(err_code);
 
     // Go to system-off mode (this function will not return; wakeup will cause a reset).
     err_code = sd_power_system_off();
-    APP_ERROR_CHECK(err_code);
+    NRF_LOG_INFO("Enter sleep mode2 ........%d\r\n",err_code);
+    //APP_ERROR_CHECK(err_code);
 }
 
 
@@ -883,8 +1165,8 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
             break;
 
         case BLE_ADV_EVT_IDLE:
-            err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-            APP_ERROR_CHECK(err_code);
+            //err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+            //APP_ERROR_CHECK(err_code);
             sleep_mode_enter();
             break;
 
@@ -949,6 +1231,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
     {
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected\r\n");
+			sw3153_blink_off();
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
 
@@ -956,6 +1239,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             break; // BLE_GAP_EVT_CONNECTED
 
         case BLE_GAP_EVT_DISCONNECTED:
+			sw3153_blink_on();
             NRF_LOG_INFO("Disconnected\r\n");
             err_code = bsp_indication_set(BSP_INDICATE_IDLE);
             APP_ERROR_CHECK(err_code);
@@ -1046,6 +1330,7 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 {
     /** The Connection state module has to be fed BLE events in order to function correctly
      * Remember to call ble_conn_state_on_ble_evt before calling any ble_conns_state_* functions. */
+    NRF_LOG_INFO(" ----  ble_evt_dispatch :header.evt_id = 0x%x\r\n",p_ble_evt->header.evt_id);
     ble_conn_state_on_ble_evt(p_ble_evt);
     pm_on_ble_evt(p_ble_evt);
     bsp_btn_ble_on_ble_evt(p_ble_evt);
@@ -1069,6 +1354,7 @@ static void sys_evt_dispatch(uint32_t sys_evt)
 {
     // Dispatch the system event to the fstorage module, where it will be
     // dispatched to the Flash Data Storage (FDS) module.
+    NRF_LOG_INFO(" --------------------\r\n");
     fs_sys_event_handler(sys_evt);
 
     // Dispatch to the Advertising module last, since it will check if there are any
@@ -1127,6 +1413,7 @@ static void ble_stack_init(void)
 }
 
 
+
 /**@brief Function for the Peer Manager initialization.
  */
 static void peer_manager_init(void)
@@ -1181,7 +1468,7 @@ static void advertising_init(void)
     advdata.uuids_complete.p_uuids  = m_adv_uuids;
 
     memset(&options, 0, sizeof(options));
-    options.ble_adv_whitelist_enabled      = true;
+    options.ble_adv_whitelist_enabled      = false;
     options.ble_adv_directed_enabled       = true;
     options.ble_adv_directed_slow_enabled  = false;
     options.ble_adv_directed_slow_interval = 0;
@@ -1208,7 +1495,6 @@ static void scheduler_init(void)
 {
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
 }
-
 
 /**@brief Function for sending a Mouse Movement.
  *
@@ -1265,6 +1551,7 @@ static void mouse_movement_send(int16_t x_delta, int16_t y_delta)
  *
  * @param[in]   event   Event generated by button press.
  */
+uint8_t key_num_3;
 static void bsp_event_handler(bsp_event_t event)
 {
     ret_code_t err_code;
@@ -1295,19 +1582,65 @@ static void bsp_event_handler(bsp_event_t event)
             }
             break;
 
-        case BSP_EVENT_KEY_0:
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-                mouse_movement_send(-MOVEMENT_SPEED, 0);
-            }
-            break;
-
         case BSP_EVENT_KEY_1:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
-                mouse_movement_send(0, -MOVEMENT_SPEED);
+					uint8_t temp = 0xFF;//0x01<<4;
+					ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
+					mouse_movement_send(-MOVEMENT_SPEED, 0);
             }
             break;
+        case BSP_EVENT_KEY_1_RELEASE:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+					uint8_t temp = 0x00;//0x01<<4;
+					ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
+					//report_key = 0x00;
+					//uint8_t temp = 0x00;
+					//ble_hids_inp_rep_send(&m_hids,INPUT_REP_BUTTONS_INDEX,INPUT_REP_BUTTONS_LEN,&temp);
+					mouse_movement_send(-MOVEMENT_SPEED, 0);
+            }
+            break;
+        case BSP_EVENT_KEY_1_LONG:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+				if(Mode_3D == false){
+					Mode_3D = true;
+					sw3153_green();
+				}else{
+					Mode_3D = false;
+					sw3153_blue();
+				}
+
+			}
+        case BSP_EVENT_KEY_0:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+								ble_hids_inp_rep_send(&m_hids,
+                                         INPUT_REP_CUSTOM1_INDEX,
+                                         INPUT_REP_CUSTOM1_LEN,
+                                         &report_key);
+               mouse_movement_send(0, -MOVEMENT_SPEED);
+            }
+            break;
+        case BSP_EVENT_KEY_0_LONG:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+            }
+            break;
+        case BSP_EVENT_KEY_0_RELEASE:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+								uint8_t temp = 0x00;
+								ble_hids_inp_rep_send(&m_hids,
+                                         INPUT_REP_CUSTOM1_INDEX,
+                                         INPUT_REP_CUSTOM1_LEN,
+                                         &temp);
+
+               mouse_movement_send(0, -MOVEMENT_SPEED);
+            }
+            break;
+
 
         case BSP_EVENT_KEY_2:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -1315,7 +1648,18 @@ static void bsp_event_handler(bsp_event_t event)
                 mouse_movement_send(MOVEMENT_SPEED, 0);
             }
             break;
-
+        case BSP_EVENT_KEY_2_LONG:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+            }else{
+			}
+				//key_num_3++;
+    			//NRF_LOG_INFO("key_2 press long----------------%d\r\n",event);
+            	//APP_ERROR_CHECK(3);
+				sw3153_red();
+				nrf_delay_ms(4000);
+				sleep_mode_enter();
+            break;
         case BSP_EVENT_KEY_3:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
@@ -1338,13 +1682,12 @@ static void buttons_leds_init(bool * p_erase_bonds)
     ret_code_t err_code;
     bsp_event_t startup_event;
 
-    err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS, bsp_event_handler);
-
+    //err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS, bsp_event_handler);
+    err_code = bsp_init( BSP_INIT_BUTTONS, bsp_event_handler);
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_btn_ble_init(NULL, &startup_event);
     APP_ERROR_CHECK(err_code);
-
     *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
 }
 
@@ -1369,6 +1712,155 @@ static void power_manage(void)
 
 /**@brief Function for application main entry.
  */
+    uint8_t sample_data[16];
+ret_code_t eventsize;
+#include "nrf_drv_gpiote.h"
+
+#define K_RIGHT 0x4F //right
+#define K_LEFT  0x50 //left
+#define K_DOWN  0x51 //down
+#define K_UP    0x52 //up
+#define K_ENTER 0x28 //right
+#define F8      0x41 //right
+#define F9      0x42 //left
+#define F10     0x43 //down
+#define F11     0x44 //up
+#define F12     0x45 //right
+uint8_t interr;
+static uint16_t tp_firmware_version(void)
+{
+	uint16_t temp;
+	uint8_t firmware[2];
+	I2C_Read_Addr16(TOUCH_ADDRESS,0x0126,firmware,2);
+	temp=firmware[1];
+	return (uint16_t)(temp<<8 | firmware[0]);
+}
+float buf1[6]={0};
+void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+	  ret_code_t err_code;
+    static uint8_t * p_key = m_sample_key_press_scan_str;
+    static uint8_t   size  = 0;
+		interr++;
+/*
+		keys_send(1, p_key);
+    p_key++;
+    size++;
+    if (size == MAX_KEYS_IN_ONE_REPORT)
+    {
+      p_key = m_sample_key_press_scan_str;
+      size  = 0;
+    }						
+*/								
+				I2C_Read_Addr16(TOUCH_ADDRESS,PACK_INFO,sample_data,1);
+				eventsize = sample_data[0] & 0x7F;
+				Touch_Info.Touch_Category = (sample_data[0] >> 7) & 0x01;
+				if(0 == Touch_Info.Touch_Category){
+						if(eventsize > 0){
+								I2C_Read_Addr16(TOUCH_ADDRESS,PACK_CONTENT,sample_data,eventsize);
+							for(int i=0;i<eventsize/6;i++){
+								Touch_Info.Finger_ID = sample_data[0+i*6] & 0x0F - 1;
+								Touch_Info.Touch_Status = sample_data[0+i*6] >> 7;
+								Touch_Info.X_Axis = ((sample_data[1+i*6] << 8) & 0x0F00)|sample_data[2+i*6];
+								Touch_Info.Y_Axis = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
+							}
+						}					
+				}
+				if(Touch_Info.Touch_Status == 0 || 1){
+						/*if(-Touch_Info.X_Axis < -Touch_Info.Y_Axis && Touch_Info.X_Axis < -Touch_Info.Y_Axis ){
+								report_key = K_UP; // 0x52;
+						}else if(Touch_Info.X_Axis < Touch_Info.Y_Axis && -Touch_Info.X_Axis < Touch_Info.Y_Axis ){
+								report_key = K_DOWN;  //0x51;
+						}else if(-Touch_Info.X_Axis > -Touch_Info.Y_Axis && -Touch_Info.X_Axis > -Touch_Info.Y_Axis ){
+								report_key = K_RIGHT; //0x4f
+						}else if(Touch_Info.X_Axis > -Touch_Info.Y_Axis && Touch_Info.X_Axis > Touch_Info.Y_Axis ){
+								report_key = K_LEFT;  //0x50
+						}*/
+					int x,y;
+					x = 127 -Touch_Info.X_Axis;
+					y = 127 -Touch_Info.Y_Axis;
+					if(Mode_3D == true){
+						if(abs(x) < 38 && abs(y) <38){
+							report_key = F12; // 0x45;
+						}else if(abs(x) < (y )  ){
+								report_key = F8; // 0x41;
+						}else if(abs(x) <(-y )  ){
+								report_key = F9;  //0x42;
+						}else if(abs(y) < (x ) ){
+								report_key = F11; //0x44
+						}else if(abs(y) < (-x )  ){
+								report_key = F10;  //0x43
+						};
+					}else{
+						if(abs(x) < 38 && abs(y) <38){
+							report_key = K_ENTER; // 0x28;
+						}else if(abs(x) < (y )  ){
+								report_key = K_UP; // 0x52;
+						}else if(abs(x) <(-y )  ){
+								report_key = K_DOWN;  //0x51;
+						}else if(abs(y) < (x ) ){
+								report_key = K_RIGHT; //0x4f
+						}else if(abs(y) < (-x )  ){
+								report_key = K_LEFT;  //0x50
+						};
+
+					}
+						//keys_send(1, &report_key);
+				}
+}
+//uint8_t interrupter_sensor;
+void sensor_in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+	ret_code_t err_code;
+	//interrupter_sensor++;
+//	SENSOR_READ_TEST(buf);
+}
+int8_t I2C1_Read_Addr8(	const uint8_t slave_addr,const uint8_t read_addr,uint8_t *data,uint8_t data_num)
+{
+		ret_code_t err_code;
+		
+	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, &read_addr, 1, false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+		err_code = nrf_drv_twi_rx(&m_twi1, slave_addr, data, data_num);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+	  return (int8_t)err_code;
+}
+int8_t I2C1_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t * data,uint8_t data_num)
+{
+		ret_code_t err_code;
+	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, &write_addr, 1, false);
+	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, data, data_num, false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+	  return (int8_t)err_code;
+}
+int8_t I2C2_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t write_value)
+{
+		ret_code_t err_code;
+	  uint8_t write[2]={write_addr,write_value};	
+	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, write, sizeof(write), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+	  return (int8_t)err_code;
+}
+void bmg160_init(void)
+{
+	uint8_t data=0;	
+	I2C1_Read_Addr8(0x68,0x00,&data,1);
+    NRF_LOG_INFO("-----------bmg160 read id 0x%x\r\n",data);
+	data =3;
+	I2C2_Write_Addr8(0x68,0x40,0x11);
+	data = 0;
+	I2C1_Read_Addr8(0x68,0x03,&data,1);
+    NRF_LOG_INFO("-----------bmg160 read 0x6c 0x%x\r\n",data);
+}
+void sensor_poll_start();
 int main(void)
 {
     bool erase_bonds;
@@ -1377,6 +1869,28 @@ int main(void)
     log_init();
     timers_init();
     buttons_leds_init(&erase_bonds);
+ #ifdef USE_SHADOW_CREATE
+	nrf_gpio_cfg_output(TOUCH_RST_PIN);
+	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
+	nrf_delay_ms(10);
+	nrf_gpio_pin_write(TOUCH_RST_PIN,1);
+	nrf_delay_ms(50);
+
+	 //nrf_drv_gpiote_init();
+    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
+    in_config.pull = NRF_GPIO_PIN_PULLUP;
+
+    nrf_drv_gpiote_in_init(TOUCH_INT_PIN, &in_config, in_pin_handler);
+  	//nrf_drv_gpiote_in_init(SENSOR_INT_PIN, &in_config, sensor_in_pin_handler);
+	nrf_drv_gpiote_in_event_enable(TOUCH_INT_PIN, true);
+	//nrf_drv_gpiote_in_event_enable(SENSOR_INT_PIN, true);
+	twi_init();
+	twi_init_1();
+	//bmg160_init();
+	uint16_t tp_version = tp_firmware_version();
+    NRF_LOG_INFO("----- tp_version 0x%x\r\n",tp_version);
+SENSOR_INIT();
+ #endif
     ble_stack_init();
     scheduler_init();
     gap_params_init();
@@ -1388,13 +1902,15 @@ int main(void)
     peer_manager_init();
 
     // Start execution.
-    NRF_LOG_INFO("HID Mouse example started.\r\n");
+    NRF_LOG_INFO("HID Mouse example started. erase_bonds %d\r\n",erase_bonds);
     timers_start();
-
+		//erase_bonds = true;
     advertising_start(erase_bonds);
-
+		sw3153_config();
+		sensor_poll_start();
+		
     // Enter main loop.
-    for (;;)
+	for (;;)
     {
         app_sched_execute();
         if (NRF_LOG_PROCESS() == false)

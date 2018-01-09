@@ -49,9 +49,9 @@
 #define BTN_ID_WAKEUP             0  /**< ID of button used to wake up the application. */
 #define BTN_ID_SLEEP              0  /**< ID of button used to put the application into sleep mode. */
 #define BTN_ID_DISCONNECT         0  /**< ID of button used to gracefully terminate a connection on long press. */
-#define BTN_ID_WAKEUP_BOND_DELETE 1  /**< ID of button used to wake up the application and delete all bonding information. */
+#define BTN_ID_WAKEUP_BOND_DELETE 2  /**< ID of button used to wake up the application and delete all bonding information. */
 #define BTN_ID_WHITELIST_OFF      1  /**< ID of button used to turn off usage of the whitelist. */
-
+#define BTN_ID_BACK 1
 #define BTN_ACTION_SLEEP          BSP_BUTTON_ACTION_RELEASE    /**< Button action used to put the application into sleep mode. */
 #define BTN_ACTION_DISCONNECT     BSP_BUTTON_ACTION_LONG_PUSH  /**< Button action used to gracefully terminate a connection on long press. */
 #define BTN_ACTION_WHITELIST_OFF  BSP_BUTTON_ACTION_LONG_PUSH  /**< Button action used to turn off usage of the whitelist. */
@@ -185,8 +185,8 @@ static uint32_t advertising_buttons_configure()
 static void startup_event_extract(bsp_event_t * p_startup_event)
 {
     // React to button states
-    if (bsp_button_is_pressed(BTN_ID_WAKEUP_BOND_DELETE))
-    {
+	if( bsp_button_is_pressed(BTN_ID_WAKEUP_BOND_DELETE)){
+		if(bsp_button_is_pressed(BTN_ID_BACK) )
         *p_startup_event = BSP_EVENT_CLEAR_BONDING_DATA;
     }
     else if (bsp_button_is_pressed(BTN_ID_WAKEUP))
@@ -219,10 +219,10 @@ void bsp_btn_ble_on_ble_evt(ble_evt_t * p_ble_evt)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            if (m_num_connections == 0)
+            if (m_num_connections == 0 && 0)
             {
-                err_code = connection_buttons_configure();
-                CALL_HANDLER_ON_ERROR(err_code);
+                //err_code = connection_buttons_configure();
+                //CALL_HANDLER_ON_ERROR(err_code);
             }
 
             m_num_connections++;
@@ -231,10 +231,10 @@ void bsp_btn_ble_on_ble_evt(ble_evt_t * p_ble_evt)
         case BLE_GAP_EVT_DISCONNECTED:
             m_num_connections--;
 
-            if (m_num_connections == 0)
+            if (m_num_connections == 0 && 0)
             {
-                err_code = advertising_buttons_configure();
-                CALL_HANDLER_ON_ERROR(err_code);
+                //err_code = advertising_buttons_configure();
+                //CALL_HANDLER_ON_ERROR(err_code);
             }
             break;
 
@@ -257,7 +257,7 @@ uint32_t bsp_btn_ble_init(bsp_btn_ble_error_handler_t error_handler, bsp_event_t
 
     if (m_num_connections == 0)
     {
-        err_code = advertising_buttons_configure();
+        //err_code = advertising_buttons_configure();
     }
 
     return err_code;

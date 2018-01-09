@@ -231,7 +231,7 @@ static uint32_t       m_whitelist_peer_cnt;                                 /**<
 static bool           m_is_wl_changed;                                      /**< Indicates if the whitelist has been changed since last time it has been updated in the Peer Manager. */
 
 static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_HUMAN_INTERFACE_DEVICE_SERVICE, BLE_UUID_TYPE_BLE}};
-
+static uint8_t report_key;
 static uint8_t m_sample_key_press_scan_str[] = /**< Key pattern to be sent when the key press button has been pushed. */
 {
     0x0b,      //home                                /* Key h */
@@ -1516,7 +1516,122 @@ static void scheduler_init(void)
 {
     APP_SCHED_INIT(SCHED_MAX_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
 }
+/****************add start **********/
 
+ #define USE_SHADOW_CREATE
+ #ifdef USE_SHADOW_CREATE
+#include "nrf_drv_twi.h"
+#include "nrf_delay.h"
+/* TWI instance. */
+/* TWI instance ID. */
+#define TWI_INSTANCE_ID     0
+static const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
+void twi_init (void)
+{
+    ret_code_t err_code;
+
+    const nrf_drv_twi_config_t twi_lm75b_config = {
+       .scl                = ARDUINO_SCL_PIN,
+       .sda                = ARDUINO_SDA_PIN,
+       .frequency          = NRF_TWI_FREQ_100K,
+       .interrupt_priority = APP_IRQ_PRIORITY_HIGH,
+       .clear_bus_init     = false
+    };
+
+   // err_code = nrf_drv_twi_init(&m_twi, &twi_lm75b_config, twi_handler, NULL);
+		err_code = nrf_drv_twi_init(&m_twi, &twi_lm75b_config, NULL, NULL);
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_twi_enable(&m_twi);
+}
+
+typedef struct _Touch_format{
+uint8_t Touch_Category;
+uint8_t Touch_Status;
+uint8_t Finger_ID;
+uint16_t X_Axis;
+uint16_t Y_Axis;
+uint8_t Z_Pressure;
+uint8_t Touch_Radius;
+
+}Touch_Event,*PTouch_Event;
+Touch_Event Touch_Info;
+#define PACK_INFO    0x0210
+#define PACK_CONTENT 0x0211
+
+#define TOUCH_RST_PIN 11
+#define TOUCH_INT_PIN 12
+#define TOUCH_ADDRESS 0x48
+
+#define WD3153_ADDRESS 0x45
+uint8_t sample_data[16];
+void I2C_Read_Addr16(	const uint8_t slave_addr,const uint16_t read_addr,uint8_t *data,uint8_t data_num)
+{
+		uint8_t addr[2];
+		ret_code_t err_code;
+		addr[0] = (uint8_t)((read_addr & 0xFF00) >> 8);
+		addr[1] = (uint8_t) (read_addr & 0x00FF);
+		
+	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, addr, sizeof(addr), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+		err_code = nrf_drv_twi_rx(&m_twi, slave_addr, data, data_num);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+}
+
+void I2C_Read_Addr8(	const uint8_t slave_addr,const uint8_t read_addr,uint8_t *data,uint8_t data_num)
+{
+		ret_code_t err_code;
+		
+	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, &read_addr, sizeof(read_addr), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+		err_code = nrf_drv_twi_rx(&m_twi, slave_addr, data, data_num);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+}
+void I2C_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t write_value)
+{
+		ret_code_t err_code;
+	  uint8_t write[2]={write_addr,write_value};	
+	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, write, sizeof(write), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+}
+void sw3153_config(void)
+{
+
+		I2C_Write_Addr8(WD3153_ADDRESS,0x00, 0x55);
+		nrf_delay_us(8);
+	
+		I2C_Write_Addr8(WD3153_ADDRESS,0x01, 0x01);
+		nrf_delay_us(8);
+	
+		I2C_Write_Addr8(WD3153_ADDRESS,0x31, 0x02);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,0x32, 0x02);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,0x33, 0x02);
+		nrf_delay_us(8);	
+		I2C_Write_Addr8(WD3153_ADDRESS,0x34, 0x22);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,0x35, 0x22);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,0x36, 0x22);
+		nrf_delay_us(8);	
+		I2C_Write_Addr8(WD3153_ADDRESS,0x30, 0x07);
+		nrf_delay_us(8);	
+}
+#endif  //end USE_SHADOW_CREATE
+ 
+
+/****************add end  */
 
 /**@brief Function for handling events from the BSP module.
  *
@@ -1554,32 +1669,6 @@ static void bsp_event_handler(bsp_event_t event)
             }
             break;
 
-        case BSP_EVENT_KEY_0:
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-                keys_send(1, p_key);
-                p_key++;
-                size++;
-                if (size == MAX_KEYS_IN_ONE_REPORT)
-                {
-                    p_key = m_sample_key_press_scan_str;
-                    size  = 0;
-                }
-            }
-            break;
-        case BSP_EVENT_KEY_1:
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-                keys_send(1, p_key);
-                p_key++;
-                size++;
-                if (size == MAX_KEYS_IN_ONE_REPORT)
-                {
-                    p_key = m_sample_key_press_scan_str;
-                    size  = 0;
-                }
-            }
-            break;
         case BSP_EVENT_KEY_2:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
@@ -1591,6 +1680,54 @@ static void bsp_event_handler(bsp_event_t event)
                     p_key = m_sample_key_press_scan_str;
                     size  = 0;
                 }
+            }
+            break;
+        case BSP_EVENT_KEY_0:
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+				keys_send(1, &report_key);
+				/*		
+                keys_send(1, p_key);
+                p_key++;
+                size++;
+                if (size == MAX_KEYS_IN_ONE_REPORT)
+                {
+                    p_key = m_sample_key_press_scan_str;
+                    size  = 0;
+                }*/
+            }
+            break;
+        case BSP_EVENT_KEY_1:
+					
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+                keys_send(1, p_key);
+                p_key++;
+                size++;
+                if (size == MAX_KEYS_IN_ONE_REPORT)
+                {
+                    p_key = m_sample_key_press_scan_str;
+                    size  = 0;
+                }
+            }
+						
+ 
+            {ret_code_t eventsize;
+								I2C_Read_Addr16(TOUCH_ADDRESS,PACK_INFO,sample_data,1);
+								eventsize = sample_data[0] & 0x7F;
+								Touch_Info.Touch_Category = (sample_data[0] >> 7) & 0x01;
+								if(0 == Touch_Info.Touch_Category){
+									if(eventsize > 0){
+										I2C_Read_Addr16(TOUCH_ADDRESS,PACK_CONTENT,sample_data,eventsize);
+										for(int i=0;i<eventsize/6;i++){
+										Touch_Info.Finger_ID = sample_data[0+i*6] & 0x0F - 1;
+										Touch_Info.Touch_Status = sample_data[0+i*6] >> 7;
+										Touch_Info.X_Axis = ((sample_data[1+i*6] << 8) & 0x0F00)|sample_data[2+i*6];
+										Touch_Info.Y_Axis = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
+										}
+									}
+					
+								}	
             }
             break;
         case BSP_EVENT_KEY_3:
@@ -1723,18 +1860,76 @@ static void power_manage(void)
     ret_code_t err_code = sd_app_evt_wait();
     APP_ERROR_CHECK(err_code);
 }
-/****************add start **********/
-
- #define USE_SHADOW_CREATE
- #ifdef USE_SHADOW_CREATE
-
- #endif
- 
-
-/****************add end  */
 
 /**@brief Function for application main entry.
  */
+    uint8_t sample_data[16];
+ret_code_t eventsize;
+#include "nrf_drv_gpiote.h"
+
+#define K_RIGHT 0x4F //right
+#define K_LEFT  0x50 //left
+#define K_DOWN  0x51 //down
+#define K_UP    0x52 //up
+#define K_ENTER 0x28 //right
+void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+	  ret_code_t err_code;
+    static uint8_t * p_key = m_sample_key_press_scan_str;
+    static uint8_t   size  = 0;
+		
+/*
+		keys_send(1, p_key);
+    p_key++;
+    size++;
+    if (size == MAX_KEYS_IN_ONE_REPORT)
+    {
+      p_key = m_sample_key_press_scan_str;
+      size  = 0;
+    }						
+*/								
+				I2C_Read_Addr16(TOUCH_ADDRESS,PACK_INFO,sample_data,1);
+				eventsize = sample_data[0] & 0x7F;
+				Touch_Info.Touch_Category = (sample_data[0] >> 7) & 0x01;
+				if(0 == Touch_Info.Touch_Category){
+						if(eventsize > 0){
+								I2C_Read_Addr16(TOUCH_ADDRESS,PACK_CONTENT,sample_data,eventsize);
+							for(int i=0;i<eventsize/6;i++){
+								Touch_Info.Finger_ID = sample_data[0+i*6] & 0x0F - 1;
+								Touch_Info.Touch_Status = sample_data[0+i*6] >> 7;
+								Touch_Info.X_Axis = ((sample_data[1+i*6] << 8) & 0x0F00)|sample_data[2+i*6];
+								Touch_Info.Y_Axis = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
+							}
+						}					
+				}
+				if(Touch_Info.Touch_Status == 0 || 1){
+						/*if(-Touch_Info.X_Axis < -Touch_Info.Y_Axis && Touch_Info.X_Axis < -Touch_Info.Y_Axis ){
+								report_key = K_UP; // 0x52;
+						}else if(Touch_Info.X_Axis < Touch_Info.Y_Axis && -Touch_Info.X_Axis < Touch_Info.Y_Axis ){
+								report_key = K_DOWN;  //0x51;
+						}else if(-Touch_Info.X_Axis > -Touch_Info.Y_Axis && -Touch_Info.X_Axis > -Touch_Info.Y_Axis ){
+								report_key = K_RIGHT; //0x4f
+						}else if(Touch_Info.X_Axis > -Touch_Info.Y_Axis && Touch_Info.X_Axis > Touch_Info.Y_Axis ){
+								report_key = K_LEFT;  //0x50
+						}*/
+					int x,y;
+					x = 127 -Touch_Info.X_Axis;
+					y = 127 -Touch_Info.Y_Axis;
+						if(abs(x) < 38 && abs(y) <38){
+							report_key = K_ENTER; // 0x28;
+						}else if(abs(x) < (y )  ){
+								report_key = K_UP; // 0x52;
+						}else if(abs(x) <(-y )  ){
+								report_key = K_DOWN;  //0x51;
+						}else if(abs(y) < (x ) ){
+								report_key = K_RIGHT; //0x4f
+						}else if(abs(y) < (-x )  ){
+								report_key = K_LEFT;  //0x50
+						};
+						//keys_send(1, &report_key);
+				}
+				
+}
 int main(void)
 {
 
@@ -1742,8 +1937,27 @@ int main(void)
     // Initialize
 	
     log_init();
+
+	
     timers_init();
     buttons_leds_init(&erase_bonds);
+ #ifdef USE_SHADOW_CREATE
+		nrf_gpio_cfg_output(TOUCH_RST_PIN);
+		nrf_gpio_pin_write(TOUCH_RST_PIN,0);
+		nrf_delay_ms(10);
+		nrf_gpio_pin_write(TOUCH_RST_PIN,1);
+		nrf_delay_ms(50);
+
+	 //nrf_drv_gpiote_init();
+    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
+    in_config.pull = NRF_GPIO_PIN_PULLUP;
+
+    nrf_drv_gpiote_in_init(TOUCH_INT_PIN, &in_config, in_pin_handler);
+		nrf_drv_gpiote_in_event_enable(TOUCH_INT_PIN, true);
+		twi_init();
+		sw3153_config();
+ #endif
+ 
     ble_stack_init();
     scheduler_init();
     gap_params_init();
@@ -1757,6 +1971,7 @@ int main(void)
 
     // Start execution.
     NRF_LOG_INFO("HID Keyboard example started.\r\n");
+		
     timers_start();
 
     erase_bonds = true;
@@ -1771,6 +1986,9 @@ int main(void)
             power_manage();
         }
     }
+		
+
+		
 }
 
 

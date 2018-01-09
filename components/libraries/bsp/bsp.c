@@ -64,7 +64,7 @@ APP_TIMER_DEF(m_alert_timer_id);
 #if BUTTONS_NUMBER > 0
 #ifndef BSP_SIMPLE
 static bsp_event_callback_t   m_registered_callback         = NULL;
-static bsp_button_event_cfg_t m_events_list[BUTTONS_NUMBER] = {{BSP_EVENT_NOTHING, BSP_EVENT_NOTHING}};
+bsp_button_event_cfg_t m_events_list[BUTTONS_NUMBER] = {{BSP_EVENT_NOTHING, BSP_EVENT_NOTHING}};
 APP_TIMER_DEF(m_button_timer_id);
 static void bsp_button_event_handler(uint8_t pin_no, uint8_t button_action);
 #endif // BSP_SIMPLE
@@ -121,6 +121,9 @@ bool bsp_button_is_pressed(uint32_t button)
  * @param[in]   pin_no          The pin number of the button pressed.
  * @param[in]   button_action   Action button.
  */
+uint8_t key_push;
+uint8_t key_release;
+uint8_t key_longpush;
 static void bsp_button_event_handler(uint8_t pin_no, uint8_t button_action)
 {
     bsp_event_t        event  = BSP_EVENT_NOTHING;
@@ -136,6 +139,8 @@ static void bsp_button_event_handler(uint8_t pin_no, uint8_t button_action)
         switch (button_action)
         {
             case APP_BUTTON_PUSH:
+				key_push++;
+				key_release--;
                 event = m_events_list[button].push_event;
                 if (m_events_list[button].long_push_event != BSP_EVENT_NOTHING)
                 {
@@ -148,6 +153,9 @@ static void bsp_button_event_handler(uint8_t pin_no, uint8_t button_action)
                 release_event_at_push[button] = m_events_list[button].release_event;
                 break;
             case APP_BUTTON_RELEASE:
+				key_push--;
+				key_release++;
+				key_longpush--;
                 (void)app_timer_stop(m_button_timer_id);
                 if (release_event_at_push[button] == m_events_list[button].release_event)
                 {
@@ -155,6 +163,7 @@ static void bsp_button_event_handler(uint8_t pin_no, uint8_t button_action)
                 }
                 break;
             case BSP_BUTTON_ACTION_LONG_PUSH:
+				key_longpush++;
                 event = m_events_list[button].long_push_event;
         }
     }
@@ -488,6 +497,9 @@ uint32_t bsp_init(uint32_t type, bsp_event_callback_t callback)
         for (num = 0; ((num < BUTTONS_NUMBER) && (err_code == NRF_SUCCESS)); num++)
         {
             err_code = bsp_event_to_button_action_assign(num, BSP_BUTTON_ACTION_PUSH, BSP_EVENT_DEFAULT);
+    		err_code = bsp_event_to_button_action_assign(num, BSP_BUTTON_ACTION_RELEASE,(bsp_event_t)(BSP_EVENT_KEY_0_RELEASE+num));
+    		err_code = bsp_event_to_button_action_assign(num, BSP_BUTTON_ACTION_LONG_PUSH,(bsp_event_t)(BSP_EVENT_KEY_0_LONG+num));
+    		//err_code = bsp_event_to_button_action_assign(num, BSP_BUTTON_ACTION_LONG_PUSH,(bsp_event_t)(BSP_EVENT_KEY_0+num));
         }
 
         if (err_code == NRF_SUCCESS)
