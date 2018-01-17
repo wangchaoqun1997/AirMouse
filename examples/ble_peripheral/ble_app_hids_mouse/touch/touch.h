@@ -1,6 +1,8 @@
-#include "sys.h"
-#include "i2c.h"
 
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "app_timer.h"
+#include "nrf_delay.h"
 #define TOUCHPAD_MELFAS_MMS427    1
 #define TOUCHPAD_MELFAS_MMS438    2
 #define CHIP_MMS427	      427
@@ -18,7 +20,7 @@
 #define MMS_EXT_FW_FORCE_UPDATE	0	//0 or 1
 
 
-#define TOUCH_DEVICE_ADDR        (0x48 << 1)     //melfas I2C address
+#define TOUCH_DEVICE_ADDR        (0x68)     //melfas I2C address
 
 #define MIP_EVENT_GESTURE_FLICK_RIGHT	20			
 #define MIP_EVENT_GESTURE_FLICK_DOWN	       21		
@@ -40,6 +42,15 @@
 #if !defined BUFFERSIZE
 #define BUFFERSIZE              30
 #endif
+typedef	int8_t s8;/**< used for signed 8bit */
+typedef	int16_t s16;/**< used for signed 16bit */
+typedef	int32_t s32;/**< used for signed 32bit */
+typedef	int64_t s64;/**< used for signed 64bit */
+
+typedef	uint8_t u8;/**< used for unsigned 8bit */
+typedef	uint16_t u16;/**< used for unsigned 16bit */
+typedef	uint32_t u32;/**< used for unsigned 32bit */
+typedef	uint64_t u64;/**< used for unsigned 64bit */
 
 #if      1
 typedef  struct  _Touch_Format{
@@ -51,12 +62,12 @@ typedef  struct  _Touch_Format{
   u8 Touch_Radius;
 }Touch_Event,*PTouch_EVent;
 #endif
-void  MMS_Reboot(void);
-void Touch_Init(void);
-void Touch_Exti_Init(void);
+//void  MMS_Reboot(void);
+//void Touch_Init(void);
+//void Touch_Exti_Init(void);
 int mms_i2c_write(u8 device, u8 *write_buf, u16 write_len);
 int mms_i2c_read(u8 device, u8 *write_buf, u16 write_len, u8 *read_buf, u16 read_len);
 int   MMS_Get_FW_Version(u8 Addr,u8 *ver_buf);
 int MMS_Get_FW_Version_u16(u8 Addr,u16 *ver_buf_u16);
 
-void EXTI1_IRQHandler(void);
+//void EXTI1_IRQHandler(void);

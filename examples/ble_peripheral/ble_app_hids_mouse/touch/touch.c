@@ -1,12 +1,14 @@
 #include "touch.h"
-#include "usart.h"
-#include "delay.h"
+//#include "usart.h"
+//#include "delay.h"
 #if   0
 extern  u8 RX2_Buffer[BUFFERSIZE];// eventsize,
 extern  u8 EVENT_CATEGORY[2];
 extern  u8 eventsize, event_category,alert_event,gesture_code;
 extern  u8 EVENT_CATEGORY[2];
 #endif
+
+#if 0
 Touch_Event Touch_Info;
 
 void MMS_Reboot(void)
@@ -63,27 +65,27 @@ void Touch_Exti_Init(void)
        NVIC->ISER[0]|=1<<7;	
 	NVIC->IP[7]|=temp<<4;//设置响应优先级和抢断优先级
 }
-
+#endif
 int mms_i2c_write(u8 device, u8 *write_buf, u16 write_len)
 {
        int ret;
-	ret = I2C_MasterWtiteMultiBytes(device,write_buf,write_len);
-
+	//ret = I2C_MasterWtiteMultiBytes(device,write_buf,write_len);
+	ret = I2C_Write_Addr(device,write_buf,write_len);
 	if(ret == 0)
 	{
 		goto EXIT;
 	}
 	else if(ret < 0)
 	{
-		USART1_printf("[ERROR] i2c_write - errno[%d]\r\n", ret);
+		NRF_LOG_INFO("[ERROR] i2c_write - errno[%d]\r\n", ret);
 	}
 	else
 	{
-		USART1_printf("[ERROR] unknown error[%d]\r\n", ret);
+		NRF_LOG_INFO("[ERROR] unknown error[%d]\r\n", ret);
 	}
 	goto ERROR;
 ERROR:
-	//USART1_printf("[ERROR] mms_i2c_write failed\r\n");
+	//NRF_LOG_INFO("[ERROR] mms_i2c_write failed\r\n");
 	return 1;
 EXIT:
 	return 0;
@@ -95,10 +97,11 @@ int mms_i2c_read(u8 device, u8 *write_buf, u16 write_len, u8 *read_buf, u16 read
 	ret = mms_i2c_write(device,write_buf,write_len);
 	if(ret == 1)
 	{
-	 	USART1_printf("[ERROR] mms_i2c_write failed\r\n");
+	 	NRF_LOG_INFO("[ERROR] mms_i2c_write failed\r\n");
 		goto ERROR;
 	}
-	res= I2C_MasterReadMultiBytes(device,read_buf,read_len);
+	//res= I2C_MasterReadMultiBytes(device,read_buf,read_len);
+	res= I2C_Read_Addr(device,read_buf,read_len);
 	
 	if(res == 0)
 	{
@@ -106,11 +109,11 @@ int mms_i2c_read(u8 device, u8 *write_buf, u16 write_len, u8 *read_buf, u16 read
 	}
 	else if(res < 0)
 	{
-		USART1_printf("[ERROR] i2c_read- errno[%d]\r\n", ret);
+		NRF_LOG_INFO("[ERROR] i2c_read- errno[%d]\r\n", ret);
 	}
 	else
 	{
-		USART1_printf("[ERROR] unknown error[%d]\r\n", ret);
+		NRF_LOG_INFO("[ERROR] unknown error[%d]\r\n", ret);
 	}
 	goto ERROR;
 
@@ -142,7 +145,7 @@ int    MMS_Get_FW_Version(u8 Addr,u8 *ver_buf)
 
 	return 0;
 ERROR:
-	USART1_printf("[ERROR]MMS_Get_FW_Version failed\r\n");
+	NRF_LOG_INFO("[ERROR]MMS_Get_FW_Version failed\r\n");
 	return 1;	
 	
 }
@@ -164,12 +167,12 @@ int MMS_Get_FW_Version_u16(u8 Addr,u16 *ver_buf_u16)
 	
 	return 0;
 ERROR:
-	USART1_printf(" [ERROR]MMS_Get_FW_Version_u16\r\n");
+	NRF_LOG_INFO(" [ERROR]MMS_Get_FW_Version_u16\r\n");
 	return 1;	
 
 }
 
-
+#if 0
 void EXTI1_IRQHandler(void)
 {
 #if           1
@@ -182,7 +185,7 @@ void EXTI1_IRQHandler(void)
 
   mms_i2c_read(TOUCH_DEVICE_ADDR,wbuf,2,RX2_Buffer,1);
   EVENT_CATEGORY[0] = RX2_Buffer[0];
-  //USART1_printf("EVENT_CATEGORY[0] = 0x%x \r\n", EVENT_CATEGORY[0]);
+  //NRF_LOG_INFO("EVENT_CATEGORY[0] = 0x%x \r\n", EVENT_CATEGORY[0]);
   event_category = (EVENT_CATEGORY[0] >> 7) & 0x01;  // 0:normal touch  others:alert event
   eventsize = EVENT_CATEGORY[0] & 0x7F;            // finger number,each finger size:6 bytes
   if(event_category ==0)
@@ -199,7 +202,7 @@ void EXTI1_IRQHandler(void)
 			  Touch_Info.X_Axis = ((RX2_Buffer[1 + i*6] << 8) & 0x0F00)|RX2_Buffer[2 + i*6];
 			  Touch_Info.Y_Axis = ((RX2_Buffer[1 + i*6] << 4) & 0x0F00)|RX2_Buffer[3 + i*6];
 			  
-			  USART1_printf("TOUCH INFO: Finger_ID= %d,Touch_Status= %d,X_Axis= %d,Y_Axis= %d\r\n",\
+			  NRF_LOG_INFO("TOUCH INFO: Finger_ID= %d,Touch_Status= %d,X_Axis= %d,Y_Axis= %d\r\n",\
 			   Touch_Info.Finger_ID,Touch_Info.Touch_Status,Touch_Info.X_Axis,Touch_Info.Y_Axis);
 
 			 
@@ -216,22 +219,22 @@ void EXTI1_IRQHandler(void)
 			switch(gesture_code)  //Here is need modified if any customising
 			{
 				case MIP_EVENT_GESTURE_FLICK_RIGHT:	
-					USART1_printf("Gesture info:Slide From Left To Right\r\n");
+					NRF_LOG_INFO("Gesture info:Slide From Left To Right\r\n");
 					break;
 				case MIP_EVENT_GESTURE_FLICK_DOWN:
-				    USART1_printf("Gesture info:Slide From Top To Bottom\r\n");
+				    NRF_LOG_INFO("Gesture info:Slide From Top To Bottom\r\n");
 					break;
 				case MIP_EVENT_GESTURE_FLICK_LEFT:
-					USART1_printf("Gesture info:Slide From Right To Left\r\n");
+					NRF_LOG_INFO("Gesture info:Slide From Right To Left\r\n");
 					break;
 				case MIP_EVENT_GESTURE_FLICK_UP:
-					USART1_printf("Gesture info:Slide_From Bottom To Top\r\n");
+					NRF_LOG_INFO("Gesture info:Slide_From Bottom To Top\r\n");
 					break;
 				case MIP_EVENT_GESTURE_DOUBLE_TAP:
-					USART1_printf("Gesture info:Double Tap\r\n");
+					NRF_LOG_INFO("Gesture info:Double Tap\r\n");
 					break;
 				default:
-					USART1_printf("No gesture recognizing\r\n");
+					NRF_LOG_INFO("No gesture recognizing\r\n");
 					break;
 					
 			}
@@ -242,4 +245,4 @@ void EXTI1_IRQHandler(void)
 	EXTI->PR=1<<1;  //清除LINE0上的中断标志位  
 	#endif
 }
-
+#endif

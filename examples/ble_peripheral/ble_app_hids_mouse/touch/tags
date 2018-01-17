@@ -1,0 +1,131 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AUTO_UPDATE_ENABLE	touch.h	12;"	d
+BUFFERSIZE	touch.h	41;"	d
+CHIP_MMS427	touch.h	6;"	d
+CHIP_MMS438	touch.h	7;"	d
+CHIP_NAME	mms400_update.c	14;"	d	file:
+CHIP_NAME	mms400_update.c	9;"	d	file:
+EXTI1_IRQHandler	touch.c	/^void EXTI1_IRQHandler(void)$/;"	f
+FW_CHIP_CODE	mms400_update.c	/^u8  FW_CHIP_CODE[4] = {0x4D,0x34,0x48,0x30}; 	\/\/"M4H0"$/;"	v
+FW_CHIP_CODE	mms400_update.c	/^u8  FW_CHIP_CODE[4] = {0x4D,0x34,0x48,0x32};     \/\/"M4H2"$/;"	v
+Finger_ID	touch.h	/^  u8 Finger_ID;$/;"	m	struct:_Touch_Format
+I2C_READ_MODE	touch.h	10;"	d
+ISC_CMD_ERASE_ALL	mms400_update.h	14;"	d
+ISC_CMD_ERASE_PAGE	mms400_update.h	15;"	d
+ISC_CMD_EXIT	mms400_update.h	20;"	d
+ISC_CMD_PROGRAM_PAGE	mms400_update.h	18;"	d
+ISC_CMD_READ_PAGE	mms400_update.h	16;"	d
+ISC_CMD_READ_STATUS	mms400_update.h	19;"	d
+ISC_CMD_WRITE_PAGE	mms400_update.h	17;"	d
+ISC_PAGE_SIZE	mms400_update.h	11;"	d
+ISC_STATUS_BUSY	mms400_update.h	23;"	d
+ISC_STATUS_DONE	mms400_update.h	24;"	d
+MELFAS_MFSB	101_mfsb.c	/^uint8_t MELFAS_MFSB[] = $/;"	v
+MELFAS_MFSB	102_mfsb.c	/^uint8_t MELFAS_MFSB[] = $/;"	v
+MELFAS_MFSB	mms400_fw.h	/^const uint8_t MELFAS_MFSB[] = $/;"	v
+MELFAS_MFSB_SIZE	101_mfsb.c	/^int MELFAS_MFSB_SIZE = 49248;$/;"	v
+MELFAS_MFSB_SIZE	102_mfsb.c	/^int MELFAS_MFSB_SIZE = 49248;$/;"	v
+MIP_BIN_TAIL_MARK	mms400_update.h	26;"	d
+MIP_BIN_TAIL_SIZE	mms400_update.h	27;"	d
+MIP_EVENT_GESTURE_DOUBLE_TAP	touch.h	27;"	d
+MIP_EVENT_GESTURE_FLICK_DOWN	touch.h	24;"	d
+MIP_EVENT_GESTURE_FLICK_LEFT	touch.h	25;"	d
+MIP_EVENT_GESTURE_FLICK_RIGHT	touch.h	23;"	d
+MIP_EVENT_GESTURE_FLICK_UP	touch.h	26;"	d
+MIP_R0_EVENT	touch.h	32;"	d
+MIP_R0_INFO	touch.h	29;"	d
+MIP_R0_STATUS	touch.h	36;"	d
+MIP_R1_EVENT_PACKET_DATA	touch.h	34;"	d
+MIP_R1_EVENT_PACKET_INFO	touch.h	33;"	d
+MIP_R1_INFO_VERSION_BOOT	touch.h	30;"	d
+MIP_R1_STATUS_EVENT_READY	touch.h	37;"	d
+MIP_R1_STATUS_TRIGGER_TYPE	touch.h	38;"	d
+MMS_EXT_FW_FORCE_UPDATE	touch.h	18;"	d
+MMS_FW_MAX_SECT_NUM	touch.h	15;"	d
+MMS_FW_UPDATE_DEBUG	touch.h	16;"	d
+MMS_FW_UPDATE_SECTION	touch.h	17;"	d
+MMS_Get_FW_Version	touch.c	/^int    MMS_Get_FW_Version(u8 Addr,u8 *ver_buf)$/;"	f
+MMS_Get_FW_Version_u16	touch.c	/^int MMS_Get_FW_Version_u16(u8 Addr,u16 *ver_buf_u16)$/;"	f
+MMS_Reboot	touch.c	/^void MMS_Reboot(void)$/;"	f
+MMS_USE_AUTO_FW_UPDATE	touch.h	14;"	d
+PTouch_EVent	touch.h	/^}Touch_Event,*PTouch_EVent;$/;"	t	typeref:struct:_Touch_Format
+TOUCHPAD_MELFAS_MMS427	touch.h	4;"	d
+TOUCHPAD_MELFAS_MMS438	touch.h	5;"	d
+TOUCH_DEVICE_ADDR	touch.h	21;"	d
+TOUCH_IC_SELECT	touch.h	8;"	d
+Touch_Event	touch.h	/^}Touch_Event,*PTouch_EVent;$/;"	t	typeref:struct:_Touch_Format
+Touch_Exti_Init	touch.c	/^void Touch_Exti_Init(void)$/;"	f
+Touch_Info	touch.c	/^Touch_Event Touch_Info;$/;"	v
+Touch_Init	touch.c	/^void Touch_Init(void)$/;"	f
+Touch_Radius	touch.h	/^  u8 Touch_Radius;$/;"	m	struct:_Touch_Format
+Touch_Status	touch.h	/^  u8 Touch_Status;$/;"	m	struct:_Touch_Format
+UPDATE_LOG_ENABLE	mms400_update.h	8;"	d
+X_Axis	touch.h	/^  u16 X_Axis;$/;"	m	struct:_Touch_Format
+Y_Axis	touch.h	/^  u16 Y_Axis;$/;"	m	struct:_Touch_Format
+Z_Pressure	touch.h	/^  u8 Z_Pressure;$/;"	m	struct:_Touch_Format
+_Touch_Format	touch.h	/^typedef  struct  _Touch_Format{$/;"	s
+__MELFAS_MFSB_C__	101_mfsb.c	7;"	d	file:
+__MELFAS_MFSB_C__	102_mfsb.c	7;"	d	file:
+__MMS400_FW_H__	mms400_fw.h	2;"	d
+__MMS400_UPDATE_H	mms400_update.h	2;"	d
+app_end	mms400_update.h	/^	u8 app_end;$/;"	m	struct:mip_bin_tail
+app_start	mms400_update.h	/^	u8 app_start;$/;"	m	struct:mip_bin_tail
+bin_length	mms400_update.h	/^	u32 bin_length;$/;"	m	struct:mip_bin_tail
+bin_start_addr	mms400_update.h	/^	u32 bin_start_addr;$/;"	m	struct:mip_bin_tail
+boot_end	mms400_update.h	/^	u8 boot_end;$/;"	m	struct:mip_bin_tail
+boot_start	mms400_update.h	/^	u8 boot_start;$/;"	m	struct:mip_bin_tail
+build_date	mms400_update.h	/^	u32 build_date;$/;"	m	struct:mip_bin_tail
+build_time	mms400_update.h	/^	u32 build_time;$/;"	m	struct:mip_bin_tail
+checksum_type	mms400_update.h	/^	u8 checksum_type;$/;"	m	struct:mip_bin_tail
+chip_name	mms400_update.h	/^	char chip_name[4];$/;"	m	struct:mip_bin_tail
+core_end	mms400_update.h	/^	u8 core_end;$/;"	m	struct:mip_bin_tail
+core_start	mms400_update.h	/^	u8 core_start;$/;"	m	struct:mip_bin_tail
+crc	mms400_update.h	/^	u32 crc;$/;"	m	struct:mip_bin_tail
+data	mms400_update.h	/^    const u8 *data;$/;"	m	struct:firmware
+end_page	mms400_update.h	/^	u16	end_page;$/;"	m	struct:mms_fw_img
+firmware	mms400_update.h	/^struct firmware {$/;"	s
+fw_err_download	mms400_update.h	/^	fw_err_download = -1,$/;"	e	enum:fw_update_errno
+fw_err_file_open	mms400_update.h	/^	fw_err_file_open = -3,$/;"	e	enum:fw_update_errno
+fw_err_file_read	mms400_update.h	/^	fw_err_file_read = -4,$/;"	e	enum:fw_update_errno
+fw_err_file_type	mms400_update.h	/^	fw_err_file_type = -2,$/;"	e	enum:fw_update_errno
+fw_err_none	mms400_update.h	/^	fw_err_none = 0,$/;"	e	enum:fw_update_errno
+fw_err_retries_over	mms400_update.h	/^       fw_err_retries_over = -5,$/;"	e	enum:fw_update_errno
+fw_err_uptodate	mms400_update.h	/^	fw_err_uptodate = 1,$/;"	e	enum:fw_update_errno
+fw_update_errno	mms400_update.h	/^enum fw_update_errno{$/;"	g
+hw_category	mms400_update.h	/^	u8 hw_category;$/;"	m	struct:mip_bin_tail
+length	mms400_update.h	/^	u32	length;$/;"	m	struct:mms_fw_img
+main	test.c	/^int main (void)$/;"	f
+melfas_fw	mms400_update.c	/^struct firmware melfas_fw = $/;"	v	typeref:struct:firmware
+mip_bin_tail	mms400_update.h	/^struct mip_bin_tail {$/;"	s
+mms_flash_fw	mms400_update.c	/^int mms_flash_fw(u8 Addr,  const u8 *fw_data, u16 fw_size, bool force, bool section)$/;"	f
+mms_fw_img	mms400_update.h	/^struct mms_fw_img {$/;"	s
+mms_i2c_read	touch.c	/^int mms_i2c_read(u8 device, u8 *write_buf, u16 write_len, u8 *read_buf, u16 read_len)$/;"	f
+mms_i2c_write	touch.c	/^int mms_i2c_write(u8 device, u8 *write_buf, u16 write_len)$/;"	f
+mms_isc_erase_page	mms400_update.c	/^static int mms_isc_erase_page(u8 addr)$/;"	f	file:
+mms_isc_exit	mms400_update.c	/^static int mms_isc_exit(u8 addr)$/;"	f	file:
+mms_isc_program_page	mms400_update.c	/^static int mms_isc_program_page(u8 addr, int offset,const u8 *data, int length)$/;"	f	file:
+mms_isc_read_page	mms400_update.c	/^static int mms_isc_read_page(u8 addr,int offset, u8 *data)$/;"	f	file:
+mms_isc_read_status	mms400_update.c	/^static int mms_isc_read_status(u8 addr)$/;"	f	file:
+offset	mms400_update.h	/^	u32	offset;$/;"	m	struct:mms_fw_img
+param_end	mms400_update.h	/^	u8 param_end;$/;"	m	struct:mip_bin_tail
+param_id	mms400_update.h	/^	u16 param_id;$/;"	m	struct:mip_bin_tail
+param_length	mms400_update.h	/^	u32 param_length;$/;"	m	struct:mip_bin_tail
+param_start	mms400_update.h	/^	u8 param_start;$/;"	m	struct:mip_bin_tail
+reserved1	mms400_update.h	/^	u32 reserved1;$/;"	m	struct:mip_bin_tail
+reserved2	mms400_update.h	/^	u32 reserved2;$/;"	m	struct:mip_bin_tail
+reserved3	mms400_update.h	/^	u16 reserved3;$/;"	m	struct:mip_bin_tail
+size	mms400_update.h	/^    size_t size;$/;"	m	struct:firmware
+start_page	mms400_update.h	/^	u16	start_page;$/;"	m	struct:mms_fw_img
+tail_mark	mms400_update.h	/^	u8 tail_mark[4];$/;"	m	struct:mip_bin_tail
+tail_size	mms400_update.h	/^	u16 tail_size;$/;"	m	struct:mip_bin_tail
+type	mms400_update.h	/^	u16	type;$/;"	m	struct:mms_fw_img
+ver_app	mms400_update.h	/^	u16 ver_app;$/;"	m	struct:mip_bin_tail
+ver_boot	mms400_update.h	/^	u16 ver_boot;$/;"	m	struct:mip_bin_tail
+ver_core	mms400_update.h	/^	u16 ver_core;$/;"	m	struct:mip_bin_tail
+ver_param	mms400_update.h	/^	u16 ver_param;$/;"	m	struct:mip_bin_tail
+version	mms400_update.h	/^	u16	version;$/;"	m	struct:mms_fw_img

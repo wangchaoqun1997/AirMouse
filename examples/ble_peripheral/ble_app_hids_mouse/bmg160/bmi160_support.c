@@ -139,11 +139,11 @@ BMI160_RETURN_FUNCTION_TYPE ivg_bmi160_init(void)
 	s_bmi160.delay_msec(100);
 	s_bmi160.delay_msec(BMI160_GEN_READ_WRITE_DELAY);/* bmi160_delay_ms in ms*/
 	/* set gyro data rate as 1600Hz*/
-	com_rslt += bmi160_set_gyro_output_data_rate(BMI160_GYRO_OUTPUT_DATA_RATE_100HZ);
+	com_rslt += bmi160_set_gyro_output_data_rate(BMI160_GYRO_OUTPUT_DATA_RATE_400HZ);
 	s_bmi160.delay_msec(100);
 	s_bmi160.delay_msec(BMI160_GEN_READ_WRITE_DELAY);/* bmi160_delay_ms in ms*/
 	/* set accel data rate as 1600Hz*/
-	com_rslt += bmi160_set_accel_output_data_rate(BMI160_ACCEL_OUTPUT_DATA_RATE_100HZ, BMI160_ACCEL_OSR4_AVG1);
+	com_rslt += bmi160_set_accel_output_data_rate(BMI160_ACCEL_OUTPUT_DATA_RATE_400HZ, BMI160_ACCEL_OSR4_AVG1);
 	s_bmi160.delay_msec(100);
 	s_bmi160.delay_msec(BMI160_GEN_READ_WRITE_DELAY);/* bmi160_delay_ms in ms*/
 
@@ -151,7 +151,7 @@ BMI160_RETURN_FUNCTION_TYPE ivg_bmi160_init(void)
  //  bmi160_set_gyro_range not do , just as defaut 2000
  //  bmi160_set_acc_range   not do , just as defaut 2G
  
- #if 1
+ #if 0
 // interrupt 
 	/* Configure the in/out control of interrupt1*/
 	com_rslt = bmi160_set_output_enable(0,BMI160_ENABLE);

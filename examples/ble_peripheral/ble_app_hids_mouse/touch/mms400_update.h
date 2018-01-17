@@ -1,9 +1,14 @@
 #ifndef __MMS400_UPDATE_H
 #define __MMS400_UPDATE_H
-#include "sys.h"
+//#include "sys.h"
 #include "touch.h"
-#include <stdbool.h>
-#include <stddef.h>
+//#include <stdbool.h>
+//#include <stddef.h>
+
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "app_timer.h"
+#include "nrf_delay.h"
 
 #define  UPDATE_LOG_ENABLE               0
 

@@ -111,7 +111,7 @@ static void on_write(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
     }
 }
 
-
+extern void custom_on_write(ble_bas_t * p_bas, ble_evt_t * p_ble_evt);
 void ble_bas_on_ble_evt(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
 {
     if (p_bas == NULL || p_ble_evt == NULL)
@@ -131,6 +131,7 @@ void ble_bas_on_ble_evt(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
 
         case BLE_GATTS_EVT_WRITE:
             on_write(p_bas, p_ble_evt);
+			custom_on_write(p_bas, p_ble_evt);
             break;
 
         default:

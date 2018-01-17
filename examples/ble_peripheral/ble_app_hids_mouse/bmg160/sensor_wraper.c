@@ -16,7 +16,7 @@ typedef unsigned int u32 ;
 typedef unsigned char u8 ;
 typedef short         s16 ;
 typedef char         s8 ;
-APP_TIMER_DEF(sensor_poll_timer_id);
+//APP_TIMER_DEF(sensor_poll_timer_id);
 struct bmi160_gyro_t {
 	s16 x;/**<gyro X  data*/
 	s16 y;/**<gyro Y  data*/
@@ -98,6 +98,7 @@ int  SENSOR_READ_TEST(float * buf)
 	buf[3] =((float)g_accelxyz.y*9.807f)/16384.0f;
 	buf[4] =((float)g_accelxyz.x*9.807f)/16384.0f;
 	buf[5] =((float)g_accelxyz.z*9.807f)/16384.0f;
+
 
 #ifdef TIME_DUR_DEBUG	 
 	duringUs=get_during_us();
@@ -287,7 +288,7 @@ void  SENSOR_LAST_PROCESS(float * buf)
 
 }
 #endif
- void SENSOR_READ_RAW_INT(void)
+ void SENSOR_READ_RAW_INT(float *buf)
 {
 	
 #ifdef BMI160_DEBUG
@@ -311,6 +312,9 @@ void  SENSOR_LAST_PROCESS(float * buf)
 
 	bmi160_read_gyro_xyz(&g_gyroxyz);
 	//printf("gyx %d\n\r",g_gyroxyz.x);
+	buf[0] =(float)(g_gyroxyz.y);
+	buf[1] =(float)(g_gyroxyz.x);
+	buf[2] =(float)(g_gyroxyz.z);
 #ifdef TIME_DUR_DEBUG	
 	duringUs=get_during_us();
 	printf("us:%d \n\r", duringUs);
