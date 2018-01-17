@@ -556,6 +556,18 @@ static void dis_init(void)
  #ifdef USE_SHADOW_CREATE
 #include "nrf_drv_twi.h"
 #include "nrf_delay.h"
+
+#define K_RIGHT 0x4F //right
+#define K_LEFT  0x50 //left
+#define K_DOWN  0x51 //down
+#define K_UP    0x52 //up
+#define K_ENTER 0x28 //right
+#define F8      0x41 //right
+#define F9      0x42 //left
+#define F10     0x43 //down
+#define F11     0x44 //up
+#define F12     0x45 //right
+
 /* TWI instance. */
 /* TWI instance ID. */
 #define TWI_INSTANCE_ID     0
@@ -721,14 +733,14 @@ void sw3153_config(void)
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
 
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE,   RISE_TIME<<4 | HOLD_TIME);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE,   FALL_TIME<<4 | OFF_TIME);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+0,   RISE_TIME<<4 | HOLD_TIME);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+1,   FALL_TIME<<4 | OFF_TIME);
 		nrf_delay_us(8);
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3, RISE_TIME<<4 | HOLD_TIME);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3, FALL_TIME<<4 | OFF_TIME);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+4, FALL_TIME<<4 | OFF_TIME);
 		nrf_delay_us(8);
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, RISE_TIME<<4 | HOLD_TIME);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, FALL_TIME<<4 | OFF_TIME);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+7, FALL_TIME<<4 | OFF_TIME);
 		nrf_delay_us(8);
 	
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x44);
@@ -750,6 +762,19 @@ void sw3153_blink_on(void)
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE,   WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+}
+void sw3153_blink_on_set(uint8_t rise_time,uint8_t fall_time,uint8_t hold_time,uint8_t off_time)
+{
+		sw3153_blink_on();
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+0, rise_time<<4 | hold_time);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+1, fall_time<<4 | off_time);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3, rise_time<<4 | hold_time);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+4, fall_time<<4 | off_time);
+		nrf_delay_us(8);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, rise_time<<4 | hold_time);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+7, fall_time<<4 | off_time);
+		nrf_delay_us(8);
 }
 void sw3153_green(void)
 {
@@ -1779,11 +1804,13 @@ static void bsp_event_handler(bsp_event_t event)
             }
             break;
 
-        case BSP_EVENT_KEY_1:
+        case BSP_EVENT_KEY_1: //back
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
 					uint8_t temp = 0xFF;//0x01<<4;
 					if(Mode_test == true){
+						sw3153_blue();
+						sw3153_blink_on_set(0x03,0x03,0x03,0x03);
 						uint8_t temp1[2] = {TEST_DATA,0xFF};//0x01<<4;
 						custom_on_send(m_conn_handle,&m_bas,temp1,sizeof(temp1));
 						break;
@@ -1820,10 +1847,27 @@ static void bsp_event_handler(bsp_event_t event)
 				}
 			}
             break;
-        case BSP_EVENT_KEY_0:
+        case BSP_EVENT_KEY_0://up down left rigth
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
 				if(Mode_test == true){
+					if(report_key == K_UP || report_key == F8){
+						sw3153_red();
+						sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+					}else if(report_key == K_DOWN || report_key == F9){
+						sw3153_red();
+						sw3153_blink_on_set(0x03,0x03,0x03,0x03);
+					}else if(report_key == K_RIGHT || report_key == F11){
+						sw3153_green();
+						sw3153_blink_on_set(0x03,0x03,0x03,0x03);
+					}else if(report_key == K_LEFT || report_key == F10){
+						sw3153_green();
+						sw3153_blink_on_set(0x00,0x00,0x00,0x0);
+					}else if(report_key == K_ENTER || report_key == F12){
+						sw3153_blue_green();
+						sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+					}
+
 					uint8_t temp1[2] = {TEST_DATA,0xFF};
 					temp1[1]=report_key;
 					custom_on_send(m_conn_handle,&m_bas,temp1,sizeof(temp1));
@@ -1847,6 +1891,7 @@ static void bsp_event_handler(bsp_event_t event)
         case BSP_EVENT_KEY_0_LONG:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
+				Mode_switch(false,false,true);//test mode
             }
             break;
         case BSP_EVENT_KEY_0_RELEASE:
@@ -1877,6 +1922,8 @@ static void bsp_event_handler(bsp_event_t event)
             {	
 					uint8_t power_key[2]={TEST_DATA,0x11};
 					if(Mode_test == true){
+						sw3153_blue();
+						sw3153_blink_on_set(0x00,0x00,0x00,0x00);
 						custom_on_send(m_conn_handle,&m_bas,power_key,sizeof(power_key));
 					}
                 //mouse_movement_send(MOVEMENT_SPEED, 0);
@@ -1987,16 +2034,6 @@ static void power_manage(void)
 ret_code_t eventsize;
 #include "nrf_drv_gpiote.h"
 
-#define K_RIGHT 0x4F //right
-#define K_LEFT  0x50 //left
-#define K_DOWN  0x51 //down
-#define K_UP    0x52 //up
-#define K_ENTER 0x28 //right
-#define F8      0x41 //right
-#define F9      0x42 //left
-#define F10     0x43 //down
-#define F11     0x44 //up
-#define F12     0x45 //right
 uint8_t interr;
 static uint16_t tp_firmware_version(void)
 {
