@@ -525,9 +525,9 @@ uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
         {
             m_peer_addr_reply_expected = false;
         }
-		bond_error++;
-		if(bond_error == 20)
-			sleep_mode_enter();
+			bond_error++;
+			if(bond_error == 30)
+				sleep_mode_enter();
     }
 
 NRF_LOG_INFO("advertis start mode start== %d\r\n",advertising_mode);

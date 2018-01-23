@@ -19,14 +19,4 @@ SECTIONS
   } > RAM
 } INSERT AFTER .data;
 
-SECTIONS
-{
-  .pwr_mgmt_data :
-  {
-    PROVIDE(__start_pwr_mgmt_data = .);
-    KEEP(*(SORT(.pwr_mgmt_data*)))
-    PROVIDE(__stop_pwr_mgmt_data = .);
-  } > FLASH
-} INSERT AFTER .text
-
 INCLUDE "nrf5x_common.ld"

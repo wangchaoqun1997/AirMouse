@@ -1,0 +1,11 @@
+mergehex.exe --merge s132_nrf52_2.0.0_softdevice.hex app_s132.hex nrf52832_xxaa_s132.hex --output whole.hex
+
+nrfjprog.exe --eraseall -f NRF52
+nrfjprog.exe --program whole.hex --verify -f NRF52 
+nrfjprog.exe --memwr 0x0007F000 --val 0x01 --verify -f NRF52          
+;nrfjprog.exe --memwr 0x10001200 --val 0x00000015 --verify -f NRF52   ;open this line if reset pin should be enabled; otherwise delete this line 
+;nrfjprog.exe --memwr 0x10001204 --val 0x00000015 --verify -f NRF52   ;open this line if reset pin should be enabled; otherwise delete this line
+nrfjprog.exe --debugreset -f NRF52
+
+pause
+

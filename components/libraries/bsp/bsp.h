@@ -152,6 +152,7 @@ typedef enum
     BSP_EVENT_DEFAULT,                      /**< Assign this event to an action to assign the default event to the action. */
     BSP_EVENT_CLEAR_BONDING_DATA,           /**< Persistent bonding data should be erased. */
     BSP_EVENT_CLEAR_ALERT,                  /**< An alert should be cleared. */
+    BSP_EVENT_ENTER_TEST,                  /**< An alert should be cleared. */
     BSP_EVENT_DISCONNECT,                   /**< A link should be disconnected. */
     BSP_EVENT_ADVERTISING_START,            /**< The device should start advertising. */
     BSP_EVENT_ADVERTISING_STOP,             /**< The device should stop advertising. */

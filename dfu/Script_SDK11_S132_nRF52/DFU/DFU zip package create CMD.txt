@@ -1,0 +1,1 @@
+nrfutil.exe dfu genpkg --application app_s132.hex --application-version 1 DFU_app_s132.zip

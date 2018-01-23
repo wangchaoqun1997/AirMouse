@@ -92,12 +92,12 @@ static void detection_delay_timeout_handler(void * p_context)
         }
     }
 }
-int8_t key_num_2=0;
+
 static void gpiote_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
     uint32_t err_code;
     uint32_t pin_mask = 1 << pin;
-key_num_2++;
+
     // Start detection timer. If timer is already running, the detection period is restarted.
     // NOTE: Using the p_context parameter of app_timer_start() to transfer the pin states to the
     //       timeout handler (by casting event_pins_mask into the equally sized void * p_context

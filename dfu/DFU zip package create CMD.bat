@@ -1,0 +1,2 @@
+X:\nRF5_SDK_13.1.0_7ca7556\dfu\tools\nrfutil.exe pkg generate --application X:\nRF5_SDK_13.1.0_7ca7556\dfu\nrf52832_xxaa.hex --application-version 2 --hw-version 52 --sd-req 0x98 --key-file X:\nRF5_SDK_13.1.0_7ca7556\dfu\priv.pem X:\nRF5_SDK_13.1.0_7ca7556\dfu\DFU_app_sec.zip
+pause

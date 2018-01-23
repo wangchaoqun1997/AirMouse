@@ -75,7 +75,21 @@ extern void start_during(void );
 extern uint32_t get_during_us(void);
 char vr_get_data_mode(void);
 
+int  SENSOR_READ_TEST_2(float * buf)
+{ 
+	bmi160_read_gyro_xyz(&g_gyroxyz);
+	bmi160_read_accel_xyz(&g_accelxyz);
+	//gyro for android rad/s
+	buf[0] =(float)(g_gyroxyz.y);
+	buf[1] =(float)(g_gyroxyz.x);
+	buf[2] =(float)(g_gyroxyz.z);
 
+	// acc for android m/s2
+	buf[3] =((float)g_accelxyz.y);
+	buf[4] =((float)g_accelxyz.x);
+	buf[5] =((float)g_accelxyz.z);
+
+}
 int  SENSOR_READ_TEST(float * buf)
 { 
 #ifdef TIME_DUR_DEBUG	 

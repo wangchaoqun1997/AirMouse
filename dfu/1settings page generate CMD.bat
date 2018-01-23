@@ -1,0 +1,3 @@
+;nrfutil settings generate --family NRF52 --application app.hex --application-version 1 --bootloader-version 2 --bl-settings-version 1 settings.hex
+X:\nRF5_SDK_13.1.0_7ca7556\dfu\tools\nrfutil.exe settings generate --family NRF52 --application X:\nRF5_SDK_13.1.0_7ca7556\dfu\nrf52832_xxaa.hex --application-version 1 --bootloader-version 2 --bl-settings-version 1 X:\nRF5_SDK_13.1.0_7ca7556\dfu\settings.hex
+pause
