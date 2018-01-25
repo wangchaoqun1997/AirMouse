@@ -1043,3 +1043,21 @@ void bmi160_delay_ms(u32 msek)
 	nrf_delay_ms(msek);
 #endif
 }
+
+BMI160_RETURN_FUNCTION_TYPE bmi160_suspend(void){
+	bmi160_set_command_register(ACCEL_SUSPEND);
+		/* bmi160_delay_ms in ms*/
+	s_bmi160.delay_msec(BMI160_MODE_SWITCHING_DELAY);
+	bmi160_set_command_register(GYRO_MODE_SUSPEND);
+		/* bmi160_delay_ms in ms*/
+	s_bmi160.delay_msec(BMI160_MODE_SWITCHING_DELAY);
+}
+BMI160_RETURN_FUNCTION_TYPE bmi160_resume(void){
+	bmi160_set_command_register(ACCEL_MODE_NORMAL);
+		/* bmi160_delay_ms in ms*/
+	s_bmi160.delay_msec(BMI160_MODE_SWITCHING_DELAY);
+	/*Set the gyro mode as Normal write in the register 0x7E*/
+	bmi160_set_command_register(GYRO_MODE_NORMAL);
+		/* bmi160_delay_ms in ms*/
+	s_bmi160.delay_msec(BMI160_MODE_SWITCHING_DELAY);
+}

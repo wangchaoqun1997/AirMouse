@@ -189,7 +189,10 @@ static void startup_event_extract(bsp_event_t * p_startup_event)
 	if( bsp_button_is_pressed(BTN_ID_WAKEUP_BOND_DELETE)){
 		if(bsp_button_is_pressed(BTN_ID_BACK) ){
 			if(bsp_button_is_pressed(BTN_ID_TOUCH)){
-        	*p_startup_event = BSP_EVENT_CLEAR_BONDING_DATA;}
+        		*p_startup_event = BSP_EVENT_CLEAR_BONDING_DATA;
+			}else{
+        		*p_startup_event = BSP_EVENT_ENTER_CALIBRATE;
+			}
 		}else if(bsp_button_is_pressed(BTN_ID_TOUCH)){
 			*p_startup_event = BSP_EVENT_ENTER_TEST;
 		}

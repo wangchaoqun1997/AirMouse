@@ -82,7 +82,7 @@ extern "C" {
 #define BSP_BUTTONS_ALL      0xFFFFFFFF
 #define BSP_BUTTONS_NONE     0
 
-#define BSP_LONG_PUSH_TIMEOUT_MS (4000) /**< The time to hold for a long push (in milliseconds). */
+#define BSP_LONG_PUSH_TIMEOUT_MS (3000) /**< The time to hold for a long push (in milliseconds). */
 /**@brief Types of BSP initialization.
  */
 
