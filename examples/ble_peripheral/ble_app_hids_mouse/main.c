@@ -605,7 +605,6 @@ bool mode_will_cal=false;
 /* TWI instance ID. */
 #define TWI_INSTANCE_ID     0
 //-----init starus
-bool open_imu_send = false;
 bool Mode_2D =false;
 bool Mode_3D =false;
 bool Mode_test =false;
@@ -627,6 +626,10 @@ MODE_TEST,
 MODE_CALIBRATE,
 MODE_DISCONNECT,
 };
+//init status
+bool open_imu_send = true;
+enum Mode_select MODE_INIT = MODE_3D;
+//
 enum key_value{
 SHORT_STATUS=1,
 LONG_STATUS=2,
@@ -1895,7 +1898,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 					Mode_switch(MODE_2D,true);
 				}
 			}else{
-				Mode_switch(MODE_2D,false);
+				Mode_switch(MODE_INIT,false);
 			}
 			
 			if(Mode_2D == true || Mode_3D == true){
