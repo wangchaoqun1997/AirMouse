@@ -91,6 +91,7 @@ CHARGER_BATTERY_LOW,
 CHARGER_BATTERY_NOMAL,
 CHARGER_BATTERY_UNKONW,
 };
+static bool plug_in_flag=false;
 static enum status_flag_ status_flag=CHARGER_BATTERY_NOMAL;
 static enum status_flag_ status_flag_lastest=CHARGER_BATTERY_NOMAL;
 #include "ble_bas.h"
@@ -104,12 +105,11 @@ static void battery_led_start(void)
 	app_timer_start(battery_led_id,APP_TIMER_TICKS(10),NULL);//8min
 }
 #define BATTERY_CAPCITY 520
-
 static enum status_flag_ analyze_plug_status(nrf_saadc_value_t *battery_level_trend)
 {
-	nrf_saadc_value_t battery_init_adc=(battery_level_trend[2]+battery_level_trend[1]+battery_level_trend[0])/3;
-	
-		if((battery_level_trend[1]>battery_level_trend[0]) &&(battery_level_trend[2]>battery_level_trend[1]) &&(battery_level_trend[3]>battery_level_trend[2])&&(battery_level_trend[4]>=battery_level_trend[3]-2)){
+
+	//nrf_saadc_value_t battery_init_adc=(battery_level_trend[2]+battery_level_trend[1]+battery_level_trend[0])/3;
+		if((battery_level_trend[1]>=battery_level_trend[0]) &&(battery_level_trend[2]>=battery_level_trend[1]) &&(battery_level_trend[3]>=battery_level_trend[2])&&(battery_level_trend[4]>=battery_level_trend[3])&&((battery_level_trend[4]-3)>=battery_level_trend[0])){
 				NRF_LOG_INFO("charger plug in !!!! \r\n");
 				status_flag = CHARGER_PLUG_IN;
 				battery_led_start();
@@ -192,12 +192,12 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 					}
 				}
 ////////------------------
-				static char slowness=0;//200ms
+				static int slowness=0;//200ms
 				static char time_slow=0;
 				if(time_slow == BATTERY_BUFFER_SLOW)
 					time_slow = 0;
 				slowness++;
-				if(slowness >= 110){//100*110 =11 000ms
+				if(slowness >= 1000){//100*1800 =180 000ms
 					slowness = 0;
 					battery_buffer_slow[time_slow++]=sample_avg;
 				}
@@ -217,8 +217,10 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 				if(level_updata >60){
 					level_updata=0;
 					//battery_level =(char)( (battery_level_adc_slow*0.119));
+					if(battery_level_adc_slow<BATTERY_LOW)
+							battery_level_adc_slow = BATTERY_LOW;
 					battery_level =(char)( ((battery_level_adc_slow-BATTERY_LOW)*0.34));
-					if(battery_level>=100)
+					if(battery_level>=88)
 						battery_level=100;
 					if(battery_level<=0)
 						battery_level=1;
@@ -253,16 +255,16 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 				   (((battery_level_adc - battery_level_adc_laster)>4 || (battery_level_adc_laster - battery_level_adc)>4) && battery_level_adc > 800)
 				  )	
 				#else
-				   ((battery_level_adc - battery_level_adc_laster)>=5)
+				   ((battery_level_adc - battery_level_adc_laster)>=1)
 				#endif
 				   && 
 				  start_sample==false 
 				  ){
 					NRF_LOG_INFO("start_sample----------- \r\n");
 					start_sample=true;
-				}else if(battery_level_adc_slow >= (BATTERY_FULL)){
+				}else if(battery_level==100/*battery_level_adc_slow >= (BATTERY_FULL)*/){
 					status_flag = CHARGER_BATTERY_FULL;
-				}else if(battery_level_adc_slow <= (BATTERY_LOW)){
+				}else if(battery_level<=20/*battery_level_adc_slow <= (680BATTERY_LOW)*/){
 					status_flag = CHARGER_BATTERY_LOW;
 					battery_led_start();
 				}else{
@@ -353,8 +355,10 @@ static void battery_led_handler(void* p_context)
 		sw3153_blink_on_set(0x00,0x00,0x00,0x00);
 		nrf_delay_ms(2000);
 		led_reset();
+		plug_in_flag=true;
 	}else if(CHARGER_PLUG_OUT == status_flag){
 			led_reset();
+		plug_in_flag=false;
 	}else if(CHARGER_BATTERY_NOMAL == status_flag){
 		//sw3153_red();
 		//sw3153_blink_on_set(0x03,0x03,0x03,0x03);
@@ -362,13 +366,19 @@ static void battery_led_handler(void* p_context)
 			led_reset();
 	}else if(CHARGER_BATTERY_LOW == status_flag){
 		sw3153_red();
-		sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+		sw3153_blink_on_set(0x01,0x01,0x01,0x01);
 		//nrf_delay_ms(2000);
 	}else if(CHARGER_BATTERY_FULL == status_flag){
 		//sw3153_green();
 		//sw3153_blink_on_set(0x00,0x00,0x00,0x00);
-		//nrf_delay_ms(2000);	
+		//nrf_delay_ms(2000);
+		if(plug_in_flag == true){
+			sw3153_green();
+			sw3153_blink_on_set(0x02,0x02,0x02,0x02);
+			nrf_delay_ms(2000);
 			led_reset();
+			plug_in_flag=false;
+		}
 	}
 
 	//battery_led_start();
