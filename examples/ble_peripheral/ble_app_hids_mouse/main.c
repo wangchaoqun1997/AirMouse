@@ -92,7 +92,7 @@
 
 
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "wangcq327_v1.0.0"                       /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v1.0.1"                       /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                        /**< Battery level measurement interval (ticks). */
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum simulated battery level. */
@@ -162,10 +162,10 @@
 
 
 static ble_hids_t     m_hids;                                                       /**< Structure used to identify the HID service. */
-static ble_bas_t      m_bas;                                                        /**< Structure used to identify the battery service. */
+ble_bas_t      m_bas;                                                        /**< Structure used to identify the battery service. */
 static nrf_ble_gatt_t m_gatt;
 static bool           m_in_boot_mode = false;                                       /**< Current protocol mode. */
-static uint16_t       m_conn_handle  = BLE_CONN_HANDLE_INVALID;                     /**< Handle of the current connection. */
+uint16_t       m_conn_handle  = BLE_CONN_HANDLE_INVALID;                     /**< Handle of the current connection. */
 
 static sensorsim_cfg_t   m_battery_sim_cfg;                                         /**< Battery Level sensor simulator configuration. */
 static sensorsim_state_t m_battery_sim_state;                                       /**< Battery Level sensor simulator state. */
@@ -208,6 +208,7 @@ APP_TIMER_DEF(touch_timer_id);
 APP_TIMER_DEF(mouse_slow_id);
 APP_TIMER_DEF(sensor_cal_id);
 APP_TIMER_DEF(connect_sleep_id);
+APP_TIMER_DEF(saadc_sample_id);
 APP_TIMER_DEF(sensor_poll_timer_id);
 //--------------dfu end
 ble_gatts_char_handles_t custom_char_handles;
@@ -463,12 +464,13 @@ static void ble_advertising_error_handler(uint32_t nrf_error)
 
 /**@brief Function for performing a battery measurement, and update the Battery Level characteristic in the Battery Service.
  */
+extern char battery_level;
 static void battery_level_update(void)
 {
     ret_code_t err_code;
-    uint8_t  battery_level;
+    //uint8_t  battery_level;
 
-    battery_level = (uint8_t)sensorsim_measure(&m_battery_sim_state, &m_battery_sim_cfg);
+    //battery_level = (uint8_t)sensorsim_measure(&m_battery_sim_state, &m_battery_sim_cfg);
 
     err_code = ble_bas_battery_level_update(&m_bas, battery_level);
     if ((err_code != NRF_SUCCESS) &&
@@ -477,7 +479,7 @@ static void battery_level_update(void)
         (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
        )
     {
-        APP_ERROR_HANDLER(err_code);
+        //APP_ERROR_HANDLER(err_code);
     }
 }
 
@@ -628,7 +630,7 @@ MODE_DISCONNECT,
 };
 //init status
 bool open_imu_send = true;
-enum Mode_select MODE_INIT = MODE_3D;
+enum Mode_select MODE_INIT = MODE_2D;
 //
 enum key_value{
 SHORT_STATUS=1,
@@ -1263,6 +1265,29 @@ static void connect_sleep_stop(void)
 {
 	app_timer_stop(connect_sleep_id);
 }
+//--saadc oper start
+extern int saadc_sample_time_ms;
+static void saadc_sample_start(void)
+{
+	app_timer_start(saadc_sample_id,APP_TIMER_TICKS(saadc_sample_time_ms),NULL);
+}
+static void saadc_sample_stop(void)
+{
+	app_timer_stop(saadc_sample_id);
+}
+static void saadc_sample_handler(void* p_context)
+{
+	//NRF_LOG_INFO("saadc_sample_handler -------------\r\n");
+  nrf_drv_saadc_sample();
+	saadc_sample_start();
+}
+static void saadc_sample_init(void)
+{
+	NRF_LOG_INFO("saadc_sample_init -------------\r\n");
+	app_timer_create(&saadc_sample_id,APP_TIMER_MODE_SINGLE_SHOT,saadc_sample_handler);
+}
+
+
 
 int8_t sensor_data[sizeof(float)*3+1]={0};
 static uint32_t custom_char_add(ble_bas_t * p_bas, const ble_bas_init_t * p_bas_init)
@@ -1347,6 +1372,8 @@ void custom_on_write(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
 				sw3153_blue();
 			}else if(p_evt_write->data[0] == 'I'){
 				open_imu_send = true;
+			}else if(p_evt_write->data[0] == 'i'){
+				open_imu_send = false;
 			}
         }
     }
@@ -3091,19 +3118,22 @@ int main(void)
     // Start execution.
     NRF_LOG_INFO("HID Mouse example started. erase_bonds %d\r\n",erase_bonds);
     timers_start();
+	saadc_init();
 	
 	sw3153_config();
 	fds_test_init();
 	sensor_cal_status();
-
+	
 
 	touch_timer_init();
 	mouse_slow_init();
 	connect_sleep_init();
+	saadc_sample_init();
 
 	SENSOR_INIT();
 	SENSOR_INIT_1();
 	sensor_poll_start();
+	saadc_sample_start();
 
 	if(mode_will_cal == true){
 		//Mode_switch(MODE_CALIBRATE,false);
