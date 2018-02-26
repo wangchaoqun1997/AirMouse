@@ -972,6 +972,7 @@ void sleep_mode_enter_power(void)
     //APP_ERROR_CHECK(err_code);
     // Prepare wakeup buttons.
 		sw3153_off();
+	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
     NRF_LOG_INFO("power Enter sleep mode ........\r\n");
     err_code = bsp_btn_ble_sleep_mode_prepare();
     NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
@@ -1753,6 +1754,7 @@ void sleep_mode_enter(void)
 if(Mode_test ==false){
     // Prepare wakeup buttons.
 		sw3153_off();
+	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
     NRF_LOG_INFO("not test Enter sleep mode ........\r\n");
     err_code = bsp_btn_ble_sleep_mode_prepare();
     NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
