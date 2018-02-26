@@ -595,6 +595,8 @@ static void dis_init(void)
 #define K_DOWN  0x51 //down
 #define K_UP    0x52 //up
 #define K_ENTER 0x28 //right
+#define K_VOL_UP (0x01<<5) //right
+#define K_VOL_DOWN (0x01<<4) //right
 #define F8      0x41 //right
 #define F9      0x42 //left
 #define F10     0x43 //down
@@ -612,6 +614,7 @@ bool Mode_3D =false;
 bool Mode_test =false;
 bool Mode_calibrate =false;
 bool Mode_mouse =false;
+bool Mode_custom1 =false;//mod_vol
 //------
 bool mouse_push =false;
 bool push_button =false;
@@ -625,6 +628,7 @@ enum Mode_select{
 MODE_2D=0x10,
 MODE_3D,
 MODE_TEST,
+MODE_CUSTOM1,
 MODE_CALIBRATE,
 MODE_DISCONNECT,
 };
@@ -890,6 +894,7 @@ Mode_calibrate
 		Mode_2D = false;
 		Mode_3D = false;
 		Mode_test = false;
+		Mode_custom1 = false;
 		Mode_calibrate = false;
 		Mode_mouse = false;
 		if(Mode == MODE_2D){
@@ -917,9 +922,13 @@ Mode_calibrate
 		}else if(Mode == MODE_DISCONNECT){
 			sw3153_blue();
 			sw3153_blink_on();
+		}else if(Mode == MODE_CUSTOM1){
+			Mode_custom1=true;
+			sw3153_red();
+			sw3153_blink_on_set(0x00,0x00,0x00,0x00);
 		}
 
-		if(Mode == MODE_3D || Mode == MODE_TEST || Mode == MODE_CALIBRATE || Mode_mouse == true){
+		if(Mode == MODE_3D || Mode == MODE_TEST || Mode == MODE_CALIBRATE || Mode_mouse == true || Mode == MODE_CUSTOM1){
 			bmi160_resume();
 		}else{
 			bmi160_suspend();
@@ -2484,19 +2493,29 @@ static void bsp_event_handler(bsp_event_t event)
 
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
+				static  enum Mode_select mode_keep;
 				if(Mode_2D == true){
-					if(Mode_mouse == true){	
-						Mode_switch(MODE_2D,false);
-					}else{
+					mode_keep = MODE_2D;
+					if(Mode_mouse == false){	
 						Mode_switch(MODE_2D,true);
+					}else if(Mode_mouse == true){
+						Mode_switch(MODE_CUSTOM1,false);
 					}
 				}else if(Mode_3D == true){
+					mode_keep = MODE_3D;
 					if(Mode_mouse == true){
 						Mode_switch(MODE_3D,false);	
 					}else{
-						Mode_switch(MODE_3D,false);
+						Mode_switch(MODE_CUSTOM1,false);
 					}
-				}/*
+				}else if(Mode_custom1 == true){
+					if(mode_keep == MODE_2D){
+						Mode_switch(MODE_2D,false);
+					}else if(mode_keep == MODE_3D){
+						Mode_switch(MODE_3D,false);
+					}	
+				}
+				/*
 				if(Mode_mouse == false && Mode_3D == false){
 					Mode_switch(MODE_2D,true);
 					//Mode_switch(false,true,false);
@@ -2858,6 +2877,22 @@ key_cal = report_key_touch;
 					     //nothing	
 						}else if(push_button == true){
 							push_button = false;
+						}else if(Mode_custom1 == true){
+							if(report_key_touch == K_UP || report_key_touch == K_RIGHT){
+								for(int i=0;i<2;i++){
+									report_key_touch = K_VOL_UP;
+									ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&report_key_touch);
+									report_key_touch = 0x00;
+									ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&report_key_touch);
+								}
+							}else if(report_key_touch == K_DOWN || report_key_touch == K_LEFT){
+								for(int i=0;i<2;i++){
+									report_key_touch = K_VOL_DOWN;
+									ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&report_key_touch);
+									report_key_touch = 0x00;
+									ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&report_key_touch);
+								}
+							}
 						}else if(report_key_touch != 0x00 && Mode_mouse == false && Mode_3D == false){
 							ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM1_INDEX,INPUT_REP_CUSTOM1_LEN,&report_key_touch);
 							report_key_touch = 0x00;
