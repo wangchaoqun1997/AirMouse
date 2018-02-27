@@ -150,9 +150,9 @@ int  SENSOR_READ_TEST(float * buf)
 	g_gyroxyz.z -= apply_gyro_offset_Z;
     //NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
 	//gyro for android rad/s
-	buf[0] =(float)(g_gyroxyz.y+3)/938.0f;
-	buf[1] =(float)(g_gyroxyz.x+3)/938.0f;
-	buf[2] =(float)(g_gyroxyz.z+8)/938.0f;
+	buf[0] =(float)(g_gyroxyz.y)/938.0f;
+	buf[1] =(float)(g_gyroxyz.x)/938.0f;
+	buf[2] =(float)(g_gyroxyz.z)/938.0f;
 
 	// acc for android m/s2
 	buf[3] =((float)g_accelxyz.y*9.807f)/16384.0f;
