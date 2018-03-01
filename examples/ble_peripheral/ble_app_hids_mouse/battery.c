@@ -114,7 +114,7 @@ static enum status_flag_ analyze_plug_status(nrf_saadc_value_t *battery_level_tr
 				status_flag = CHARGER_PLUG_IN;
 				battery_led_start();
 		}else{
-				NRF_LOG_INFO("charger plug unknow !!!! \r\n");
+				//NRF_LOG_INFO("charger plug unknow !!!! \r\n");
 		}
 #if 0
 	if(battery_init_adc <=750 || (battery_init_adc>750 && battery_level_trend[0]<=760)){
@@ -260,7 +260,7 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 				   && 
 				  start_sample==false 
 				  ){
-					NRF_LOG_INFO("start_sample----------- \r\n");
+					//NRF_LOG_INFO("start_sample----------- \r\n");
 					start_sample=true;
 				}else if(battery_level==100/*battery_level_adc_slow >= (BATTERY_FULL)*/){
 					status_flag = CHARGER_BATTERY_FULL;
@@ -276,9 +276,9 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 					battery_level_analyze[flag++]=battery_level_adc;
 
 					if(flag == BATTERY_BUFFER_ANALYZE){
-						NRF_LOG_INFO("start_sample ok1[%d][%d][%d][%d][%d],analyzeing ----------- \r\n",\
+						//NRF_LOG_INFO("start_sample ok1[%d][%d][%d][%d][%d],analyzeing ----------- \r\n",\
 										battery_level_analyze[0],battery_level_analyze[1],battery_level_analyze[2],battery_level_analyze[3],battery_level_analyze[4]);
-						NRF_LOG_INFO("start_sample ok2[%d][%d][%d][%d][%d]\r\n",\
+						//NRF_LOG_INFO("start_sample ok2[%d][%d][%d][%d][%d]\r\n",\
 										battery_level_analyze[5],battery_level_analyze[6],battery_level_analyze[7],battery_level_analyze[8],battery_level_analyze[9]);
 						analyze_plug_status(battery_level_analyze);	 
 						flag=0;
