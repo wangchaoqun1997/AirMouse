@@ -92,7 +92,7 @@
 
 
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "wangcq327_v1.0.1"                       /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v1.0.2"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                        /**< Battery level measurement interval (ticks). */
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum simulated battery level. */
@@ -637,8 +637,10 @@ MODE_CALIBRATE,
 MODE_DISCONNECT,
 };
 //init status
-bool open_imu_send = true;
-enum Mode_select MODE_INIT = MODE_3D;
+static bool open_imu_send = true;
+static enum Mode_select MODE_INIT = MODE_2D;
+static bool use_mode_custom1 = false;
+static bool use_touch_wheel = false;
 //
 enum key_value{
 SHORT_STATUS=1,
@@ -815,9 +817,9 @@ void sw3153_config(void)
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+7, FALL_TIME<<4 | OFF_TIME);
 		nrf_delay_us(8);
 */	
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x44);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+1, 0x44);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+2, 0x44);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x02);//pwm
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+1, 0x02);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+2, 0x02);
 		nrf_delay_us(8);
 		
 		//I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE);
@@ -876,6 +878,7 @@ void sw3153_red(void)
 void sw3153_off(void)
 {
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, 0x00);
+		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_GLOBAL_CONTROL, 0x00);
 }
 static void Mode_switch(enum Mode_select Mode,bool use_mouse)
 {/*
@@ -972,7 +975,15 @@ Mode_calibrate
 	*/
 }
 
-
+static void devices_suspend()
+{
+//BMI160 IC
+	bmi160_suspend();
+//WD3153 IC
+	sw3153_off();
+//TOUCH IC
+	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
+}
 #endif  //end USE_SHADOW_CREATE
 /**@brief Function for putting the chip into sleep mode.
  *
@@ -985,8 +996,7 @@ void sleep_mode_enter_power(void)
     //err_code = bsp_indication_set(BSP_INDICATE_IDLE);
     //APP_ERROR_CHECK(err_code);
     // Prepare wakeup buttons.
-		sw3153_off();
-	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
+	devices_suspend();
     NRF_LOG_INFO("power Enter sleep mode ........\r\n");
     err_code = bsp_btn_ble_sleep_mode_prepare();
     NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
@@ -1389,6 +1399,10 @@ void custom_on_write(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
 				open_imu_send = true;
 			}else if(p_evt_write->data[0] == 'i'){
 				open_imu_send = false;
+			}else if(p_evt_write->data[0] == 'W'){
+				use_touch_wheel = true;
+			}else if(p_evt_write->data[0] == 'w'){
+				use_touch_wheel = false;
 			}
         }
     }
@@ -1413,7 +1427,9 @@ static int16_t step_Y,step_temp_Y;
 static int16_t step_X,step_temp_X;
 static void touch_action_detect_start(void)
 {
-	app_timer_start(touch_action_detect_id,APP_TIMER_TICKS(10),NULL);
+	if(use_touch_wheel == true){
+		app_timer_start(touch_action_detect_id,APP_TIMER_TICKS(10),NULL);
+	}
 }
 static void touch_action_detect_stop(void)
 {
@@ -1925,8 +1941,7 @@ void sleep_mode_enter(void)
     //APP_ERROR_CHECK(err_code);
 if(Mode_test ==false){
     // Prepare wakeup buttons.
-		sw3153_off();
-	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
+	devices_suspend();
     NRF_LOG_INFO("not test Enter sleep mode ........\r\n");
     err_code = bsp_btn_ble_sleep_mode_prepare();
     NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
@@ -2666,16 +2681,24 @@ static void bsp_event_handler(bsp_event_t event)
 					if(Mode_mouse == false){	
 						Mode_switch(MODE_2D,true);
 					}else if(Mode_mouse == true){
-						Mode_switch(MODE_CUSTOM1,false);
+						if(use_mode_custom1==true){
+							Mode_switch(MODE_CUSTOM1,false);
+						}else{
+							Mode_switch(MODE_2D,false);
+						}
 					}
 				}else if(Mode_3D == true){
 					mode_keep = MODE_3D;
 					if(Mode_mouse == true){
 						Mode_switch(MODE_3D,false);	
 					}else{
-						Mode_switch(MODE_CUSTOM1,false);
+						if(use_mode_custom1==true){
+							Mode_switch(MODE_CUSTOM1,false);
+						}else{
+							Mode_switch(MODE_3D,false);
+						}
 					}
-				}else if(Mode_custom1 == true){
+				}else if(Mode_custom1 == true && use_mode_custom1==true){
 					if(mode_keep == MODE_2D){
 						Mode_switch(MODE_2D,false);
 					}else if(mode_keep == MODE_3D){

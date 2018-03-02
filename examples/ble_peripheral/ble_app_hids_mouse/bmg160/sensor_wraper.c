@@ -84,6 +84,9 @@ int  SENSOR_READ_TEST_2(float * buf)
 { 
 	bmi160_read_gyro_xyz(&g_gyroxyz);
 	bmi160_read_accel_xyz(&g_accelxyz);
+	if(abs(g_gyroxyz.y) >=32767 || abs(g_gyroxyz.x) >=32767|| abs(g_gyroxyz.z) >=32767 ){
+	
+	}else {
 	g_gyroxyz.y -= apply_gyro_offset_X;
 	g_gyroxyz.x -= apply_gyro_offset_Y;
 	g_gyroxyz.z -= apply_gyro_offset_Z;
@@ -91,6 +94,7 @@ int  SENSOR_READ_TEST_2(float * buf)
 	g_accelxyz.y -= apply_gsensor_offset_X;
 	g_accelxyz.x -= apply_gsensor_offset_Y;
 	g_accelxyz.z -= apply_gsensor_offset_Z;
+	}
 	//gyro for android rad/s
 	buf[0] =(float)(g_gyroxyz.y);
 	buf[1] =(float)(g_gyroxyz.x);
@@ -108,6 +112,9 @@ int  SENSOR_READ_TEST_3(s16 * buf)
 	bmi160_read_accel_xyz(&g_accelxyz);
 
     //NRF_LOG_INFO("read gyro  x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
+	if(abs(g_gyroxyz.y) >=32767 || abs(g_gyroxyz.x) >=32767|| abs(g_gyroxyz.z) >=32767 ){
+	
+	}else {
 	g_gyroxyz.y -= apply_gyro_offset_X;
 	g_gyroxyz.x -= apply_gyro_offset_Y;
 	g_gyroxyz.z -= apply_gyro_offset_Z;
@@ -115,6 +122,7 @@ int  SENSOR_READ_TEST_3(s16 * buf)
 	g_accelxyz.y -= apply_gsensor_offset_X;
 	g_accelxyz.x -= apply_gsensor_offset_Y;
 	g_accelxyz.z -= apply_gsensor_offset_Z;
+	}
     //NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
 	//gyro for android rad/s
 	buf[0] =(g_gyroxyz.y);
@@ -139,15 +147,16 @@ int  SENSOR_READ_TEST(float * buf)
 
 	bmi160_read_gyro_xyz(&g_gyroxyz);
 	bmi160_read_accel_xyz(&g_accelxyz);
-
-    //NRF_LOG_INFO("read gyro  x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
-	g_accelxyz.y -= apply_gsensor_offset_X;
-	g_accelxyz.x -= apply_gsensor_offset_Y;
-	g_accelxyz.z -= apply_gsensor_offset_Z;
-
-	g_gyroxyz.y -= apply_gyro_offset_X;
-	g_gyroxyz.x -= apply_gyro_offset_Y;
-	g_gyroxyz.z -= apply_gyro_offset_Z;
+	if(abs(g_gyroxyz.y) >=32767 || abs(g_gyroxyz.x) >=32767|| abs(g_gyroxyz.z) >=32767 ){
+	
+	}else {
+		g_accelxyz.y -= apply_gsensor_offset_X;
+		g_accelxyz.x -= apply_gsensor_offset_Y;
+		g_accelxyz.z -= apply_gsensor_offset_Z;
+		g_gyroxyz.y -= apply_gyro_offset_X;
+		g_gyroxyz.x -= apply_gyro_offset_Y;
+		g_gyroxyz.z -= apply_gyro_offset_Z;
+	}
     //NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
 	//gyro for android rad/s
 	buf[0] =(float)(g_gyroxyz.y)/938.0f;
@@ -373,9 +382,13 @@ void  SENSOR_LAST_PROCESS(float * buf)
 	bmi160_read_gyro_xyz(&g_gyroxyz);
 
     //NRF_LOG_INFO("read gyro  x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
+	if(abs(g_gyroxyz.y) >=32767 || abs(g_gyroxyz.x) >=32767|| abs(g_gyroxyz.z) >=32767 ){
+	
+	}else {
 	g_gyroxyz.y -= apply_gyro_offset_X;
 	g_gyroxyz.x -= apply_gyro_offset_Y;
 	g_gyroxyz.z -= apply_gyro_offset_Z;
+	}
     //NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
 	//printf("gyx %d\n\r",g_gyroxyz.x);
 	buf[0] =(float)(g_gyroxyz.y);
