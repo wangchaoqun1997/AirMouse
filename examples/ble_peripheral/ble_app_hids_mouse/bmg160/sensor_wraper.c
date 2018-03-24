@@ -135,7 +135,8 @@ int  SENSOR_READ_TEST_3(s16 * buf)
 	buf[5] =(g_accelxyz.z);
 
 }
-
+int buf_need_resent[6]={0};
+extern bool gyro_resent_flag;
 int  SENSOR_READ_TEST(float * buf)
 { 
 #ifdef TIME_DUR_DEBUG	 
@@ -149,6 +150,7 @@ int  SENSOR_READ_TEST(float * buf)
 	bmi160_read_accel_xyz(&g_accelxyz);
 	if(abs(g_gyroxyz.y) >=32767 || abs(g_gyroxyz.x) >=32767|| abs(g_gyroxyz.z) >=32767 ){
 	
+    NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
 	}else {
 		g_accelxyz.y -= apply_gsensor_offset_X;
 		g_accelxyz.x -= apply_gsensor_offset_Y;
@@ -157,18 +159,54 @@ int  SENSOR_READ_TEST(float * buf)
 		g_gyroxyz.x -= apply_gyro_offset_Y;
 		g_gyroxyz.z -= apply_gyro_offset_Z;
 	}
+
+	if(abs(g_gyroxyz.x)<5 &&abs(g_gyroxyz.y)<5 &&abs(g_gyroxyz.z)<5){
+		g_gyroxyz.y =0 ;
+		g_gyroxyz.x =0 ;
+		g_gyroxyz.z =0 ;
+	}
+
+
+	if(false == gyro_resent_flag){
+		buf_need_resent[0] = 0;	
+		buf_need_resent[1] = 0;	
+		buf_need_resent[2] = 0;	
+	}
     //NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
 	//gyro for android rad/s
-	buf[0] =(float)(g_gyroxyz.y)/938.0f;
-	buf[1] =(float)(g_gyroxyz.x)/938.0f;
-	buf[2] =(float)(g_gyroxyz.z)/938.0f;
+	buf[0] =(float)(g_gyroxyz.y+buf_need_resent[1])/938.0f;
+	buf[1] =(float)(g_gyroxyz.x+buf_need_resent[0])/938.0f;
+	buf[2] =(float)(g_gyroxyz.z+buf_need_resent[2])/938.0f;
 
 	// acc for android m/s2
 	buf[3] =((float)g_accelxyz.y*9.807f)/16384.0f;
 	buf[4] =((float)g_accelxyz.x*9.807f)/16384.0f;
 	buf[5] =((float)g_accelxyz.z*9.807f)/16384.0f;
+    //NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
+    //NRF_LOG_INFO(" gyro  x[%d]  y[%d] z[%d] ----- \r\n",buf[0]*1000000,buf[1]*1000000,buf[2]*1000000);
 
+	buf_need_resent[0] +=g_gyroxyz.x;
+	buf_need_resent[1] +=g_gyroxyz.y;
+	buf_need_resent[2] +=g_gyroxyz.z;
+    if(g_gyroxyz.x ==0 &&g_gyroxyz.y==0&&g_gyroxyz.z==0){
+	}else{
+	//	NRF_LOG_INFO(" gyro after1 ***** x[%d]  y[%d] z[%d] need_x[%d]  need_y[%d] need_z[%d]----- \r\n",g_gyroxyz.x,g_gyroxyz.y,g_gyroxyz.z,buf_need_resent[0],buf_need_resent[1],buf_need_resent[2]);
+	}
+	if(false == gyro_resent_flag){
+		//buf_need_resent[0] = 0;	
+		//buf_need_resent[1] = 0;	
+		//buf_need_resent[2] = 0;	
+	}
+	
+	//buf[0] += buf_need_resent[0];
+	//buf[1] += buf_need_resent[1];
+	//buf[2] += buf_need_resent[2];
 
+	//buf_need_resent[0] +=buf[0];
+	//buf_need_resent[1] +=buf[1];
+	//buf_need_resent[2] +=buf[2];
+   // NRF_LOG_INFO(" gyro after1  x[%d]  y[%d] z[%d] x[%d]  y[%d] z[%d]----- \r\n",buf[0]*1000,buf[1]*1000,buf[2]*1000,buf_need_resent[0]*1000,buf_need_resent[1]*1000,buf_need_resent[2]*1000);
+    //NRF_LOG_INFO(" gyro after2  x[%d]  y[%d] z[%d] ----- \r\n",buf_need_resent[0]*1000,buf_need_resent[1]*1000,buf_need_resent[2]*1000);
 #ifdef TIME_DUR_DEBUG	 
 	duringUs=get_during_us();
 	printf("us:%d \n\r", duringUs);

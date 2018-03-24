@@ -6,6 +6,17 @@
 #ifdef USE_APP_CONFIG
 #include "app_config.h"
 #endif
+
+// <h> nRF_Drivers 
+//==========================================================
+// <q> SYSTICK_ENABLED  - nrf_drv_systick - SysTick driver 
+#ifndef SYSTICK_ENABLED
+#define SYSTICK_ENABLED 1
+#endif 
+// </h> 
+//==========================================================
+
+
 // <h> nRF_BLE 
 
 //==========================================================

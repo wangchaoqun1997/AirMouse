@@ -638,9 +638,9 @@ MODE_DISCONNECT,
 };
 //init status
 static bool open_imu_send = true;
-static enum Mode_select MODE_INIT = MODE_2D;
+static enum Mode_select MODE_INIT = MODE_3D;
 static bool use_mode_custom1 = false;
-static bool use_touch_wheel = false;
+static bool use_touch_wheel = true;
 //
 enum key_value{
 SHORT_STATUS=1,
@@ -1448,15 +1448,21 @@ static void touch_action_detect_stop(void)
 }
 
 static bool ble_gatts_evt_hvn_tx_complete=false;
+//float buf_need_resent[6]={0.0};
+bool gyro_resent_flag=false;
 uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data,uint16_t data_len)
 {
     //if (p_bas->is_notification_supported)
 	
     uint32_t err_code=0;
+	int8_t send_data_copy[12]={0};
+	for(int i=0;i<12;i++){
+		send_data_copy[i]=*(send_data+1+i);
+	}
 	if (m_conn_handle != BLE_CONN_HANDLE_INVALID )
     {
 		ble_gatts_hvx_params_t params;
-		
+
 		memset(&params,0,sizeof(params));
 		params.type = BLE_GATT_HVX_NOTIFICATION;
 		params.handle = custom_char_handles.value_handle;
@@ -1466,19 +1472,36 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 		err_code = sd_ble_gatts_hvx(conn_handle,&params);
 		static int i=0;	
     	//NRF_LOG_INFO("----- ---------------------- error_code [0x%x] %d %d\r\n",send_data[0],err_code,i++);
+		if(err_code == 19 && (send_data[0]==GYRO_DATA)){
+			gyro_resent_flag=true;
+				/*
+		 	buf_need_resent[0] += *((float*)(&send_data_copy[0]));
+		 	buf_need_resent[1] += *((float*)(&send_data_copy[4]));
+		 	buf_need_resent[2] += *((float*)(&send_data_copy[8]));
+			*/
+			static int j=0;
+    		//NRF_LOG_INFO("----- ---------------------- gyro_data error %d\r\n",j++);
+		}else if(err_code == 0 && (send_data[0]==GYRO_DATA)){
+			gyro_resent_flag=false;
+			/*
+		 	buf_need_resent[0]=0.0;
+		 	buf_need_resent[1]=0.0;
+		 	buf_need_resent[2]=0.0;
+			*/
+		}
 		if(err_code == 19 && ((send_data[0] == KEY_DATA)||(send_data[0] == TOUCH_MOVE))){
 		//if(err_code == 19 && ((send_data[0] == KEY_DATA))){
 		//if(err_code == 19 && ((send_data[0] == KEY_DATA))){
 			if(send_data[0]==TOUCH_MOVE){
 				touch_action_detect_stop();
 			}
-    		//NRF_LOG_INFO("----- ---------------------- error_code [0x%x] %d %d\r\n",send_data[0],err_code,i++);
+    		NRF_LOG_INFO("----- ---------------------- error_code [0x%x] %d %d\r\n",send_data[0],err_code,i++);
 			nrf_delay_ms(50);
 			err_code = sd_ble_gatts_hvx(conn_handle,&params);
 			if(err_code == 19){
     			NRF_LOG_INFO("----- ---------------------- error_code resend %d error\r\n",err_code);
 			}else{
-    			//NRF_LOG_INFO("----- ---------------------- error_code resend %d ok\r\n",err_code);
+    			NRF_LOG_INFO("----- ---------------------- error_code resend %d ok\r\n",err_code);
 			}
 			if(send_data[0]==TOUCH_MOVE){
 				touch_action_detect_start();
@@ -1502,7 +1525,8 @@ static void touch_action_detect_handler(void* p_context)
 {
 	touch_action_detect_flag++;
 	//NRF_LOG_INFO("touch interrupt hander--------------%d\r\n",touch_action_detect_flag);
-#if 0
+#define TOUCH_SPEED
+#ifdef TOUCH_SPEED
 	if(touch_action_detect_flag == 1){
 		Touch_Info_record.X_Axis = 	Touch_Info.X_Axis_Second;
 		Touch_Info_record.Y_Axis = 	Touch_Info.Y_Axis_Second;
@@ -1510,33 +1534,28 @@ static void touch_action_detect_handler(void* p_context)
 			touch_buffer[i]=0;
 		}
 	}
-	if(touch_action_detect_flag % 10==0){
-		if(abs(Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second)>5){
-			NRF_LOG_INFO("touch action 100--------------detY[%d]\r\n",Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second);
-		}
-		if(abs(Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second) > 10){
+#define DETECTION_TIME 5
+#define MIN_SPEED 5
+	if(touch_action_detect_flag % DETECTION_TIME==0){
+		if(abs(Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second) > MIN_SPEED){
 			
+#ifdef MOVE_BUFFER
 			static char i=0;
+			touch_buffer[4]=0;
 			touch_buffer[i++]=Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second;
 			if(i>=4)i=0;
-			touch_buffer[4]=0;
 			for(int j=0;j<4;j++){
 				touch_buffer[4]+=touch_buffer[j];
 			}
 			touch_buffer[4]=touch_buffer[4]/4;
+#else
+			touch_buffer[4] = Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second;
+#endif
 			NRF_LOG_INFO("touch action ********** detY[%d] [%d][%d][%d][%d]\r\n",touch_buffer[4],touch_buffer[0],touch_buffer[1],touch_buffer[2],touch_buffer[3]);
+			
+			touch_sum[1] = (touch_buffer[4]);
+			custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
 
-			if(abs(Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second) < 25){
-				if(Touch_Info_record.Y_Axis > Touch_Info.Y_Axis_Second){
-					action=MOVE_UP_SLOW_0;
-				}else{
-					action=MOVE_DOWN_SLOW_0;
-				}
-			}else if(abs(Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second) < 60){
-			
-			}else if(abs(Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second) < 60){
-			
-			}
 		}
 		Touch_Info_record.X_Axis = 	Touch_Info.X_Axis_Second;
 		Touch_Info_record.Y_Axis = 	Touch_Info.Y_Axis_Second;
@@ -3186,9 +3205,20 @@ void sensor_poll_start()
 {
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
 }
+#include "nrf_drv_systick.h"
 void sensor_data_poll_handler(void* p_context)
 {
-	app_timer_stop(sensor_poll_timer_id);
+	static nrf_drv_systick_state_t systick_s;
+	static nrf_drv_systick_state_t systick_s_end;
+	static nrf_drv_systick_state_t systick_s_lastest;
+	static uint32_t det_tick1=0,det_tick2=0;
+	nrf_drv_systick_get(&systick_s);
+
+	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
+			//nrf_delay_ms(50);
+//nrf_drv_systick_delay_ms(50);
+	//app_timer_stop(sensor_poll_timer_id);
+#if 1
 	ret_code_t err_code;
 	if(Mode_test == true && sensor_ok_flag == false){
 		SENSOR_READ_TEST_2(dof3_buf);
@@ -3256,8 +3286,29 @@ void sensor_data_poll_handler(void* p_context)
 }
 #endif
 	}
+#endif
 
-	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
+#if 1
+	if(systick_s_lastest.time >= systick_s.time){
+		det_tick1 = systick_s_lastest.time - systick_s.time;
+	}
+	//NRF_LOG_INFO("----- ---------------------- systick[%d] lastest[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_lastest.time,det_tick1,(det_tick1/64));
+	systick_s_lastest.time = systick_s.time;
+#endif
+#if 0
+	nrf_drv_systick_get(&systick_s_end);
+	if(systick_s.time >= systick_s_end.time){
+		det_tick2 = systick_s.time - systick_s_end.time;
+	}
+	NRF_LOG_INFO("----- ---------------------- start_systick[%d] end_systick[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_end.time,det_tick2,(det_tick2/64));
+#endif
+	/*
+	int new_poll_interval = SENSOR_POLL_INTERVAL-(det_tick2/64000)-1;
+	if(new_poll_interval>=0){
+		app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(new_poll_interval),NULL);
+	}else{
+		app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(0.1),NULL);
+	}*/
 }
 void SENSOR_INIT_1(void)
 {
@@ -3380,7 +3431,7 @@ int main(void)
 	SENSOR_INIT_1();
 	sensor_poll_start();
 	saadc_sample_start();
-
+nrf_drv_systick_init();
 	if(mode_will_cal == true){
 		//Mode_switch(MODE_CALIBRATE,false);
 		sensor_cal_init();
