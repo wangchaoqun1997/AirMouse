@@ -62,7 +62,7 @@
 #define NRF_LOG_MODULE_NAME "APP"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
-
+#include "sw3153_driver.h"
 #define SAMPLES_IN_BUFFER 5
 int saadc_sample_time_ms=20;
 volatile uint8_t state = 1;
@@ -321,23 +321,20 @@ void led_reset()
 {
 	if(Mode_2D){
 		if(Mode_mouse == true){
-			sw3153_blue_green();
+			sw3153_light_select(BLUE_GREEN,BLINK_LEVEL_NON);
 		}else{
-			sw3153_blue();
+			sw3153_light_select(BLUE,BLINK_LEVEL_NON);
 		}
 	}else if(Mode_3D){
 		if(Mode_mouse == true){
 			//sw3153_blue_green();
 		}else{
-			sw3153_green();
+			sw3153_light_select(GREEN,BLINK_LEVEL_NON);
 		}	
 	}else if(Mode_test){
-			sw3153_blue_green_red();
-			//sw3153_blink_on();
-			sw3153_blink_on_set(0x02,0x02,0x02,0x02);
+			sw3153_light_select(RED,BLINK_LEVEL_2);
 	}else{
-			sw3153_blue();
-			sw3153_blink_on_set(0x02,0x02,0x02,0x02);
+			sw3153_light_select(BLUE,BLINK_LEVEL_2);
 	}
 
 }
@@ -351,8 +348,7 @@ static void battery_led_handler(void* p_context)
 {
 	//NRF_LOG_INFO("battery_led_handler -------------\r\n");
 	if(CHARGER_PLUG_IN == status_flag){
-		sw3153_green();
-		sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+		sw3153_light_select(GREEN,BLINK_LEVEL_0);
 		nrf_delay_ms(2000);
 		led_reset();
 		plug_in_flag=true;
@@ -360,21 +356,13 @@ static void battery_led_handler(void* p_context)
 			led_reset();
 		plug_in_flag=false;
 	}else if(CHARGER_BATTERY_NOMAL == status_flag){
-		//sw3153_red();
-		//sw3153_blink_on_set(0x03,0x03,0x03,0x03);
-		//nrf_delay_ms(2000);
 			led_reset();
 	}else if(CHARGER_BATTERY_LOW == status_flag){
-		sw3153_red();
-		sw3153_blink_on_set(0x01,0x01,0x01,0x01);
-		//nrf_delay_ms(2000);
+		sw3153_light_select(RED,BLINK_LEVEL_1);
 	}else if(CHARGER_BATTERY_FULL == status_flag){
-		//sw3153_green();
-		//sw3153_blink_on_set(0x00,0x00,0x00,0x00);
-		//nrf_delay_ms(2000);
+
 		if(plug_in_flag == true){
-			sw3153_green();
-			sw3153_blink_on_set(0x02,0x02,0x02,0x02);
+		sw3153_light_select(GREEN,BLINK_LEVEL_2);
 			nrf_delay_ms(2000);
 			led_reset();
 			plug_in_flag=false;

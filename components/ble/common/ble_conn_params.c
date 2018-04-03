@@ -281,12 +281,13 @@ static void on_write(ble_evt_t * p_ble_evt)
     }
 }
 
-
+extern int16_t min_param,max_param,slave_latency;
 static void on_conn_params_update(ble_evt_t * p_ble_evt)
 {
     // Copy the parameters
     m_current_conn_params = p_ble_evt->evt.gap_evt.params.conn_param_update.conn_params;
-
+	min_param = m_current_conn_params.min_conn_interval;
+	max_param = m_current_conn_params.max_conn_interval;
     conn_params_negotiation();
 }
 

@@ -81,18 +81,17 @@
 #include "fstorage.h"
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
-
+#include "sw3153_driver.h"
 #define NRF_LOG_MODULE_NAME "APP"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
-
 #if BUTTONS_NUMBER < 4
 #error "Not enough resources on board to run example"
 #endif
 
 
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "wangcq327_v1.0.2"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v1.0.3"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                        /**< Battery level measurement interval (ticks). */
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum simulated battery level. */
@@ -107,7 +106,7 @@
 /*lint -emacro(524, MIN_CONN_INTERVAL) // Loss of precision */
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)            /**< Minimum connection interval (7.5 ms). */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(15, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
-#define SLAVE_LATENCY                   20                                          /**< Slave latency. */
+#define SLAVE_LATENCY                   20                                         /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(3000, UNIT_10_MS)             /**< Connection supervisory timeout (3000 ms). */
 
 #define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(5000)                       /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
@@ -611,7 +610,6 @@ bool mode_will_cal=false;
 /* TWI instance. */
 /* TWI instance ID. */
 #define TWI_INSTANCE_ID     0
-//-----init starus
 bool Mode_2D =false;
 bool Mode_3D =false;
 bool Mode_test =false;
@@ -621,7 +619,12 @@ bool Mode_custom1 =false;//mod_vol
 //------
 bool mouse_push =false;
 bool push_button =false;
+static int8_t send_data_t[13];
+#define touch_sum send_data_t
+#define key_sum   send_data_t
+
 enum data_format{
+NON_DATA=0x00,
 GYRO_DATA=0x01,
 GSENSOR_DATA,
 KEY_DATA,
@@ -637,14 +640,22 @@ MODE_CALIBRATE,
 MODE_DISCONNECT,
 };
 //init status
-static bool open_imu_send = true;
+//-----------you work here -------------
+//#define HaloMini
+#ifdef HaloMini
+static enum Mode_select MODE_INIT = MODE_2D;
+static bool report_system_in_3D_mode = true;
+#else
 static enum Mode_select MODE_INIT = MODE_3D;
+static bool report_system_in_3D_mode = false;
+#endif
 static bool use_mode_custom1 = false;
 static bool use_touch_wheel = true;
-//
+static bool open_imu_send = true;
+//----------end wcq
+#define SHORT_STATUS 1
+#define LONG_STATUS 2
 enum key_value{
-SHORT_STATUS=1,
-LONG_STATUS=2,
 KEY_UP=0,
 KEY_DOWN,
 KEY_LEFT,
@@ -653,9 +664,9 @@ KEY_CENTRE,
 KEY_BACK,
 KEY_POWER,
 };
-int8_t key_sum[13]={KEY_DATA,0x00};
-int8_t touch_sum[13]={TOUCH_MOVE,0x00};
-static const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
+//int8_t key_sum[13]={KEY_DATA,0x00};
+//int8_t touch_sum[13]={TOUCH_MOVE,0x00};
+const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 void twi_init (void)
 {
     ret_code_t err_code;
@@ -717,7 +728,6 @@ Touch_Event Touch_Info;
 #define SENSOR_INT_PIN 15
 #define TOUCH_ADDRESS 0x48
 
-#define WD3153_ADDRESS 0x45
 uint8_t sample_data[16];
 int I2C_Read_Addr8(	const uint8_t slave_addr,const uint8_t *read_addr,uint8_t addr_len,uint8_t *data,uint8_t data_num)
 {
@@ -742,16 +752,7 @@ int I2C_Read_Addr(	const uint8_t slave_addr,uint8_t *data,uint8_t data_num)
     }
 	return err_code;
 }
-int I2C_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t write_value)
-{
-		ret_code_t err_code;
-	  uint8_t write[2]={write_addr,write_value};	
-	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, write, sizeof(write), false);
-	  if (err_code == NRF_SUCCESS){
-				//nrf_drv_gpiote_out_set(PIN_OUT);
-    }
-	return err_code;
-}
+
 
 int I2C_Write_Addr(	const uint8_t slave_addr,uint8_t * data,uint8_t data_num)
 {
@@ -765,121 +766,6 @@ int I2C_Write_Addr(	const uint8_t slave_addr,uint8_t * data,uint8_t data_num)
 
 
 
-
-/* register address */
-#define WD_REG_RESET			0x00
-#define WD_REG_GLOBAL_CONTROL		0x01
-#define WD_REG_LED_STATUS		0x02
-#define WD_REG_LED_ENABLE		0x30
-#define WD_REG_LED_CONFIG_BASE		0x31
-#define WD_REG_LED_BRIGHTNESS_BASE	0x34
-#define WD_REG_TIMESET0_BASE		0x37
-#define WD_REG_TIMESET1_BASE		0x38
-/* register bits */
-#define WD3153_CHIPID			0x33
-#define WD_LED_MOUDLE_ENABLE_MASK	0x01
-#define WD_LED_FADE_OFF_MASK		0x40
-#define WD_LED_FADE_ON_MASK		0x20
-#define WD_LED_BREATHE_MODE_MASK	0x10
-#define WD_LED_RESET_MASK		0x55
-
-#define OUT_CURRENT 0x01
-
-#define LED_RED 0x01
-#define LED_GREEN 0x02
-#define LED_BLUE 0x04
-
-#define RISE_TIME 0x2
-#define FALL_TIME 0x2
-#define HOLD_TIME 0x1
-#define OFF_TIME  0x2
-
-void sw3153_config(void)
-{
-
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_RESET, WD_LED_RESET_MASK);
-		nrf_delay_us(8);
-	
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_GLOBAL_CONTROL, WD_LED_MOUDLE_ENABLE_MASK);
-		nrf_delay_us(8);
-	
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE,   WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
-/*
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+0,   RISE_TIME<<4 | HOLD_TIME);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+1,   FALL_TIME<<4 | OFF_TIME);
-		nrf_delay_us(8);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3, RISE_TIME<<4 | HOLD_TIME);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+4, FALL_TIME<<4 | OFF_TIME);
-		nrf_delay_us(8);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, RISE_TIME<<4 | HOLD_TIME);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+7, FALL_TIME<<4 | OFF_TIME);
-		nrf_delay_us(8);
-*/	
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x02);//pwm
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+1, 0x02);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+2, 0x02);
-		nrf_delay_us(8);
-		
-		//I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE);
-}
-void sw3153_blink_off(void)
-{
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE,   WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |0x00 | OUT_CURRENT);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |0x00 | OUT_CURRENT);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |0x00 | OUT_CURRENT);
-
-}
-void sw3153_blink_on(void)
-{
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE,   WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
-}
-void sw3153_blink_on_set(uint8_t rise_time,uint8_t fall_time,uint8_t hold_time,uint8_t off_time)
-{
-		sw3153_blink_on();
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+0, rise_time<<4 | hold_time);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+1, fall_time<<4 | off_time);
-		nrf_delay_us(8);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3, rise_time<<4 | hold_time);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+4, fall_time<<4 | off_time);
-		nrf_delay_us(8);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, rise_time<<4 | hold_time);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+7, fall_time<<4 | off_time);
-		nrf_delay_us(8);
-}
-void sw3153_green(void)
-{
-		sw3153_blink_off();
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_GREEN);
-}
-void sw3153_blue(void)
-{
-		sw3153_blink_off();
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE);
-}
-void sw3153_blue_green(void)
-{
-		sw3153_blink_off();
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE|LED_GREEN);
-}
-void sw3153_blue_green_red(void)
-{
-		sw3153_blink_off();
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE|LED_GREEN|LED_RED);
-}
-void sw3153_red(void)
-{
-		sw3153_blink_off();
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_RED);
-}
-void sw3153_off(void)
-{
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, 0x00);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_GLOBAL_CONTROL, 0x00);
-}
 static void Mode_switch(enum Mode_select Mode,bool use_mouse)
 {/*
 disconnect
@@ -909,9 +795,9 @@ Mode_calibrate
 			Mode_2D = true;
 			Mode_mouse = use_mouse;
 			if(Mode_mouse){
-				sw3153_blue_green();
+				sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_NON);
 			}else{
-				sw3153_blue();
+				sw3153_light_select(BLUE, BLINK_LEVEL_NON);
 			}
 		}else if(Mode == MODE_3D){
 			Mode_3D = true;
@@ -919,21 +805,18 @@ Mode_calibrate
 			if(Mode_mouse){
 			//	sw3153_blue_green();
 			}else{
-				sw3153_green();
+				sw3153_light_select(GREEN, BLINK_LEVEL_NON);
 			}
 		}else if(Mode == MODE_TEST){
 			Mode_test = true;
-			sw3153_blue_green_red();
-			sw3153_blink_on();
+			sw3153_light_select(BLUE_GREEN_RED, BLINK_LEVEL_0);
 		}else if(Mode == MODE_CALIBRATE){
 			Mode_calibrate = true;
 		}else if(Mode == MODE_DISCONNECT){
-			sw3153_blue();
-			sw3153_blink_on();
+			sw3153_light_select(BLUE, BLINK_LEVEL_2);
 		}else if(Mode == MODE_CUSTOM1){
 			Mode_custom1=true;
-			sw3153_red();
-			sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+			sw3153_light_select(RED, BLINK_LEVEL_0);
 		}
 
 		if(Mode == MODE_3D || Mode == MODE_TEST || Mode == MODE_CALIBRATE || Mode_mouse == true || Mode == MODE_CUSTOM1){
@@ -943,36 +826,6 @@ Mode_calibrate
 		}
 
     	NRF_LOG_INFO("Mode switch Mode[%d] use_mouse[%d]\r\n",Mode,use_mouse);
-/*
-	if(mode_test == true){
-		Mode_3D = false;
-		Mode_mouse = false;
-		Mode_test = true;
-		bmi160_resume();
-		sw3153_blue_green_red();
-		sw3153_blink_on();
-		return;
-	}
-	if(Mode_use_3D == true){
-		Mode_3D = true;
-		Mode_mouse = false;
-		Mode_test = false;
-		bmi160_resume();
-		sw3153_green();
-	}else if(Mode_use_3D == false && use_mouse == false){
-		Mode_3D = false;
-		Mode_mouse = false;
-		Mode_test = false;
-		sw3153_blue();
-		bmi160_suspend();
-	}else if(Mode_use_3D == false && use_mouse == true){
-		Mode_3D = false;
-		Mode_mouse = true;
-		Mode_test = false;
-		bmi160_resume();
-		sw3153_blue_green();
-	}
-	*/
 }
 
 static void devices_suspend()
@@ -980,7 +833,7 @@ static void devices_suspend()
 //BMI160 IC
 	bmi160_suspend();
 //WD3153 IC
-	sw3153_off();
+	sw3153_light_select(OFF, BLINK_LEVEL_NON);
 //TOUCH IC
 	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
 }
@@ -1165,7 +1018,7 @@ void bmi160_calibration(void)
 	fds_test_init();
 	fds_read(read_gryo_offset);
 	if((read_gryo_offset[1] & 0xFFFF0000)){
-		sw3153_red();
+		sw3153_light_select(RED, BLINK_LEVEL_NON);
 		nrf_delay_ms(2000);
 		if(! bsp_button_is_pressed(1/*back*/)){
     		NRF_LOG_INFO("haved apply offset not apply this time\r\n");
@@ -1186,12 +1039,11 @@ void bmi160_calibration(void)
 	cal_status=0x00;
 	
     NRF_LOG_INFO("sensor calibrate start !!! \r\n");
-	sw3153_red();
-	sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+	sw3153_light_select(RED, BLINK_LEVEL_0);
 	nrf_delay_ms(3000);
-	sw3153_blue_green();
+	sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_NON);
 	nrf_delay_ms(3000);
-	sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+	sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_0);
 	for(char i=0;i<100;i++){
 		short cal_buf[6]={0x00};
 		SENSOR_READ_TEST_3(cal_buf);
@@ -1214,8 +1066,7 @@ void bmi160_calibration(void)
 		cal_offset[0] = cal_offset[1] = cal_offset[2] = 50;
 		cal_status=0x00;
 		Mode_switch(MODE_DISCONNECT,false);
-		sw3153_red();
-		sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+		sw3153_light_select(RED, BLINK_LEVEL_0);
 		nrf_delay_ms(2000);
     	NRF_LOG_INFO("sensor calibrate fail ,into sleep !!! \r\n");
 		sleep_mode_enter_power();
@@ -1232,8 +1083,7 @@ void bmi160_calibration(void)
 		err_code = fds_test_write(gyro_offset_l,gyro_offset_h);
 		//nrf_delay_ms(2000);
 		Mode_switch(MODE_DISCONNECT,false);
-		sw3153_green();
-		sw3153_blink_on_set(0x02,0x02,0x02,0x02);
+		sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_2);
 		//sleep_mode_enter_power();
 	}
 
@@ -1314,7 +1164,7 @@ static void saadc_sample_init(void)
 
 
 
-int8_t sensor_data[sizeof(float)*3+1]={0};
+int8_t sensor_data[3*(sizeof(float)*3+1)]={0};
 static uint32_t custom_char_add(ble_bas_t * p_bas, const ble_bas_init_t * p_bas_init)
 {
 	ble_gatts_char_md_t char_md;
@@ -1378,8 +1228,6 @@ void custom_on_write(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
 				Mode_switch(MODE_3D,false);
 			}else if(p_evt_write->data[0] == '2'){//'2'
 				//Mode_3D = false;
-				//sw3153_blue();
-				//Mode_switch(false,false,false);
 				Mode_switch(MODE_2D,false);
 			}else if(p_evt_write->data[0] == 'T'){
 				//Mode_switch(false,false,true);
@@ -1390,11 +1238,11 @@ void custom_on_write(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
 			}else if(p_evt_write->data[0] == 'C'){
 				Mode_switch(MODE_CALIBRATE,false);
 			}else if(p_evt_write->data[0] == 'R'){	
-				sw3153_red();
+				sw3153_light_select(RED, BLINK_LEVEL_NON);
 			}else if(p_evt_write->data[0] == 'G'){
-				sw3153_green();
+				sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_NON);
 			}else if(p_evt_write->data[0] == 'B'){	
-				sw3153_blue();
+				sw3153_light_select(BLUE, BLINK_LEVEL_NON);
 			}else if(p_evt_write->data[0] == 'I'){
 				open_imu_send = true;
 			}else if(p_evt_write->data[0] == 'i'){
@@ -1455,11 +1303,8 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
     //if (p_bas->is_notification_supported)
 	
     uint32_t err_code=0;
-	int8_t send_data_copy[12]={0};
-	for(int i=0;i<12;i++){
-		send_data_copy[i]=*(send_data+1+i);
-	}
-	if (m_conn_handle != BLE_CONN_HANDLE_INVALID )
+
+	if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
     {
 		ble_gatts_hvx_params_t params;
 
@@ -1470,32 +1315,28 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 		params.p_len = &data_len;
 
 		err_code = sd_ble_gatts_hvx(conn_handle,&params);
-		static int i=0;	
-    	//NRF_LOG_INFO("----- ---------------------- error_code [0x%x] %d %d\r\n",send_data[0],err_code,i++);
-		if(err_code == 19 && (send_data[0]==GYRO_DATA)){
+		static int i=0;
+		if(send_data[0] == KEY_DATA || send_data[0] == TOUCH_MOVE){
+			if(err_code == 0){NRF_LOG_INFO("----- ----------------------key/touch 0-2:[0x%x][%d][%d] err:[%d] %d\r\n",send_data[0],send_data[1],send_data[2],err_code,i++);}
+			else 			 {NRF_LOG_INFO("----- -------ERR !!! -------key/touch 0-2:[0x%x][%d][%d] err:[%d] %d\r\n",send_data[0],send_data[1],send_data[2],err_code,i++);}
+		}
+		static int j=0;
+		j++;
+		if(err_code != 0 && (send_data[0]==GYRO_DATA)){
 			gyro_resent_flag=true;
-				/*
-		 	buf_need_resent[0] += *((float*)(&send_data_copy[0]));
-		 	buf_need_resent[1] += *((float*)(&send_data_copy[4]));
-		 	buf_need_resent[2] += *((float*)(&send_data_copy[8]));
-			*/
-			static int j=0;
-    		//NRF_LOG_INFO("----- ---------------------- gyro_data error %d\r\n",j++);
+		    static int i=0,t;
+    		NRF_LOG_INFO("----- ---------------------- gyro_data error %d [%d]ms [%d]\r\n",err_code,(j-i)*10,t++);
+			i=j;
 		}else if(err_code == 0 && (send_data[0]==GYRO_DATA)){
 			gyro_resent_flag=false;
-			/*
-		 	buf_need_resent[0]=0.0;
-		 	buf_need_resent[1]=0.0;
-		 	buf_need_resent[2]=0.0;
-			*/
 		}
-		if(err_code == 19 && ((send_data[0] == KEY_DATA)||(send_data[0] == TOUCH_MOVE))){
+		if(err_code != 0 && ((send_data[0] == KEY_DATA)||(send_data[0] == TOUCH_MOVE))){
 		//if(err_code == 19 && ((send_data[0] == KEY_DATA))){
 		//if(err_code == 19 && ((send_data[0] == KEY_DATA))){
 			if(send_data[0]==TOUCH_MOVE){
 				touch_action_detect_stop();
 			}
-    		NRF_LOG_INFO("----- ---------------------- error_code [0x%x] %d %d\r\n",send_data[0],err_code,i++);
+    		//NRF_LOG_INFO("----- ---------------------- key/touch[0x%x] error %d %d\r\n",send_data[0],err_code,i++);
 			nrf_delay_ms(50);
 			err_code = sd_ble_gatts_hvx(conn_handle,&params);
 			if(err_code == 19){
@@ -1525,7 +1366,7 @@ static void touch_action_detect_handler(void* p_context)
 {
 	touch_action_detect_flag++;
 	//NRF_LOG_INFO("touch interrupt hander--------------%d\r\n",touch_action_detect_flag);
-#define TOUCH_SPEED
+//#define TOUCH_SPEED
 #ifdef TOUCH_SPEED
 	if(touch_action_detect_flag == 1){
 		Touch_Info_record.X_Axis = 	Touch_Info.X_Axis_Second;
@@ -1551,10 +1392,10 @@ static void touch_action_detect_handler(void* p_context)
 #else
 			touch_buffer[4] = Touch_Info_record.Y_Axis-Touch_Info.Y_Axis_Second;
 #endif
-			NRF_LOG_INFO("touch action ********** detY[%d] [%d][%d][%d][%d]\r\n",touch_buffer[4],touch_buffer[0],touch_buffer[1],touch_buffer[2],touch_buffer[3]);
-			
+			//NRF_LOG_INFO("touch action ********** detY[%d] [%d][%d][%d][%d]\r\n",touch_buffer[4],touch_buffer[0],touch_buffer[1],touch_buffer[2],touch_buffer[3]);
+			touch_sum[0] = TOUCH_MOVE;	
 			touch_sum[1] = (touch_buffer[4]);
-			custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+			//custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
 
 		}
 		Touch_Info_record.X_Axis = 	Touch_Info.X_Axis_Second;
@@ -1571,13 +1412,15 @@ static void touch_action_detect_handler(void* p_context)
 		//NRF_LOG_INFO("touch action 100--------------step_Y[%d] step_temp_Y[%d] [%d] [%d][%d]\r\n",step_Y,step_temp_Y,step_temp_Y-step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
 		if(step_temp_Y != step_Y){
 			//NRF_LOG_INFO("touch action 100--------------detY[%d] [%d][%d] [%d][%d]\r\n",step_temp_Y-step_Y,step_temp_Y,step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
-			NRF_LOG_INFO("touch action 100--------------detY[%d]\r\n",step_temp_Y-step_Y);
+			//NRF_LOG_INFO("touch action 100--------------detY[%d]\r\n",step_temp_Y-step_Y);
 			if(step_temp_Y-step_Y>0){//up
+					touch_sum[0] = TOUCH_MOVE;	
 					touch_sum[1] = (0x01);
-					custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					//custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
 			}else if(step_temp_Y-step_Y<0){//down
+					touch_sum[0] = TOUCH_MOVE;	
 					touch_sum[1] = (0x02);
-					custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					//custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
 			}
 			step_Y=step_temp_Y;
 		}
@@ -2113,6 +1956,9 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
     switch (p_ble_evt->header.evt_id)
     {
+		case BLE_GAP_EVT_CONN_PARAM_UPDATE:
+            NRF_LOG_INFO("Param update ...............\r\n");
+		break;
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected\r\n");
 
@@ -2147,16 +1993,9 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             break; // BLE_GAP_EVT_CONNECTED
 
         case BLE_GAP_EVT_DISCONNECTED:
-			//Mode_mouse = false;
-			//Mode_3D = false;
-			//sw3153_blue();
+
             NRF_LOG_INFO("Disconnected\r\n");
-			/*
-			if(Mode_test == false){
-				//Mode_switch(false,false,false);
-				Mode_switch(MODE_DISCONNECT,false);
-				sw3153_blink_on();
-			}*/
+
 			connect_sleep_stop();
 
 			if(Mode_test == true){
@@ -2553,147 +2392,108 @@ static void bsp_event_handler(bsp_event_t event)
 
         case BSP_EVENT_KEY_1: //back
 
-					if(Mode_test == true && sensor_ok_flag==true){
-						sw3153_green();
-						sw3153_blink_on_set(0x02,0x02,0x02,0x02);
-					}
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-					uint8_t temp = 0xFF;//0x01<<4;
-					if(Mode_test == true){
-						uint8_t temp1[2] = {TEST_DATA,0xFF};//0x01<<4;
-						custom_on_send(m_conn_handle,&m_bas,temp1,sizeof(temp1));
-						break;
-					}
-					ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
-					key_sum[SHORT_STATUS] |= (0x01<<KEY_BACK);
-					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
-					//mouse_movement_send(-MOVEMENT_SPEED, 0);
+			if(Mode_test == true && sensor_ok_flag==true){
+				sw3153_light_select(GREEN, BLINK_LEVEL_2);
+				break;
+			}
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				uint8_t temp = 0xFF;//0x01<<4;
+				ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
+				key_sum[0]=KEY_DATA;
+				key_sum[SHORT_STATUS] |= (0x01<<KEY_BACK);
             }
             break;
         case BSP_EVENT_KEY_1_RELEASE:
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-					uint8_t temp = 0x00;//0x01<<4;
-					if(Mode_test == true){
-						break;
-					}
-					ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
-					//report_key = 0x00;
-					//uint8_t temp = 0x00;
-					//ble_hids_inp_rep_send(&m_hids,INPUT_REP_BUTTONS_INDEX,INPUT_REP_BUTTONS_LEN,&temp);
-					//mouse_movement_send(-MOVEMENT_SPEED, 0);
-					key_sum[SHORT_STATUS] &= (~(0x01<<KEY_BACK));
-					key_sum[LONG_STATUS] &= (~(0x01<<KEY_BACK));
-					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				if(Mode_test == true){
+					break;
+				}
+				uint8_t temp = 0x00;//0x01<<4;
+				ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
+				key_sum[0]=KEY_DATA;
+				key_sum[SHORT_STATUS] &= (~(0x01<<KEY_BACK));
+				key_sum[LONG_STATUS] &= (~(0x01<<KEY_BACK));
             }
             break;
         case BSP_EVENT_KEY_1_LONG:
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-/*
-				if(Mode_mouse == false && Mode_3D == false){
-					Mode_switch(false,true,false);
-				}else if(Mode_mouse == false && Mode_3D == true){
-					Mode_switch(false,false,false);
-				}else if(Mode_mouse == true){
-					Mode_switch(false,false,false);
-				}*/
-					key_sum[LONG_STATUS] |= (0x01<<KEY_BACK);
-					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				key_sum[0]=KEY_DATA;
+				key_sum[SHORT_STATUS] |= (0x01<<KEY_BACK);
+				key_sum[LONG_STATUS] |= (0x01<<KEY_BACK);
 			}
             break;
         case BSP_EVENT_KEY_0://up down left rigth
-				if(Mode_test == true && sensor_ok_flag==true){
-					if(report_key == K_UP || report_key == F8){
-						sw3153_red();
-						sw3153_blink_on_set(0x00,0x00,0x00,0x00);
-					}else if(report_key == K_DOWN || report_key == F9){
-						sw3153_red();
-						sw3153_blink_on_set(0x02,0x02,0x02,0x02);
-					}else if(report_key == K_RIGHT || report_key == F11){
-						sw3153_green();
-						sw3153_blink_on_set(0x02,0x02,0x02,0x02);
-					}else if(report_key == K_LEFT || report_key == F10){
-						sw3153_green();
-						sw3153_blink_on_set(0x00,0x00,0x00,0x0);
-					}else if(report_key == K_ENTER || report_key == F12){
-						sw3153_blue();
-						sw3153_blink_on_set(0x00,0x00,0x00,0x00);
-					}
+			if(Mode_test == true && sensor_ok_flag==true){
+				if(report_key == K_UP || report_key == F8){
+					sw3153_light_select(RED, BLINK_LEVEL_0);
+				}else if(report_key == K_DOWN || report_key == F9){
+					sw3153_light_select(RED, BLINK_LEVEL_2);
+				}else if(report_key == K_RIGHT || report_key == F11){
+					sw3153_light_select(GREEN, BLINK_LEVEL_2);
+				}else if(report_key == K_LEFT || report_key == F10){
+					sw3153_light_select(GREEN, BLINK_LEVEL_0);
+				}else if(report_key == K_ENTER || report_key == F12){
+					sw3153_light_select(BLUE, BLINK_LEVEL_0);
 				}
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-				if(Mode_test == true){
-					uint8_t temp1[2] = {TEST_DATA,0xFF};
-					temp1[1]=report_key;
-					custom_on_send(m_conn_handle,&m_bas,temp1,sizeof(temp1));
-					break;
-				}
+				break;
+			}
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				int8_t const_enter = K_ENTER;
 				if(Mode_3D == true){
-						const_enter = F12;
+					const_enter = F12;
 				}
-					if(Mode_mouse == false){
-								ble_hids_inp_rep_send(&m_hids,
-                                         INPUT_REP_CUSTOM1_INDEX,
-                                         INPUT_REP_CUSTOM1_LEN,
-                                         /*&report_key*/&const_enter);
-						push_button = true;
-				 	report_key_cache = report_key;	
-					key_sum[SHORT_STATUS] |= (0x01 << (report_key-F8));
-					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
-               //mouse_movement_send(0, -MOVEMENT_SPEED);
-					}else if(Mode_mouse == true){
-    			NRF_LOG_INFO("key_2 press long---------------- down\r\n");
-								//mouse_click_send(report_mouse,0);
-								mouse_click_send(0x01,0);
+				if(Mode_mouse == false){
+					if(true == report_system_in_3D_mode || Mode_3D != true){
+						ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM1_INDEX,INPUT_REP_CUSTOM1_LEN,/*&report_key*/&const_enter);
 					}
+					push_button = true;
+				 	report_key_cache = report_key;	
+					key_sum[0]=KEY_DATA;
+					key_sum[SHORT_STATUS] |= (0x01 << (report_key-F8));
+				}else if(Mode_mouse == true){
+    				NRF_LOG_INFO("key_2 press long---------------- down\r\n");
+					if(true == report_system_in_3D_mode || Mode_3D != true){
+						mouse_click_send(0x01,0);
+					}
+				}
             }
             break;
         case BSP_EVENT_KEY_0_LONG:
-			//	Mode_switch(false,false,true);//test mode
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
-					key_sum[LONG_STATUS] |= (0x01 << (report_key_cache-F8));
-					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				key_sum[0]=KEY_DATA;
+				key_sum[SHORT_STATUS] |= (0x01 << (report_key-F8));
+				key_sum[LONG_STATUS] |= (0x01 << (report_key_cache-F8));
             }
             break;
         case BSP_EVENT_KEY_0_RELEASE:
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				if(Mode_test == true){
 					break;
 				}
 				uint8_t temp = 0x00;
-					if(Mode_mouse == false){
-								ble_hids_inp_rep_send(&m_hids,
-                                         INPUT_REP_CUSTOM1_INDEX,
-                                         INPUT_REP_CUSTOM1_LEN,
-                                         &temp);
-						push_button = true;
+				if(Mode_mouse == false){
+					if(true == report_system_in_3D_mode || Mode_3D != true){
+						ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM1_INDEX,INPUT_REP_CUSTOM1_LEN,&temp);
+					}
+					push_button = true;
+					key_sum[0]=KEY_DATA;
 					key_sum[SHORT_STATUS] &= (~(0x01 << (report_key_cache-F8)));
 					key_sum[LONG_STATUS] &= (~(0x01 << (report_key_cache-F8)));
-					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
-					}else if(Mode_mouse == true){
-    			//NRF_LOG_INFO("key_2 press long----------------%d\r\n",event);
-    			NRF_LOG_INFO("key_2 press long---------------- up\r\n");
-							mouse_click_send(0,0);
+				}else if(Mode_mouse == true){
+    				NRF_LOG_INFO("key_2 press long---------------- up\r\n");
+					if(true == report_system_in_3D_mode || Mode_3D != true){
+						mouse_click_send(0,0);
 					}
-               //mouse_movement_send(0, -MOVEMENT_SPEED);
+				}
             }
             break;
-
-
         case BSP_EVENT_KEY_2:
-    			NRF_LOG_INFO("Power key DOWN ---- DOWN\r\n");
-					if(Mode_test == true && sensor_ok_flag==true){
-						sw3153_green();
-						sw3153_blink_on_set(0x00,0x00,0x00,0x00);
-					}
-
-            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-            {
+    		NRF_LOG_INFO("Power key DOWN ---- DOWN\r\n");
+			if(Mode_test == true && sensor_ok_flag==true){
+				sw3153_light_select(GREEN, BLINK_LEVEL_0);
+				break;
+			}
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				static  enum Mode_select mode_keep;
 				if(Mode_2D == true){
 					mode_keep = MODE_2D;
@@ -2724,26 +2524,10 @@ static void bsp_event_handler(bsp_event_t event)
 						Mode_switch(MODE_3D,false);
 					}	
 				}
-				/*
-				if(Mode_mouse == false && Mode_3D == false){
-					Mode_switch(MODE_2D,true);
-					//Mode_switch(false,true,false);
-				}else if(Mode_mouse == false && Mode_3D == true){
-					Mode_switch(MODE_2D,false);
-					//Mode_switch(false,false,false);
-				}else if(Mode_mouse == true){
-					Mode_switch(MODE_2D,false);
-					//Mode_switch(false,false,false);
-				}*/
-					uint8_t power_key[2]={TEST_DATA,0x11};
-					if(Mode_test == true){
-						custom_on_send(m_conn_handle,&m_bas,power_key,sizeof(power_key));
-					}
-                //mouse_movement_send(MOVEMENT_SPEED, 0);
             }
             break;
         case BSP_EVENT_KEY_2_RELEASE:
-    			NRF_LOG_INFO("Power key UP ---- UP\r\n");
+    		NRF_LOG_INFO("Power key UP ---- UP\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
             }else{
@@ -2756,13 +2540,10 @@ static void bsp_event_handler(bsp_event_t event)
             {
             }else{
 			}
-				//key_num_3++;
-    			//NRF_LOG_INFO("key_2 press long----------------%d\r\n",event);
-            	//APP_ERROR_CHECK(3);
-				sw3153_red();
-				nrf_delay_ms(2000);
-    			NRF_LOG_INFO("power  key  push  to sleep !!! \r\n");
-				sleep_mode_enter_power();
+			sw3153_light_select(RED, BLINK_LEVEL_NON);
+			nrf_delay_ms(2000);
+    		NRF_LOG_INFO("power  key  push  to sleep !!! \r\n");
+			sleep_mode_enter_power();
             break;
         case BSP_EVENT_KEY_3:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -3205,6 +2986,7 @@ void sensor_poll_start()
 {
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
 }
+int16_t min_param,max_param,slave_latency;
 #include "nrf_drv_systick.h"
 void sensor_data_poll_handler(void* p_context)
 {
@@ -3235,10 +3017,13 @@ void sensor_data_poll_handler(void* p_context)
 		send_mouse_data(raw_buf);
 		
 	}
+	memset(sensor_data,0x00, sizeof(sensor_data));
+	memcpy(sensor_data,send_data_t,1);
+	memcpy(sensor_data+1,send_data_t+1,12);
+	memset(send_data_t,0x00, sizeof(send_data_t));
 	if(Mode_3D == true){
-
 		if(open_imu_send == true){
-		SENSOR_READ_TEST(dof3_buf);
+			SENSOR_READ_TEST(dof3_buf);
 #if 0
 		memcpy(sensor_data,(int8_t*)dof3_buf,sizeof(sensor_data)-1);
 		/*
@@ -3266,33 +3051,30 @@ void sensor_data_poll_handler(void* p_context)
 		//send_mouse_data(dof3_buf);
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 #else
-		static char gsensor_frq=0;
-		int8_t data_flag=0;
-		gsensor_frq++;
-		if(gsensor_frq != 10){
+			int8_t data_flag=0;
 			data_flag=GYRO_DATA;//1----gyro data
-        	memset(sensor_data,0x00, sizeof(sensor_data));
-			memcpy(sensor_data,&data_flag,1/*sizeof(float)*3+1*/);
-			memcpy(sensor_data+1,(int8_t*)dof3_buf,12/*sizeof(float)*3+1*/);
-			custom_on_send(m_conn_handle,&m_bas,sensor_data,13);
-		}else{
-			gsensor_frq=0;
-			memset(sensor_data,0x00, sizeof(sensor_data));
+			memcpy(sensor_data+13,&data_flag,1/*sizeof(float)*3+1*/);
+			memcpy(sensor_data+14,(int8_t*)(dof3_buf+3),12/*sizeof(float)*3+1*/);
+			
 			data_flag=GSENSOR_DATA;//2----gsensor data
-			memcpy(sensor_data,&data_flag,1/*sizeof(float)*3+1*/);
-			memcpy(sensor_data+1,(int8_t*)(dof3_buf+3),12/*sizeof(float)*3+1*/);
-			custom_on_send(m_conn_handle,&m_bas,sensor_data,13);
+			memcpy(sensor_data+26,&data_flag,1/*sizeof(float)*3+1*/);
+			memcpy(sensor_data+27,(int8_t*)(dof3_buf+3),12/*sizeof(float)*3+1*/);
+
 		}
-}
+
 #endif
+	}
+	if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
+		custom_on_send(m_conn_handle,&m_bas,sensor_data,39);
 	}
 #endif
 
-#if 1
+//#define OPEN_LOG_TIME
+#ifdef OPEN_LOG_TIME
 	if(systick_s_lastest.time >= systick_s.time){
 		det_tick1 = systick_s_lastest.time - systick_s.time;
 	}
-	//NRF_LOG_INFO("----- ---------------------- systick[%d] lastest[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_lastest.time,det_tick1,(det_tick1/64));
+	NRF_LOG_INFO("----- ---------------------- systick[%d] lastest[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_lastest.time,det_tick1,(det_tick1/64));
 	systick_s_lastest.time = systick_s.time;
 #endif
 #if 0
@@ -3366,8 +3148,7 @@ void sensor_cal_status()
 	uint32_t read_gryo_offset[2]={0x00};
 	fds_read(read_gryo_offset);
 	if(!(read_gryo_offset[1] & 0xFFFF0000)){
-		sw3153_red();
-		sw3153_blink_on_set(0x00,0x00,0x00,0x00);
+		sw3153_light_select(RED, BLINK_LEVEL_0);
 		nrf_delay_ms(500);
 	}
 
@@ -3431,7 +3212,7 @@ int main(void)
 	SENSOR_INIT_1();
 	sensor_poll_start();
 	saadc_sample_start();
-nrf_drv_systick_init();
+	nrf_drv_systick_init();
 	if(mode_will_cal == true){
 		//Mode_switch(MODE_CALIBRATE,false);
 		sensor_cal_init();
@@ -3442,8 +3223,7 @@ nrf_drv_systick_init();
 		//erase_bonds = true;
     advertising_start(erase_bonds);
 
-	sw3153_blue();
-	sw3153_blink_on_set(0x02,0x02,0x02,0x02);
+	sw3153_light_select(BLUE, BLINK_LEVEL_2);
 	if(mode_will_test == true){
 		Mode_switch(MODE_TEST,false);
 		//Mode_switch(false,false,true);
