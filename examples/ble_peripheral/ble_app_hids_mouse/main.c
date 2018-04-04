@@ -605,6 +605,7 @@ static void dis_init(void)
 #define F11     0x44 //up
 #define F12     0x45 //right
 bool sensor_ok_flag=false;
+bool gyro_move = true;
 bool mode_will_test=false;
 bool mode_will_cal=false;
 /* TWI instance. */
@@ -1322,7 +1323,7 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 		}
 		static int j=0;
 		j++;
-		if(err_code != 0 && (send_data[0]==GYRO_DATA)){
+		if(err_code != 0 && (send_data[13]==GYRO_DATA)){
 			gyro_resent_flag=true;
 		    static int i=0,t;
     		NRF_LOG_INFO("----- ---------------------- gyro_data error %d [%d]ms [%d]\r\n",err_code,(j-i)*10,t++);
@@ -2100,8 +2101,17 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
      * Remember to call ble_conn_state_on_ble_evt before calling any ble_conns_state_* functions. */
     //NRF_LOG_INFO(" ----  ble_evt_dispatch :header.evt_id = 0x%x\r\n",p_ble_evt->header.evt_id);
 	if(p_ble_evt->header.evt_id == 0x57){
-		connect_sleep_stop();
-		connect_sleep_start();
+		if(Mode_3D != true){
+			connect_sleep_stop();
+			connect_sleep_start();
+            //NRF_LOG_DEBUG("--------------connect sleep restart\r\n");
+		}else{
+			if(true == gyro_move){
+				connect_sleep_stop();
+				connect_sleep_start();
+            	//NRF_LOG_DEBUG("-------3D-------connect sleep restart\r\n");
+			}
+		}
 	}
     ble_conn_state_on_ble_evt(p_ble_evt);
     pm_on_ble_evt(p_ble_evt);
@@ -3024,6 +3034,13 @@ void sensor_data_poll_handler(void* p_context)
 	if(Mode_3D == true){
 		if(open_imu_send == true){
 			SENSOR_READ_TEST(dof3_buf);
+			if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
+				gyro_move = false;
+				//NRF_LOG_INFO("------------------------ gyro no move\n\r");
+			}else{
+				//NRF_LOG_INFO("------------------------ gyro  move\n\r");
+				gyro_move = true;
+			}
 #if 0
 		memcpy(sensor_data,(int8_t*)dof3_buf,sizeof(sensor_data)-1);
 		/*
@@ -3065,7 +3082,7 @@ void sensor_data_poll_handler(void* p_context)
 #endif
 	}
 	if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
-		custom_on_send(m_conn_handle,&m_bas,sensor_data,39);
+		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	}
 #endif
 
@@ -3084,13 +3101,6 @@ void sensor_data_poll_handler(void* p_context)
 	}
 	NRF_LOG_INFO("----- ---------------------- start_systick[%d] end_systick[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_end.time,det_tick2,(det_tick2/64));
 #endif
-	/*
-	int new_poll_interval = SENSOR_POLL_INTERVAL-(det_tick2/64000)-1;
-	if(new_poll_interval>=0){
-		app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(new_poll_interval),NULL);
-	}else{
-		app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(0.1),NULL);
-	}*/
 }
 void SENSOR_INIT_1(void)
 {
@@ -3197,6 +3207,7 @@ int main(void)
     timers_start();
 	saadc_init();
 	
+	nrf_drv_systick_init();
 	sw3153_config();
 	fds_test_init();
 	sensor_cal_status();
@@ -3212,7 +3223,6 @@ int main(void)
 	SENSOR_INIT_1();
 	sensor_poll_start();
 	saadc_sample_start();
-	nrf_drv_systick_init();
 	if(mode_will_cal == true){
 		//Mode_switch(MODE_CALIBRATE,false);
 		sensor_cal_init();
