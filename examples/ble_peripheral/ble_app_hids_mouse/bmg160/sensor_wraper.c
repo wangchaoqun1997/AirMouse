@@ -137,7 +137,7 @@ int  SENSOR_READ_TEST_3(s16 * buf)
 }
 int buf_need_resent[6]={0};
 extern bool gyro_resent_flag;
-int  SENSOR_READ_TEST(float * buf)
+int  SENSOR_READ_TEST(float * buf,uint16_t *data)
 { 
 #ifdef TIME_DUR_DEBUG	 
 	uint32_t duringUs=0;	
@@ -166,6 +166,12 @@ int  SENSOR_READ_TEST(float * buf)
 		g_gyroxyz.z =0 ;
 	}
 
+	data[0]=g_accelxyz.x;
+	data[1]=g_accelxyz.y;
+	data[2]=g_accelxyz.z;
+	data[3]=g_gyroxyz.x;
+	data[4]=g_gyroxyz.y;
+	data[5]=g_gyroxyz.z;
 
 	if(false == gyro_resent_flag){
 		buf_need_resent[0] = 0;	

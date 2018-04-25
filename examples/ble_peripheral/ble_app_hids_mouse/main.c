@@ -640,6 +640,45 @@ MODE_CUSTOM1,
 MODE_CALIBRATE,
 MODE_DISCONNECT,
 };
+enum transfer_data{
+TIME_STAMP_START,//0
+TIME_STAMP_END=8,
+PACKET_FLAG_START,//9
+PACKET_FLAG_END=13,
+DATA_MEG_X_START,//14
+DATA_MEG_X_END=26,
+DATA_MEG_Y_START,//27
+DATA_MEG_Y_END=39,
+DATA_MEG_Z_START,//40
+DATA_MEG_Z_END=52,
+DATA_ACC_X_START,//53
+DATA_ACC_X_END=65,
+DATA_ACC_Y_START,//66
+DATA_ACC_Y_END=78,
+DATA_ACC_Z_START,//79
+DATA_ACC_Z_END=91,
+DATA_GYRO_X_START,//92
+DATA_GYRO_X_END=104,
+DATA_GYRO_Y_START,//105
+DATA_GYRO_Y_END=117,
+DATA_GYRO_Z_START,//118
+DATA_GYRO_Z_END=130,
+TOUCH_X_START,//131
+TOUCH_X_END=138,
+TOUCH_Y_START,//139
+TOUCH_Y_END=146,
+KEY_CLICK_START,//147
+KEY_CLICK_END=147,
+KEY_HOME_START,//148
+KEY_HOME_END=148,
+KEY_APP_START,//149
+KEY_APP_END=149,
+KEY_VOLUME_DOWN_START,//150
+KEY_VOLUME_DOWM_END=150,
+KEY_VOLUME_UP_START,//151
+KEY_VOLUME_UP_END=151,
+MAX=160,
+};
 //init status
 //-----------you work here -------------
 //#define HaloMini
@@ -1164,8 +1203,9 @@ static void saadc_sample_init(void)
 }
 
 
-
-int8_t sensor_data[3*(sizeof(float)*3+1)]={0};
+#define MTU 20
+//int8_t sensor_data[3*(sizeof(float)*3+1)]={0};
+uint8_t sensor_data[MTU]={0};
 static uint32_t custom_char_add(ble_bas_t * p_bas, const ble_bas_init_t * p_bas_init)
 {
 	ble_gatts_char_md_t char_md;
@@ -2952,6 +2992,7 @@ mouse_slow_start();
 
 float raw_buf[3];
 float dof3_buf[6];
+uint16_t data1[6];
 uint8_t interrupter_sensor;
 int gyro_num=0;
 int gsensor_num=0;
@@ -2998,6 +3039,23 @@ void sensor_poll_start()
 }
 int16_t min_param,max_param,slave_latency;
 #include "nrf_drv_systick.h"
+void set_bits(uint8_t start_bit,uint8_t end_bit,uint16_t value)
+{
+	char *Point = sensor_data;
+	//*(uint32_t*)Point=0xFFFF;
+	*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)value)<<(start_bit%8);
+	//*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)value)<<(32-(end_bit%7+((end_bit-start_bit)/8)*8));
+	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[0],sensor_data[1],sensor_data[2],sensor_data[3]);
+	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[4],sensor_data[5],sensor_data[6],sensor_data[7]);
+	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[8],sensor_data[9],sensor_data[10],sensor_data[11]);
+	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[12],sensor_data[13],sensor_data[14],sensor_data[15]);
+	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[16],sensor_data[17],sensor_data[18],sensor_data[19]);
+	//NRF_LOG_INFO("[%x][%x][%x][%x]",(uint32_t)sensor_data,(uint32_t)(sensor_data+1),(uint32_t)(sensor_data+2),(uint32_t)Point);
+	//NRF_LOG_INFO("*%d-%d* bits %d\r\n",start_bit,end_bit,(*(unsigned short*)(Point + start_bit/8)&(~(0x00<<start_bit/8)))>>(15-(end_bit-start_bit)));
+	//NRF_LOG_INFO("*%d-%d* bits %d\r\n",start_bit,end_bit,((*(uint32_t*)(Point + start_bit/8)<<(start_bit%8))>>(32+(start_bit%8)-(end_bit%7+((end_bit-start_bit)/8)*8))));
+	//if(start_bit >=13 && start_bit <=41 )
+	//NRF_LOG_INFO("*%d-%d* value %4d\r\n",start_bit,end_bit,*(uint32_t*)(Point + start_bit/8)>>(start_bit%8));
+}
 void sensor_data_poll_handler(void* p_context)
 {
 	static nrf_drv_systick_state_t systick_s;
@@ -3010,6 +3068,8 @@ void sensor_data_poll_handler(void* p_context)
 			//nrf_delay_ms(50);
 //nrf_drv_systick_delay_ms(50);
 	//app_timer_stop(sensor_poll_timer_id);
+	//if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
+	//	return;
 #if 1
 	ret_code_t err_code;
 	if(Mode_test == true && sensor_ok_flag == false){
@@ -3027,13 +3087,10 @@ void sensor_data_poll_handler(void* p_context)
 		send_mouse_data(raw_buf);
 		
 	}
-	memset(sensor_data,0x00, sizeof(sensor_data));
-	memcpy(sensor_data,send_data_t,1);
-	memcpy(sensor_data+1,send_data_t+1,12);
-	memset(send_data_t,0x00, sizeof(send_data_t));
-	if(Mode_3D == true){
+
+	if(Mode_3D == true ){
 		if(open_imu_send == true){
-			SENSOR_READ_TEST(dof3_buf);
+			SENSOR_READ_TEST(dof3_buf,data1);
 			if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
 				gyro_move = false;
 				//NRF_LOG_INFO("------------------------ gyro no move\n\r");
@@ -3068,22 +3125,65 @@ void sensor_data_poll_handler(void* p_context)
 		//send_mouse_data(dof3_buf);
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 #else
-			int8_t data_flag=0;
-			data_flag=GYRO_DATA;//1----gyro data
-			memcpy(sensor_data+13,&data_flag,1/*sizeof(float)*3+1*/);
-			memcpy(sensor_data+14,(int8_t*)(dof3_buf+3),12/*sizeof(float)*3+1*/);
-			
-			data_flag=GSENSOR_DATA;//2----gsensor data
-			memcpy(sensor_data+26,&data_flag,1/*sizeof(float)*3+1*/);
-			memcpy(sensor_data+27,(int8_t*)(dof3_buf+3),12/*sizeof(float)*3+1*/);
+	memset(sensor_data,0x00, sizeof(sensor_data));
+	static uint16_t time_stamp=0;
+	void *p=sensor_data;
+	time_stamp++;
+	if(time_stamp==512)
+		time_stamp=0;
+//time_stamp 0-8
+	//set_bits(0,8,time_stamp);
+	set_bits(0,8,time_stamp);
+	//(*((uint16_t*)p + TIME_STAMP_START)) |= time_stamp;
+//packet id
+	static uint16_t packet_id=0;
+	packet_id++;
+	if(packet_id == 32)
+		packet_id=0;
+	//(*(uint8_t)(p + PACKET_FLAG_START)) |= packet_id;
+	//set_bits(9,13,packet_id);
+	set_bits(9,13,packet_id);
+//mag 13 13 13
+	volatile float DegreeArray[3];
+	volatile int16_t DeagreeArray_int[3];
+	extern volatile float q0, q1, q2, q3;
+	volatile uint32_t q0_, q1_, q2_, q3_;
 
+	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
+	//NRF_LOG_INFO("------------------------ acc x[%d] y[%d] z[%d]",(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[5]*1000));
+	//NRF_LOG_INFO(" gyro x[%d] y[%d] z[%d]\n\r",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
+	MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
+	QuaternionToDegreeFast(DegreeArray);
+	DeagreeArray_int[0] =  DegreeArray[0];
+	DeagreeArray_int[1] =  DegreeArray[1];
+	DeagreeArray_int[2] =  DegreeArray[2];
+	set_bits(14,26,DeagreeArray_int[0]);
+	set_bits(27,39,DeagreeArray_int[1]);
+	set_bits(40,52,DeagreeArray_int[2]);
+	NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+
+//acc 13 13 13
+	data1[0] >>=3;
+	data1[1] >>=3;
+	data1[2] >>=3;
+	data1[3] >>=3;
+	data1[4] >>=3;
+	data1[5] >>=3;
+	set_bits(53,65,data1[0]);
+	set_bits(66,78,data1[1]);
+	set_bits(79,91,data1[2]);
+
+//gyro 13 13 13
+	set_bits(92,104,data1[3]);
+	set_bits(105,117,data1[4]);
+	set_bits(118,130,data1[5]);
 		}
 
 #endif
 	}
-	if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
+	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
-	}
+	//}
 #endif
 
 //#define OPEN_LOG_TIME

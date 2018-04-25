@@ -3223,6 +3223,16 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>madgwick</GroupName>
+          <Files>
+            <File>
+              <FileName>MadgwickAHRS.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\bmg160\madgwick_algorithm\MadgwickAHRS.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
         <Group>
@@ -6442,6 +6452,16 @@
               <FileName>sw3153_driver.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\sw3153\sw3153_driver.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>madgwick</GroupName>
+          <Files>
+            <File>
+              <FileName>MadgwickAHRS.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\bmg160\madgwick_algorithm\MadgwickAHRS.c</FilePath>
             </File>
           </Files>
         </Group>
