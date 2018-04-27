@@ -8,7 +8,7 @@ set APP_HEX_PATH="X:\nRF5_SDK_13.1.0_7ca7556\dfu\nordic\shadow\nrf52832_xxaa.hex
 
 if "%1"=="" (
 	
-	set start_loop=4
+	set start_loop=1
 	
 ) else (
 
@@ -24,7 +24,7 @@ if %loop_count% gtr %start_loop% goto loop_end
  
 echo *** Please prepare the target to be programmed ***	
 
-;pause
+
 
 echo *** Start programming target %loop_count% ***
 
