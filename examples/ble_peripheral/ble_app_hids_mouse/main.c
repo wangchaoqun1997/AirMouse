@@ -621,8 +621,9 @@ bool Mode_custom1 =false;//mod_vol
 bool mouse_push =false;
 bool push_button =false;
 static int8_t send_data_t[13];
-#define touch_sum send_data_t
-#define key_sum   send_data_t
+//#define touch_sum send_data_t
+static int8_t key_sum[4];
+static int8_t touch_sum[4];
 
 enum data_format{
 NON_DATA=0x00,
@@ -630,6 +631,7 @@ GYRO_DATA=0x01,
 GSENSOR_DATA,
 KEY_DATA,
 TOUCH_MOVE,
+DATA_3DOF=0x08,
 TEST_DATA=0xFF,
 };
 enum Mode_select{
@@ -680,19 +682,27 @@ KEY_VOLUME_UP_END=151,
 MAX=160,
 };
 //init status
+//###################################
+//###################################
+//###################################
+//###################################
 //-----------you work here -------------
-//#define HaloMini
-#ifdef HaloMini
+//#define PROJECT_HaloMini
+#ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
 static bool report_system_in_3D_mode = true;
 #else
-static enum Mode_select MODE_INIT = MODE_3D;
-static bool report_system_in_3D_mode = false;
+static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
+static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 #endif
-static bool use_mode_custom1 = false;
-static bool use_touch_wheel = true;
-static bool open_imu_send = true;
-//----------end wcq
+static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
+static bool use_touch_wheel = true;   // if use the function of mouse wheel
+static bool open_imu_send = true;     // if use the function of read imu data and transfer it in 3D mode
+//#define ONLY_TRANSFER_3DOF_DATA  //transfer data struct use every byte for units
+//######################################
+//######################################
+//######################################
+//######################################
 #define SHORT_STATUS 1
 #define LONG_STATUS 2
 enum key_value{
@@ -2851,6 +2861,9 @@ NRF_LOG_INFO("sensor interrupt hander-------------- up %d\r\n",Touch_Info.Finger
 					int x,y;
 					x = 127 -Touch_Info.X_Axis_Second;
 					y = 127 -Touch_Info.Y_Axis_Second;
+					touch_sum[0] = TOUCH_MOVE;	
+					touch_sum[2]=x;
+					touch_sum[3]=y;
 					if(Mode_3D == true){
 						if(abs(x) < 38 && abs(y) <38){
 							report_key = F12; // 0x45;
@@ -3098,32 +3111,30 @@ void sensor_data_poll_handler(void* p_context)
 				//NRF_LOG_INFO("------------------------ gyro  move\n\r");
 				gyro_move = true;
 			}
-#if 0
-		memcpy(sensor_data,(int8_t*)dof3_buf,sizeof(sensor_data)-1);
-		/*
-				NRF_LOG_INFO("%c-%c-%c-%c\r\n",((int8_t*)dof3_buf)[0],((int8_t*)dof3_buf)[1],((int8_t*)dof3_buf)[2],((int8_t*)dof3_buf)[3]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",((int8_t*)dof3_buf)[4],((int8_t*)dof3_buf)[5],((int8_t*)dof3_buf)[6],((int8_t*)dof3_buf)[7]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",((int8_t*)dof3_buf)[8],((int8_t*)dof3_buf)[9],((int8_t*)dof3_buf)[10],((int8_t*)dof3_buf)[11]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",((int8_t*)dof3_buf)[12],((int8_t*)dof3_buf)[13],((int8_t*)dof3_buf)[14],((int8_t*)dof3_buf)[15]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",((int8_t*)dof3_buf)[16],((int8_t*)dof3_buf)[17],((int8_t*)dof3_buf)[18],((int8_t*)dof3_buf)[19]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",((int8_t*)dof3_buf)[20],((int8_t*)dof3_buf)[21],((int8_t*)dof3_buf)[22],((int8_t*)dof3_buf)[23]);*/
-		/*for(int i=0;i<sizeof(sensor_data);i++)*/
-		/*
-				NRF_LOG_INFO("%c-%c-%c-%c\r\n",sensor_data[0],sensor_data[1],sensor_data[2],sensor_data[3]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",sensor_data[4],sensor_data[5],sensor_data[6],sensor_data[7]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",sensor_data[8],sensor_data[9],sensor_data[10],sensor_data[11]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",sensor_data[12],sensor_data[13],sensor_data[14],sensor_data[15]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",sensor_data[16],sensor_data[17],sensor_data[18],sensor_data[19]);
-		    NRF_LOG_INFO("%c-%c-%c-%c\r\n",sensor_data[20],sensor_data[21],sensor_data[22],sensor_data[23]);
-		    NRF_LOG_INFO("%c--------------\r\n",sensor_data[25]);
-		*/
-		/*NRF_LOG_INFO("\r\n");*//*
-							report_key_touch = F12;
-							ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM1_INDEX,INPUT_REP_CUSTOM1_LEN,&report_key_touch);
-							report_key_touch = 0x00;
-							ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM1_INDEX,INPUT_REP_CUSTOM1_LEN,&report_key_touch);*/
-		//send_mouse_data(dof3_buf);
-		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
+
+	volatile float DegreeArray[3];
+	volatile int16_t DeagreeArray_int[3];
+	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
+	//NRF_LOG_INFO("------------------------ acc x[%d] y[%d] z[%d]",(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[5]*1000));
+	//NRF_LOG_INFO(" gyro x[%d] y[%d] z[%d]\n\r",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
+	MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
+	QuaternionToDegreeFast(DegreeArray);
+	DeagreeArray_int[0] =  DegreeArray[0];
+	DeagreeArray_int[1] =  DegreeArray[1];
+	DeagreeArray_int[2] =  DegreeArray[2];
+	NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+
+#ifdef ONLY_TRANSFER_3DOF_DATA
+	memset(sensor_data,0x00, sizeof(sensor_data));
+	memcpy(sensor_data,key_sum,4);
+	memcpy(sensor_data+4,touch_sum,4);
+	memset(key_sum,0x00, sizeof(key_sum));
+	memset(touch_sum,0x00, sizeof(touch_sum));
+
+	sensor_data[8] = DATA_3DOF;//1----gyro data
+	memcpy(sensor_data+9,(int8_t*)(DeagreeArray_int),2/*sizeof(float)*3+1*/);
+	memcpy(sensor_data+11,(int8_t*)(DeagreeArray_int+1),2/*sizeof(float)*3+1*/);
+	memcpy(sensor_data+13,(int8_t*)(DeagreeArray_int+2),2/*sizeof(float)*3+1*/);
 #else
 	memset(sensor_data,0x00, sizeof(sensor_data));
 	static uint16_t time_stamp=0;
@@ -3144,23 +3155,10 @@ void sensor_data_poll_handler(void* p_context)
 	//set_bits(9,13,packet_id);
 	set_bits(9,13,packet_id);
 //mag 13 13 13
-	volatile float DegreeArray[3];
-	volatile int16_t DeagreeArray_int[3];
-	extern volatile float q0, q1, q2, q3;
-	volatile uint32_t q0_, q1_, q2_, q3_;
 
-	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
-	//NRF_LOG_INFO("------------------------ acc x[%d] y[%d] z[%d]",(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[5]*1000));
-	//NRF_LOG_INFO(" gyro x[%d] y[%d] z[%d]\n\r",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
-	MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
-	QuaternionToDegreeFast(DegreeArray);
-	DeagreeArray_int[0] =  DegreeArray[0];
-	DeagreeArray_int[1] =  DegreeArray[1];
-	DeagreeArray_int[2] =  DegreeArray[2];
 	set_bits(14,26,DeagreeArray_int[0]);
 	set_bits(27,39,DeagreeArray_int[1]);
 	set_bits(40,52,DeagreeArray_int[2]);
-	NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 
 //acc 13 13 13
 	data1[0] >>=3;
@@ -3177,13 +3175,14 @@ void sensor_data_poll_handler(void* p_context)
 	set_bits(92,104,data1[3]);
 	set_bits(105,117,data1[4]);
 	set_bits(118,130,data1[5]);
-		}
 
 #endif
-	}
+		}
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	//}
+	}
+
 #endif
 
 //#define OPEN_LOG_TIME
