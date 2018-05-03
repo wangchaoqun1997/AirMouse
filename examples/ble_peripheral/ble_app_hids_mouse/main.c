@@ -623,7 +623,9 @@ bool push_button =false;
 static int8_t send_data_t[13];
 //#define touch_sum send_data_t
 static int8_t key_sum[4];
-static int8_t touch_sum[4];
+static uint8_t simple_back_key;
+static uint8_t simple_click;
+static uint8_t touch_sum[4];
 
 enum data_format{
 NON_DATA=0x00,
@@ -2461,6 +2463,7 @@ static void bsp_event_handler(bsp_event_t event)
 				ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
 				key_sum[0]=KEY_DATA;
 				key_sum[SHORT_STATUS] |= (0x01<<KEY_BACK);
+				simple_back_key =0x01;
             }
             break;
         case BSP_EVENT_KEY_1_RELEASE:
@@ -2473,6 +2476,7 @@ static void bsp_event_handler(bsp_event_t event)
 				key_sum[0]=KEY_DATA;
 				key_sum[SHORT_STATUS] &= (~(0x01<<KEY_BACK));
 				key_sum[LONG_STATUS] &= (~(0x01<<KEY_BACK));
+				simple_back_key =0x00;
             }
             break;
         case BSP_EVENT_KEY_1_LONG:
@@ -2480,6 +2484,7 @@ static void bsp_event_handler(bsp_event_t event)
 				key_sum[0]=KEY_DATA;
 				key_sum[SHORT_STATUS] |= (0x01<<KEY_BACK);
 				key_sum[LONG_STATUS] |= (0x01<<KEY_BACK);
+				simple_back_key =0x03;
 			}
             break;
         case BSP_EVENT_KEY_0://up down left rigth
@@ -2499,6 +2504,7 @@ static void bsp_event_handler(bsp_event_t event)
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				int8_t const_enter = K_ENTER;
+				simple_click = 0x01;
 				if(Mode_3D == true){
 					const_enter = F12;
 				}
@@ -2530,6 +2536,7 @@ static void bsp_event_handler(bsp_event_t event)
 				if(Mode_test == true){
 					break;
 				}
+				simple_click = 0x00;
 				uint8_t temp = 0x00;
 				if(Mode_mouse == false){
 					if(true == report_system_in_3D_mode || Mode_3D != true){
@@ -2862,8 +2869,8 @@ NRF_LOG_INFO("sensor interrupt hander-------------- up %d\r\n",Touch_Info.Finger
 					x = 127 -Touch_Info.X_Axis_Second;
 					y = 127 -Touch_Info.Y_Axis_Second;
 					touch_sum[0] = TOUCH_MOVE;	
-					touch_sum[2]=x;
-					touch_sum[3]=y;
+					touch_sum[2]=Touch_Info.X_Axis_Second;
+					touch_sum[3]=Touch_Info.Y_Axis_Second;
 					if(Mode_3D == true){
 						if(abs(x) < 38 && abs(y) <38){
 							report_key = F12; // 0x45;
@@ -2974,6 +2981,9 @@ key_cal = report_key_touch;
 					touch_timer_into = false;
 					touch_first = false;
 					touch_first1 = false;
+					touch_sum[0] = TOUCH_MOVE;	
+					touch_sum[2] = 0;
+					touch_sum[3] = 0;
 				}
 
 
@@ -3005,7 +3015,7 @@ mouse_slow_start();
 
 float raw_buf[3];
 float dof3_buf[6];
-uint16_t data1[6];
+int16_t data1[6];
 uint8_t interrupter_sensor;
 int gyro_num=0;
 int gsensor_num=0;
@@ -3016,8 +3026,7 @@ void sensor_in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t actio
 	if(Mode_mouse == true){
 		//interrupter_sensor++;
 		SENSOR_READ_RAW_INT(raw_buf);
-		send_mouse_data(raw_buf);
-		
+		send_mouse_data(raw_buf);	
 	}
 	if(Mode_3D == true){
 		SENSOR_READ_TEST(dof3_buf);
@@ -3052,23 +3061,47 @@ void sensor_poll_start()
 }
 int16_t min_param,max_param,slave_latency;
 #include "nrf_drv_systick.h"
+int16_t get_value=0;
+#define bytes sensor_data
+void get_bits(uint8_t start_bit,uint8_t end_bit,int16_t *get_value)
+{
+	int32_t temp =(int32_t)bytes[start_bit/8] | (int32_t)bytes[start_bit/8+1]<<8 | (int32_t)bytes[start_bit/8+2]<<16 | (int32_t)bytes[start_bit/8+3]<<24;
+
+	if(start_bit>=14 && start_bit<=92){
+		*get_value =(int16_t)(((temp >> (start_bit%8))<<3) );
+		NRF_LOG_INFO("*%d-%d* get_value %4d\r\n",start_bit,end_bit,(int16_t)*get_value);
+	}else{
+		*get_value =(uint16_t)(((temp >> (start_bit%8))) & (~(0xFFFFFFFF<<(end_bit-start_bit+1))));
+		NRF_LOG_INFO("*%d-%d* get_value %4d\r\n",start_bit,end_bit,(uint16_t)*get_value);
+	}
+}
 void set_bits(uint8_t start_bit,uint8_t end_bit,uint16_t value)
 {
 	char *Point = sensor_data;
 	//*(uint32_t*)Point=0xFFFF;
-	*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)value)<<(start_bit%8);
+	if(start_bit>=14 && start_bit<=92){
+		*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)((value>>3)))<<(start_bit%8);
+	}else{
+		*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)value)<<(start_bit%8);
+	}
 	//*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)value)<<(32-(end_bit%7+((end_bit-start_bit)/8)*8));
 	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[0],sensor_data[1],sensor_data[2],sensor_data[3]);
 	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[4],sensor_data[5],sensor_data[6],sensor_data[7]);
-	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[8],sensor_data[9],sensor_data[10],sensor_data[11]);
+	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",sensor_data[8],sensor_data[9],sensor_data[10],sensor_data[11]);
 	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[12],sensor_data[13],sensor_data[14],sensor_data[15]);
-	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[16],sensor_data[17],sensor_data[18],sensor_data[19]);
+	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",sensor_data[16],sensor_data[17],sensor_data[18],sensor_data[19]);
 	//NRF_LOG_INFO("[%x][%x][%x][%x]",(uint32_t)sensor_data,(uint32_t)(sensor_data+1),(uint32_t)(sensor_data+2),(uint32_t)Point);
 	//NRF_LOG_INFO("*%d-%d* bits %d\r\n",start_bit,end_bit,(*(unsigned short*)(Point + start_bit/8)&(~(0x00<<start_bit/8)))>>(15-(end_bit-start_bit)));
 	//NRF_LOG_INFO("*%d-%d* bits %d\r\n",start_bit,end_bit,((*(uint32_t*)(Point + start_bit/8)<<(start_bit%8))>>(32+(start_bit%8)-(end_bit%7+((end_bit-start_bit)/8)*8))));
 	//if(start_bit >=13 && start_bit <=41 )
-	//NRF_LOG_INFO("*%d-%d* value %4d\r\n",start_bit,end_bit,*(uint32_t*)(Point + start_bit/8)>>(start_bit%8));
+	//if(start_bit>=14 && start_bit<=92){
+	//	NRF_LOG_INFO("*%d-%d* value %4d\r\n",start_bit,end_bit,(int16_t) ( ((*(int32_t*)(Point + start_bit/8)) >>(start_bit%8))<<3 ) );
+	//}else{
+	//	NRF_LOG_INFO("*%d-%d* value %4d\r\n",start_bit,end_bit,(int16_t) ( (*(int32_t*)(Point + start_bit/8)) >>(start_bit%8) ) );
+//	}
+	//get_bits(start_bit,end_bit,&get_value);
 }
+
 void sensor_data_poll_handler(void* p_context)
 {
 	static nrf_drv_systick_state_t systick_s;
@@ -3101,7 +3134,7 @@ void sensor_data_poll_handler(void* p_context)
 		
 	}
 
-	if(Mode_3D == true ){
+	if(Mode_3D == true||1 ){
 		if(open_imu_send == true){
 			SENSOR_READ_TEST(dof3_buf,data1);
 			if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
@@ -3135,15 +3168,16 @@ void sensor_data_poll_handler(void* p_context)
 	memcpy(sensor_data+9,(int8_t*)(DeagreeArray_int),2/*sizeof(float)*3+1*/);
 	memcpy(sensor_data+11,(int8_t*)(DeagreeArray_int+1),2/*sizeof(float)*3+1*/);
 	memcpy(sensor_data+13,(int8_t*)(DeagreeArray_int+2),2/*sizeof(float)*3+1*/);
+	NRF_LOG_INFO("[%d][%d][%d]",*(int16_t*)&sensor_data[9],*(int16_t*)&sensor_data[11],*(int16_t*)&sensor_data[13]);
 #else
 	memset(sensor_data,0x00, sizeof(sensor_data));
+
 	static uint16_t time_stamp=0;
 	void *p=sensor_data;
 	time_stamp++;
 	if(time_stamp==512)
 		time_stamp=0;
 //time_stamp 0-8
-	//set_bits(0,8,time_stamp);
 	set_bits(0,8,time_stamp);
 	//(*((uint16_t*)p + TIME_STAMP_START)) |= time_stamp;
 //packet id
@@ -3152,21 +3186,14 @@ void sensor_data_poll_handler(void* p_context)
 	if(packet_id == 32)
 		packet_id=0;
 	//(*(uint8_t)(p + PACKET_FLAG_START)) |= packet_id;
-	//set_bits(9,13,packet_id);
 	set_bits(9,13,packet_id);
 //mag 13 13 13
 
-	set_bits(14,26,DeagreeArray_int[0]);
-	set_bits(27,39,DeagreeArray_int[1]);
-	set_bits(40,52,DeagreeArray_int[2]);
-
+	set_bits(14,26,DeagreeArray_int[0]*10);
+	set_bits(27,39,DeagreeArray_int[1]*10);
+	set_bits(40,52,DeagreeArray_int[2]*10);
 //acc 13 13 13
-	data1[0] >>=3;
-	data1[1] >>=3;
-	data1[2] >>=3;
-	data1[3] >>=3;
-	data1[4] >>=3;
-	data1[5] >>=3;
+
 	set_bits(53,65,data1[0]);
 	set_bits(66,78,data1[1]);
 	set_bits(79,91,data1[2]);
@@ -3176,6 +3203,37 @@ void sensor_data_poll_handler(void* p_context)
 	set_bits(105,117,data1[4]);
 	set_bits(118,130,data1[5]);
 
+//touch x y
+	set_bits(131,138,touch_sum[2]);//x
+	set_bits(139,146,touch_sum[3]);//y
+
+//key
+	set_bits(147,147,simple_click);
+	set_bits(148,149,simple_back_key);//back
+	//set_bits(149,150,key_sum[2]);//long
+	//set_bits(151,151,key_sum[2]);//long
+#if 1
+	//NRF_LOG_INFO("\r\n--------------------------------start****\r\n");
+	//get_bits(0,8,&get_value);
+	//get_bits(9,13,&get_value);
+	//get_bits(14,26,&get_value);
+	//get_bits(27,39,&get_value);
+	//get_bits(40,52,&get_value);
+
+	//get_bits(53,65,&get_value);
+	//get_bits(66,78,&get_value);
+	//get_bits(79,91,&get_value);
+	//get_bits(92,104,&get_value);
+	//get_bits(105,117,&get_value);
+	//get_bits(118,130,&get_value);
+	//get_bits(131,138,&get_value);
+	//get_bits(139,146,&get_value);
+	//get_bits(147,147,&get_value);
+	//get_bits(148,149,&get_value);
+	//NRF_LOG_INFO("[%d][%d][%d]\r\n",data1[3],data1[4],data1[5]);
+	//NRF_LOG_INFO("[%d][%d]\r\n",key_sum[1],key_sum[2]);
+#endif
+	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",touch_sum[2],touch_sum[3],simple_back_key,simple_click);
 #endif
 		}
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
