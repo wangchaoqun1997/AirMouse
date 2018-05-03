@@ -183,10 +183,12 @@ static uint32_t advertising_buttons_configure()
  *
  * @param[out] p_startup_event  Where to put the extracted BSP event.
  */
+extern bool should_power_on; 
 static void startup_event_extract(bsp_event_t * p_startup_event)
 {
     // React to button states
 	if( bsp_button_is_pressed(BTN_ID_WAKEUP_BOND_DELETE)){
+		should_power_on=true;
 		if(bsp_button_is_pressed(BTN_ID_BACK) ){
 			if(bsp_button_is_pressed(BTN_ID_TOUCH)){
         		*p_startup_event = BSP_EVENT_CLEAR_BONDING_DATA;

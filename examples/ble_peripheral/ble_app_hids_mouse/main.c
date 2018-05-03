@@ -689,7 +689,7 @@ MAX=160,
 //###################################
 //###################################
 //-----------you work here -------------
-//#define PROJECT_HaloMini
+#define PROJECT_HaloMini
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
 static bool report_system_in_3D_mode = true;
@@ -701,6 +701,7 @@ static bool use_mode_custom1 = false; // if use the function of control vol-+ mo
 static bool use_touch_wheel = true;   // if use the function of mouse wheel
 static bool open_imu_send = true;     // if use the function of read imu data and transfer it in 3D mode
 //#define ONLY_TRANSFER_3DOF_DATA  //transfer data struct use every byte for units
+bool should_power_on = false;
 //######################################
 //######################################
 //######################################
@@ -888,6 +889,8 @@ static void devices_suspend()
 	sw3153_light_select(OFF, BLINK_LEVEL_NON);
 //TOUCH IC
 	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
+
+	//should_power_on = false;
 }
 #endif  //end USE_SHADOW_CREATE
 /**@brief Function for putting the chip into sleep mode.
@@ -3109,7 +3112,10 @@ void sensor_data_poll_handler(void* p_context)
 	static nrf_drv_systick_state_t systick_s_lastest;
 	static uint32_t det_tick1=0,det_tick2=0;
 	nrf_drv_systick_get(&systick_s);
-
+	if(should_power_on == false){
+    	NRF_LOG_INFO("----- NO power key ,enter sleep !!!!!!!!\r\n");
+		sleep_mode_enter_power();
+	}
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
 			//nrf_delay_ms(50);
 //nrf_drv_systick_delay_ms(50);
@@ -3134,7 +3140,7 @@ void sensor_data_poll_handler(void* p_context)
 		
 	}
 
-	if(Mode_3D == true||1 ){
+	if(Mode_3D == true){
 		if(open_imu_send == true){
 			SENSOR_READ_TEST(dof3_buf,data1);
 			if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
@@ -3155,7 +3161,7 @@ void sensor_data_poll_handler(void* p_context)
 	DeagreeArray_int[0] =  DegreeArray[0];
 	DeagreeArray_int[1] =  DegreeArray[1];
 	DeagreeArray_int[2] =  DegreeArray[2];
-	NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+	//NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 
 #ifdef ONLY_TRANSFER_3DOF_DATA
 	memset(sensor_data,0x00, sizeof(sensor_data));
@@ -3327,7 +3333,7 @@ int main(void)
     // Initialize.
     log_init();
     timers_init();
-	nrf_delay_ms(500);
+	//nrf_delay_ms(500);
     buttons_leds_init(&erase_bonds);
  #ifdef USE_SHADOW_CREATE
 	nrf_gpio_cfg_output(TOUCH_RST_PIN);
@@ -3348,7 +3354,8 @@ int main(void)
 	twi_init_1();
 	bmg160_init();
 	uint16_t tp_version = tp_firmware_version();
-    NRF_LOG_INFO("----- tp_version  [0x%x]\r\n",tp_version);
+    NRF_LOG_INFO("----- tp_version  [0x%x] %d\r\n",tp_version,should_power_on);
+
  #endif
     ble_stack_init();
     scheduler_init();
@@ -3389,7 +3396,7 @@ int main(void)
 
 		//erase_bonds = true;
     advertising_start(erase_bonds);
-
+	if(should_power_on == true)
 	sw3153_light_select(BLUE, BLINK_LEVEL_2);
 	if(mode_will_test == true){
 		Mode_switch(MODE_TEST,false);
