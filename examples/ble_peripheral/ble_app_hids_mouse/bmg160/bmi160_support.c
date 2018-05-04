@@ -139,11 +139,11 @@ BMI160_RETURN_FUNCTION_TYPE ivg_bmi160_init(void)
 	s_bmi160.delay_msec(100);
 	s_bmi160.delay_msec(BMI160_GEN_READ_WRITE_DELAY);/* bmi160_delay_ms in ms*/
 	/* set gyro data rate as 1600Hz*/
-	com_rslt += bmi160_set_gyro_output_data_rate(BMI160_GYRO_OUTPUT_DATA_RATE_100HZ);
+	com_rslt += bmi160_set_gyro_output_data_rate(BMI160_GYRO_OUTPUT_DATA_RATE_800HZ);
 	s_bmi160.delay_msec(100);
 	s_bmi160.delay_msec(BMI160_GEN_READ_WRITE_DELAY);/* bmi160_delay_ms in ms*/
 	/* set accel data rate as 1600Hz*/
-	com_rslt += bmi160_set_accel_output_data_rate(BMI160_ACCEL_OUTPUT_DATA_RATE_100HZ, BMI160_ACCEL_OSR4_AVG1);
+	com_rslt += bmi160_set_accel_output_data_rate(BMI160_ACCEL_OUTPUT_DATA_RATE_800HZ, BMI160_ACCEL_OSR4_AVG1);
 	s_bmi160.delay_msec(100);
 	s_bmi160.delay_msec(BMI160_GEN_READ_WRITE_DELAY);/* bmi160_delay_ms in ms*/
 
@@ -780,6 +780,33 @@ BMI160_RETURN_FUNCTION_TYPE bmi160_interrupt_configuration(void)
  *	I2C bus read, write, bmi160_delay_ms and
  *	device address with global structure bmi160_t
 */
+#include "nrf_drv_twi.h"
+extern const nrf_drv_twi_t m_twi1;
+typedef  unsigned char uint8_t;
+static int8_t I2C1_Read_Addr8(	const uint8_t slave_addr,const uint8_t read_addr,uint8_t *data,uint8_t data_num)
+{
+	 char err_code;
+		
+	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, &read_addr, 1, false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+		err_code = nrf_drv_twi_rx(&m_twi1, slave_addr, data, data_num);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+	  return (int8_t)err_code;
+}
+static int8_t I2C2_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t write_value)
+{
+	  char err_code;
+	  uint8_t write[2]={write_addr,write_value};	
+	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, write, sizeof(write), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+	  return (int8_t)err_code;
+}
 s8 i2c_routine(void)
 {
 /*--------------------------------------------------------------------------*

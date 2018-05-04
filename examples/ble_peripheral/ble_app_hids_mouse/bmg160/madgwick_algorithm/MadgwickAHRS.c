@@ -21,7 +21,7 @@
 //---------------------------------------------------------------------------------------------------
 // Definitions
 
-#define sampleFreq	100.0f		// sample frequency in Hz
+#define sampleFreq	800.0f		// sample frequency in Hz
 #define betaDef		0.1f		// 2 * proportional gain
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -42,6 +42,7 @@ float invSqrt(float x);
 //---------------------------------------------------------------------------------------------------
 // AHRS algorithm update
 extern float dof3_buf[6];
+extern int magnet_xyz[3];
 void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
 	float recipNorm;
 	float s0, s1, s2, s3;
@@ -49,11 +50,27 @@ void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float 
 	float hx, hy;
 	float _2q0mx, _2q0my, _2q0mz, _2q1mx, _2bx, _2bz, _4bx, _4bz, _2q0, _2q1, _2q2, _2q3, _2q0q2, _2q2q3, q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
 
-	mx=my=mz=0.00000f;
+	//mx=my=mz=0.00000f;
+	gx = dof3_buf[1];
+	gy = dof3_buf[0];
+	gz = dof3_buf[2];
+	ax = dof3_buf[4];
+	ay = dof3_buf[3];
+	az = dof3_buf[5];
+#define NO_MAG 1
+#if NO_MAG
+	mx = 0.0001f;
+	my = 0.0001f;
+	mz = 0.0001f;
+#else
+	mx = magnet_xyz[0];
+	my = magnet_xyz[1];
+	mz = magnet_xyz[2];
+#endif
 	//NRF_LOG_INFO("------------------------ 12[%d][%d][%d]\n\r",(int32_t)(gx*1000),(int32_t)(gy*1000),(int32_t)(gz*1000));
 	// Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
 	if((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f)) {
-		//NRF_LOG_INFO("------------------------ 1\n\r");
+		NRF_LOG_INFO("------------------------ no magnet\n\r");
 		MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
 		return;
 	}

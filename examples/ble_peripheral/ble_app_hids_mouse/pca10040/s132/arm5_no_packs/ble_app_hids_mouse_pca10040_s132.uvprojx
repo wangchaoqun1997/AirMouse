@@ -3233,6 +3233,16 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>qmcX983</GroupName>
+          <Files>
+            <File>
+              <FileName>qmcX983.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\qmcX983\qmcX983.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
         <Group>
@@ -6462,6 +6472,16 @@
               <FileName>MadgwickAHRS.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\bmg160\madgwick_algorithm\MadgwickAHRS.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>qmcX983</GroupName>
+          <Files>
+            <File>
+              <FileName>qmcX983.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\qmcX983\qmcX983.c</FilePath>
             </File>
           </Files>
         </Group>

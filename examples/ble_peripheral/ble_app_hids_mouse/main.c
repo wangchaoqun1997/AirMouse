@@ -82,6 +82,7 @@
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
 #include "sw3153_driver.h"
+#include "nrf_drv_systick.h"
 #define NRF_LOG_MODULE_NAME "APP"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -210,6 +211,7 @@ APP_TIMER_DEF(connect_sleep_id);
 APP_TIMER_DEF(saadc_sample_id);
 APP_TIMER_DEF(sensor_poll_timer_id);
 APP_TIMER_DEF(touch_action_detect_id);
+APP_TIMER_DEF(MadgwickAHRSupdate_timer_id);
 
 
 //--------------dfu end
@@ -689,7 +691,7 @@ MAX=160,
 //###################################
 //###################################
 //-----------you work here -------------
-#define PROJECT_HaloMini
+//#define PROJECT_HaloMini
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
 static bool report_system_in_3D_mode = true;
@@ -740,7 +742,7 @@ void twi_init (void)
 }
 
 #define TWI_INSTANCE_ID_1     1
-static const nrf_drv_twi_t m_twi1 = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID_1);
+const nrf_drv_twi_t m_twi1 = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID_1);
 void twi_init_1 (void)
 {
     ret_code_t err_code;
@@ -1371,24 +1373,14 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 		params.p_len = &data_len;
 
 		err_code = sd_ble_gatts_hvx(conn_handle,&params);
-		static int i=0;
-		if(send_data[0] == KEY_DATA || send_data[0] == TOUCH_MOVE){
-			if(err_code == 0){NRF_LOG_INFO("----- ----------------------key/touch 0-2:[0x%x][%d][%d] err:[%d] %d\r\n",send_data[0],send_data[1],send_data[2],err_code,i++);}
-			else 			 {NRF_LOG_INFO("----- -------ERR !!! -------key/touch 0-2:[0x%x][%d][%d] err:[%d] %d\r\n",send_data[0],send_data[1],send_data[2],err_code,i++);}
-		}
-		static int j=0;
-		j++;
-		if(err_code != 0 && (send_data[13]==GYRO_DATA)){
+		if(err_code ==19){
 			gyro_resent_flag=true;
-		    static int i=0,t;
-    		NRF_LOG_INFO("----- ---------------------- gyro_data error %d [%d]ms [%d]\r\n",err_code,(j-i)*10,t++);
-			i=j;
-		}else if(err_code == 0 && (send_data[0]==GYRO_DATA)){
+		    static int t;
+    		NRF_LOG_INFO("----- ---------------------- send error %d [%d]\r\n",err_code,t++);
+		}else if(err_code == 0){
 			gyro_resent_flag=false;
 		}
 		if(err_code != 0 && ((send_data[0] == KEY_DATA)||(send_data[0] == TOUCH_MOVE))){
-		//if(err_code == 19 && ((send_data[0] == KEY_DATA))){
-		//if(err_code == 19 && ((send_data[0] == KEY_DATA))){
 			if(send_data[0]==TOUCH_MOVE){
 				touch_action_detect_stop();
 			}
@@ -3019,6 +3011,7 @@ mouse_slow_start();
 float raw_buf[3];
 float dof3_buf[6];
 int16_t data1[6];
+float magnet_xyz[3];
 uint8_t interrupter_sensor;
 int gyro_num=0;
 int gsensor_num=0;
@@ -3057,13 +3050,66 @@ void sensor_in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t actio
 	}
 #endif
 }
+#define MadgwickAHRSupdate_FRQ 10
+static void MadgwickAHRSupdate_start()
+{
+	app_timer_start(MadgwickAHRSupdate_timer_id,APP_TIMER_TICKS(MadgwickAHRSupdate_FRQ),NULL);
+}
+volatile float DegreeArray[3];
+volatile int16_t DeagreeArray_int[3];
+static void MadgwickAHRSupdate_handler(void* p_context)
+{	static nrf_drv_systick_state_t systick_s;
+	static nrf_drv_systick_state_t systick_s_end;
+	static nrf_drv_systick_state_t systick_s_lastest;
+	static uint32_t det_tick1=0,det_tick2=0;
+	nrf_drv_systick_get(&systick_s);
+	MadgwickAHRSupdate_start();
+#if 1
+	if(open_imu_send == true){
+		SENSOR_READ_TEST(dof3_buf,data1);
+		if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
+			gyro_move = false;
+			//NRF_LOG_INFO("------------------------ gyro no move\n\r");
+		}else{
+			//NRF_LOG_INFO("------------------------ gyro  move\n\r");
+			gyro_move = true;
+		}
+	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
+	//NRF_LOG_INFO("------------------------ acc x[%d] y[%d] z[%d]",(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[5]*1000));
+	//NRF_LOG_INFO(" gyro x[%d] y[%d] z[%d]\n\r",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
+		MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
+		QuaternionToDegreeFast(DegreeArray);
+		DeagreeArray_int[0] =  DegreeArray[0];
+		DeagreeArray_int[1] =  DegreeArray[1];
+		DeagreeArray_int[2] =  DegreeArray[2];
+		NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d] freq[%d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2],1000 /(MadgwickAHRSupdate_FRQ*100));
+	}
+#endif
+//#define OPEN_LOG_TIME1
+#ifdef OPEN_LOG_TIME1
+	if(systick_s_lastest.time >= systick_s.time){
+		det_tick1 = systick_s_lastest.time - systick_s.time;
+	}
+	NRF_LOG_INFO("----- ---------------------- systick[%d] lastest[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_lastest.time,det_tick1,(det_tick1/64));
+	systick_s_lastest.time = systick_s.time;
+#endif
+}
+static void MadgwickAHRSupdate_time_init(void)
+{
+	app_timer_create(&MadgwickAHRSupdate_timer_id,APP_TIMER_MODE_SINGLE_SHOT,MadgwickAHRSupdate_handler);
+}
+
+static void MadgwickAHRSupdate_stop(void)
+{
+	app_timer_stop(MadgwickAHRSupdate_timer_id);
+}
+
 #define SENSOR_POLL_INTERVAL 10
 void sensor_poll_start()
 {
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
 }
 int16_t min_param,max_param,slave_latency;
-#include "nrf_drv_systick.h"
 int16_t get_value=0;
 #define bytes sensor_data
 void get_bits(uint8_t start_bit,uint8_t end_bit,int16_t *get_value)
@@ -3117,6 +3163,11 @@ void sensor_data_poll_handler(void* p_context)
 		sleep_mode_enter_power();
 	}
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
+	int magnet_xyz_int[3];
+	read_qmcX983_xyz(magnet_xyz_int);
+	magnet_xyz[0]=magnet_xyz_int[0]*1.0;
+	magnet_xyz[1]=magnet_xyz_int[1]*1.0;
+	magnet_xyz[2]=magnet_xyz_int[2]*1.0;
 			//nrf_delay_ms(50);
 //nrf_drv_systick_delay_ms(50);
 	//app_timer_stop(sensor_poll_timer_id);
@@ -3141,27 +3192,7 @@ void sensor_data_poll_handler(void* p_context)
 	}
 
 	if(Mode_3D == true){
-		if(open_imu_send == true){
-			SENSOR_READ_TEST(dof3_buf,data1);
-			if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
-				gyro_move = false;
-				//NRF_LOG_INFO("------------------------ gyro no move\n\r");
-			}else{
-				//NRF_LOG_INFO("------------------------ gyro  move\n\r");
-				gyro_move = true;
-			}
 
-	volatile float DegreeArray[3];
-	volatile int16_t DeagreeArray_int[3];
-	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
-	//NRF_LOG_INFO("------------------------ acc x[%d] y[%d] z[%d]",(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[5]*1000));
-	//NRF_LOG_INFO(" gyro x[%d] y[%d] z[%d]\n\r",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
-	MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
-	QuaternionToDegreeFast(DegreeArray);
-	DeagreeArray_int[0] =  DegreeArray[0];
-	DeagreeArray_int[1] =  DegreeArray[1];
-	DeagreeArray_int[2] =  DegreeArray[2];
-	//NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 
 #ifdef ONLY_TRANSFER_3DOF_DATA
 	memset(sensor_data,0x00, sizeof(sensor_data));
@@ -3241,7 +3272,6 @@ void sensor_data_poll_handler(void* p_context)
 #endif
 	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",touch_sum[2],touch_sum[3],simple_back_key,simple_click);
 #endif
-		}
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	//}
@@ -3270,42 +3300,10 @@ void SENSOR_INIT_1(void)
 	app_timer_create(&sensor_poll_timer_id,APP_TIMER_MODE_SINGLE_SHOT,sensor_data_poll_handler);
 }
 
-int8_t I2C1_Read_Addr8(	const uint8_t slave_addr,const uint8_t read_addr,uint8_t *data,uint8_t data_num)
-{
-		ret_code_t err_code;
-		
-	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, &read_addr, 1, false);
-	  if (err_code == NRF_SUCCESS){
-				//nrf_drv_gpiote_out_set(PIN_OUT);
-    }
-		err_code = nrf_drv_twi_rx(&m_twi1, slave_addr, data, data_num);
-	  if (err_code == NRF_SUCCESS){
-				//nrf_drv_gpiote_out_set(PIN_OUT);
-    }
-	  return (int8_t)err_code;
-}
-int8_t I2C1_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t * data,uint8_t data_num)
-{
-		ret_code_t err_code;
-	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, &write_addr, 1, false);
-	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, data, data_num, false);
-	  if (err_code == NRF_SUCCESS){
-				//nrf_drv_gpiote_out_set(PIN_OUT);
-    }
-	  return (int8_t)err_code;
-}
-int8_t I2C2_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t write_value)
-{
-		ret_code_t err_code;
-	  uint8_t write[2]={write_addr,write_value};	
-	  err_code = nrf_drv_twi_tx(&m_twi1, slave_addr, write, sizeof(write), false);
-	  if (err_code == NRF_SUCCESS){
-				//nrf_drv_gpiote_out_set(PIN_OUT);
-    }
-	  return (int8_t)err_code;
-}
+
 void bmg160_init(void)
 {
+#if 0
 	uint8_t data=0;	
 	I2C1_Read_Addr8(0x68,0x00,&data,1);
     NRF_LOG_INFO("-----------bmg160 read id 0x%x\r\n",data);
@@ -3314,6 +3312,7 @@ void bmg160_init(void)
 	data = 0;
 	I2C1_Read_Addr8(0x68,0x03,&data,1);
     NRF_LOG_INFO("-----------bmg160 read 0x6c [0x%x]\r\n",data);
+#endif
 }
 void sensor_poll_start();
 void sensor_cal_status()
@@ -3382,11 +3381,14 @@ int main(void)
 	connect_sleep_init();
 	saadc_sample_init();
 	touch_atcion_detect_init();
+	MadgwickAHRSupdate_time_init();
 
+	qmcX983_init();
 	SENSOR_INIT();
 	SENSOR_INIT_1();
 	sensor_poll_start();
 	saadc_sample_start();
+	MadgwickAHRSupdate_start();
 	if(mode_will_cal == true){
 		//Mode_switch(MODE_CALIBRATE,false);
 		sensor_cal_init();
