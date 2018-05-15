@@ -698,11 +698,11 @@ static bool report_system_in_3D_mode = true;
 #else
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
+#define TRANSFER_FORMAT_1
 #endif
 static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
-static bool use_touch_wheel = true;   // if use the function of mouse wheel
+static bool use_touch_wheel = false;   // if use the function of mouse wheel
 static bool open_imu_send = true;     // if use the function of read imu data and transfer it in 3D mode
-//#define ONLY_TRANSFER_3DOF_DATA  //transfer data struct use every byte for units
 bool should_power_on = false;
 //######################################
 //######################################
@@ -1219,8 +1219,11 @@ static void saadc_sample_init(void)
 	app_timer_create(&saadc_sample_id,APP_TIMER_MODE_SINGLE_SHOT,saadc_sample_handler);
 }
 
-
+#ifdef TRANSFER_FORMAT_1
+#define MTU (4*3+1)
+#else
 #define MTU 20
+#endif
 //int8_t sensor_data[3*(sizeof(float)*3+1)]={0};
 uint8_t sensor_data[MTU]={0};
 static uint32_t custom_char_add(ble_bas_t * p_bas, const ble_bas_init_t * p_bas_init)
@@ -1373,14 +1376,14 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 		params.p_len = &data_len;
 
 		err_code = sd_ble_gatts_hvx(conn_handle,&params);
-		if(err_code ==19){
+		if(err_code ==19 && (send_data[0]==GYRO_DATA)){
 			gyro_resent_flag=true;
 		    static int t;
-    		NRF_LOG_INFO("----- ---------------------- send error %d [%d]\r\n",err_code,t++);
-		}else if(err_code == 0){
+    		NRF_LOG_INFO("----- ---------------------- gyro send error %d [%d]\r\n",err_code,t++);
+		}else if(err_code == 0 && (send_data[0]==GYRO_DATA)){
 			gyro_resent_flag=false;
 		}
-		if(err_code != 0 && ((send_data[0] == KEY_DATA)||(send_data[0] == TOUCH_MOVE))){
+		if(err_code == 19 && ((send_data[0] == KEY_DATA)||(send_data[0] == TOUCH_MOVE))){
 			if(send_data[0]==TOUCH_MOVE){
 				touch_action_detect_stop();
 			}
@@ -1388,9 +1391,9 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 			nrf_delay_ms(50);
 			err_code = sd_ble_gatts_hvx(conn_handle,&params);
 			if(err_code == 19){
-    			NRF_LOG_INFO("----- ---------------------- error_code resend %d error\r\n",err_code);
+    			NRF_LOG_INFO("----- ----------------------key  error_code resend %d error\r\n",err_code);
 			}else{
-    			NRF_LOG_INFO("----- ---------------------- error_code resend %d ok\r\n",err_code);
+    			NRF_LOG_INFO("----- ----------------------key  error_code resend %d ok\r\n",err_code);
 			}
 			if(send_data[0]==TOUCH_MOVE){
 				touch_action_detect_start();
@@ -2458,6 +2461,9 @@ static void bsp_event_handler(bsp_event_t event)
 				ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
 				key_sum[0]=KEY_DATA;
 				key_sum[SHORT_STATUS] |= (0x01<<KEY_BACK);
+			#ifdef TRANSFER_FORMAT_1
+				custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+			#endif
 				simple_back_key =0x01;
             }
             break;
@@ -2471,6 +2477,9 @@ static void bsp_event_handler(bsp_event_t event)
 				key_sum[0]=KEY_DATA;
 				key_sum[SHORT_STATUS] &= (~(0x01<<KEY_BACK));
 				key_sum[LONG_STATUS] &= (~(0x01<<KEY_BACK));
+			#ifdef TRANSFER_FORMAT_1
+				custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+			#endif
 				simple_back_key =0x00;
             }
             break;
@@ -2479,6 +2488,9 @@ static void bsp_event_handler(bsp_event_t event)
 				key_sum[0]=KEY_DATA;
 				key_sum[SHORT_STATUS] |= (0x01<<KEY_BACK);
 				key_sum[LONG_STATUS] |= (0x01<<KEY_BACK);
+			#ifdef TRANSFER_FORMAT_1
+				custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+			#endif
 				simple_back_key =0x03;
 			}
             break;
@@ -2511,6 +2523,9 @@ static void bsp_event_handler(bsp_event_t event)
 				 	report_key_cache = report_key;	
 					key_sum[0]=KEY_DATA;
 					key_sum[SHORT_STATUS] |= (0x01 << (report_key-F8));
+				#ifdef TRANSFER_FORMAT_1
+					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+				#endif
 				}else if(Mode_mouse == true){
     				NRF_LOG_INFO("key_2 press long---------------- down\r\n");
 					if(true == report_system_in_3D_mode || Mode_3D != true){
@@ -2524,6 +2539,9 @@ static void bsp_event_handler(bsp_event_t event)
 				key_sum[0]=KEY_DATA;
 				key_sum[SHORT_STATUS] |= (0x01 << (report_key-F8));
 				key_sum[LONG_STATUS] |= (0x01 << (report_key_cache-F8));
+			#ifdef TRANSFER_FORMAT_1
+				custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+			#endif
             }
             break;
         case BSP_EVENT_KEY_0_RELEASE:
@@ -2541,6 +2559,9 @@ static void bsp_event_handler(bsp_event_t event)
 					key_sum[0]=KEY_DATA;
 					key_sum[SHORT_STATUS] &= (~(0x01 << (report_key_cache-F8)));
 					key_sum[LONG_STATUS] &= (~(0x01 << (report_key_cache-F8)));
+				#ifdef TRANSFER_FORMAT_1
+					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+				#endif
 				}else if(Mode_mouse == true){
     				NRF_LOG_INFO("key_2 press long---------------- up\r\n");
 					if(true == report_system_in_3D_mode || Mode_3D != true){
@@ -3079,13 +3100,13 @@ if(i==512)i=0;
 	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
 	//NRF_LOG_INFO("------------------timestamp[%d]  acc*1000  x[%6d] y[%6d] z[%6d]\n",i++,(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[5]*1000));
 	//NRF_LOG_INFO("  gyro*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
-	NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
+	//NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
 		MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
 		QuaternionToDegreeFast(DegreeArray);
 		DeagreeArray_int[0] =  DegreeArray[0];
 		DeagreeArray_int[1] =  DegreeArray[1];
 		DeagreeArray_int[2] =  DegreeArray[2];
-		NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+	//	NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 	}
 #endif
 //#define OPEN_LOG_TIME1
@@ -3197,18 +3218,24 @@ void sensor_data_poll_handler(void* p_context)
 	if(Mode_3D == true){
 
 
-#ifdef ONLY_TRANSFER_3DOF_DATA
-	memset(sensor_data,0x00, sizeof(sensor_data));
-	memcpy(sensor_data,key_sum,4);
-	memcpy(sensor_data+4,touch_sum,4);
-	memset(key_sum,0x00, sizeof(key_sum));
-	memset(touch_sum,0x00, sizeof(touch_sum));
-
-	sensor_data[8] = DATA_3DOF;//1----gyro data
-	memcpy(sensor_data+9,(int8_t*)(DeagreeArray_int),2/*sizeof(float)*3+1*/);
-	memcpy(sensor_data+11,(int8_t*)(DeagreeArray_int+1),2/*sizeof(float)*3+1*/);
-	memcpy(sensor_data+13,(int8_t*)(DeagreeArray_int+2),2/*sizeof(float)*3+1*/);
-	NRF_LOG_INFO("[%d][%d][%d]",*(int16_t*)&sensor_data[9],*(int16_t*)&sensor_data[11],*(int16_t*)&sensor_data[13]);
+#ifdef TRANSFER_FORMAT_1
+	static char gsensor_frq = 0;
+	int8_t data_flag = 0;
+	gsensor_frq++;
+	if(gsensor_frq != 10){
+		data_flag=GYRO_DATA;
+		memset(sensor_data,0x00, sizeof(sensor_data));
+		memcpy(sensor_data,&data_flag,1);
+		memcpy(sensor_data+1,(int8_t*)dof3_buf,12);
+		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
+	}else{
+		gsensor_frq=0;
+		memset(sensor_data,0x00, sizeof(sensor_data));
+		data_flag=GSENSOR_DATA;
+		memcpy(sensor_data,&data_flag,1);
+		memcpy(sensor_data+1,(int8_t*)(dof3_buf+3),12);
+		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
+	}
 #else
 	memset(sensor_data,0x00, sizeof(sensor_data));
 
@@ -3274,10 +3301,10 @@ void sensor_data_poll_handler(void* p_context)
 	//NRF_LOG_INFO("[%d][%d]\r\n",key_sum[1],key_sum[2]);
 #endif
 	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",touch_sum[2],touch_sum[3],simple_back_key,simple_click);
-#endif
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
-		//custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
+		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	//}
+#endif
 	}
 
 #endif

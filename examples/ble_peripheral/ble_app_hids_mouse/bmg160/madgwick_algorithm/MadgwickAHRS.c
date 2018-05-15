@@ -67,7 +67,7 @@ void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float 
 	//NRF_LOG_INFO("------------------------ 12[%d][%d][%d]\n\r",(int32_t)(gx*1000),(int32_t)(gy*1000),(int32_t)(gz*1000));
 	// Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
 	if((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f)) {
-		NRF_LOG_INFO("------------------------ no magnet\n\r");
+		//NRF_LOG_INFO("------------------------ no magnet\n\r");
 		MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
 		return;
 	}
