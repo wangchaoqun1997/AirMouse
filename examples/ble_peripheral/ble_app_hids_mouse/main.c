@@ -3074,15 +3074,18 @@ static void MadgwickAHRSupdate_handler(void* p_context)
 			//NRF_LOG_INFO("------------------------ gyro  move\n\r");
 			gyro_move = true;
 		}
+		static int i=0;
+if(i==512)i=0;
 	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
-	//NRF_LOG_INFO("------------------------ acc x[%d] y[%d] z[%d]",(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[5]*1000));
-	//NRF_LOG_INFO(" gyro x[%d] y[%d] z[%d]\n\r",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
+	//NRF_LOG_INFO("------------------timestamp[%d]  acc*1000  x[%6d] y[%6d] z[%6d]\n",i++,(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[5]*1000));
+	//NRF_LOG_INFO("  gyro*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
+	NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
 		MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
 		QuaternionToDegreeFast(DegreeArray);
 		DeagreeArray_int[0] =  DegreeArray[0];
 		DeagreeArray_int[1] =  DegreeArray[1];
 		DeagreeArray_int[2] =  DegreeArray[2];
-		NRF_LOG_INFO("---- Deagree [%5d][%5d][%5d] freq[%d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2],1000 /(MadgwickAHRSupdate_FRQ*100));
+		NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 	}
 #endif
 //#define OPEN_LOG_TIME1
@@ -3165,9 +3168,9 @@ void sensor_data_poll_handler(void* p_context)
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
 	int magnet_xyz_int[3];
 	read_qmcX983_xyz(magnet_xyz_int);
-	magnet_xyz[0]=magnet_xyz_int[0]*1.0;
-	magnet_xyz[1]=magnet_xyz_int[1]*1.0;
-	magnet_xyz[2]=magnet_xyz_int[2]*1.0;
+	magnet_xyz[0]=(magnet_xyz_int[0]+100)*1.0;
+	magnet_xyz[1]=(magnet_xyz_int[1]-100)*1.0;
+	magnet_xyz[2]=(magnet_xyz_int[2]-300)*1.0;
 			//nrf_delay_ms(50);
 //nrf_drv_systick_delay_ms(50);
 	//app_timer_stop(sensor_poll_timer_id);
@@ -3273,7 +3276,7 @@ void sensor_data_poll_handler(void* p_context)
 	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",touch_sum[2],touch_sum[3],simple_back_key,simple_click);
 #endif
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
-		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
+		//custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	//}
 	}
 
