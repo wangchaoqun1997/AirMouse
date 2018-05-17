@@ -176,12 +176,20 @@ typedef enum
     BSP_EVENT_KEY_1_LONG,                        /**< Default event of the push action of BSP_BUTTON_1 (only if this button is present). */
     BSP_EVENT_KEY_2_LONG,                        /**< Default event of the push action of BSP_BUTTON_2 (only if this button is present). */
     BSP_EVENT_KEY_3_LONG,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_4_LONG,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_5_LONG,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_6_LONG,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_7_LONG,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
     BSP_EVENT_KEY_0_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_0 (only if this button is present). */
     BSP_EVENT_KEY_1_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_1 (only if this button is present). */
     BSP_EVENT_KEY_2_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_2 (only if this button is present). */
     BSP_EVENT_KEY_3_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_4_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_5_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_6_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
+    BSP_EVENT_KEY_7_RELEASE,                        /**< Default event of the push action of BSP_BUTTON_3 (only if this button is present). */
 
-    BSP_EVENT_KEY_LAST = BSP_EVENT_KEY_3_RELEASE,
+    BSP_EVENT_KEY_LAST = BSP_EVENT_KEY_7_RELEASE,
 
 } bsp_event_t;
 

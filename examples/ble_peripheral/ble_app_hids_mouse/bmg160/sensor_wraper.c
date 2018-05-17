@@ -160,7 +160,7 @@ int  SENSOR_READ_TEST(float * buf,int16_t *data)
 		g_gyroxyz.z -= apply_gyro_offset_Z;
 	}
 
-	if(abs(g_gyroxyz.x)<5 &&abs(g_gyroxyz.y)<5 &&abs(g_gyroxyz.z)<5){
+	if(abs(g_gyroxyz.x)<10 &&abs(g_gyroxyz.y)<10 &&abs(g_gyroxyz.z)<10){
 		g_gyroxyz.y =0 ;
 		g_gyroxyz.x =0 ;
 		g_gyroxyz.z =0 ;

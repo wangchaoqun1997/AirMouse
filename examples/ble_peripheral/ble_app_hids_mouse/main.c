@@ -92,7 +92,7 @@
 
 
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "wangcq327_v1.0.3"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v1.0.4"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                        /**< Battery level measurement interval (ticks). */
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum simulated battery level. */
@@ -685,6 +685,16 @@ KEY_VOLUME_UP_START,//151
 KEY_VOLUME_UP_END=151,
 MAX=160,
 };
+#define LED_EN 27//LED_1
+#define PWR_EN 28//LED_2
+void set_enable_pin(uint32_t enable_pin,char on_or_off)
+{
+	if(on_or_off){
+		bsp_board_led_on(enable_pin);
+	}else{
+		bsp_board_led_off(enable_pin);
+	}
+}
 //init status
 //###################################
 //###################################
@@ -1076,7 +1086,7 @@ void bmi160_calibration(void)
 	fds_read(read_gryo_offset);
 	if((read_gryo_offset[1] & 0xFFFF0000)){
 		sw3153_light_select(RED, BLINK_LEVEL_NON);
-		nrf_delay_ms(2000);
+		nrf_delay_ms(1500);
 		if(! bsp_button_is_pressed(1/*back*/)){
     		NRF_LOG_INFO("haved apply offset not apply this time\r\n");
 			sleep_mode_enter_power();
@@ -1097,14 +1107,14 @@ void bmi160_calibration(void)
 	
     NRF_LOG_INFO("sensor calibrate start !!! \r\n");
 	sw3153_light_select(RED, BLINK_LEVEL_0);
-	nrf_delay_ms(3000);
+	nrf_delay_ms(1000);
 	sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_NON);
-	nrf_delay_ms(3000);
+	nrf_delay_ms(500);
 	sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_0);
 	for(char i=0;i<100;i++){
 		short cal_buf[6]={0x00};
 		SENSOR_READ_TEST_3(cal_buf);
-    	NRF_LOG_INFO("gyro offset [%d][%d][%d]\r\n",cal_buf[0],cal_buf[1],cal_buf[2]);
+    	//NRF_LOG_INFO("gyro offset [%d][%d][%d]\r\n",cal_buf[0],cal_buf[1],cal_buf[2]);
 		cal_offset[0] += cal_buf[0];
 		cal_offset[1] += cal_buf[1];
 		cal_offset[2] += cal_buf[2];
@@ -1312,6 +1322,10 @@ void custom_on_write(ble_bas_t * p_bas, ble_evt_t * p_ble_evt)
 				use_touch_wheel = true;
 			}else if(p_evt_write->data[0] == 'w'){
 				use_touch_wheel = false;
+			}else if(p_evt_write->data[0] == 'L'){
+				set_enable_pin(LED_EN,1);
+			}else if(p_evt_write->data[0] == 'l'){
+				set_enable_pin(LED_EN,0);
 			}
         }
     }
@@ -2634,7 +2648,79 @@ static void bsp_event_handler(bsp_event_t event)
                 //mouse_movement_send(0, MOVEMENT_SPEED);
             }
             break;
+#if 1
+        case BSP_EVENT_KEY_4://vol -
+    			NRF_LOG_INFO("vol- push ---- push short\r\n");
+			if(Mode_test == true && sensor_ok_flag==true){
+				sw3153_light_select(BLUE, BLINK_LEVEL_0);
+				break;
+			}
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				uint8_t temp = K_VOL_DOWN;//0x01<<4;
+				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+				temp = 0x00;
+				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+			}
+            break;
+        case BSP_EVENT_KEY_4_LONG://vol -
+    			NRF_LOG_INFO("vol- push ---- push LONG\r\n");
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+            }
+            break;
+        case BSP_EVENT_KEY_4_RELEASE://vol-
+    			NRF_LOG_INFO("vol- release ---- release\r\n");
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+            }
+            break;
+        case BSP_EVENT_KEY_5://vol +
+    			NRF_LOG_INFO("vol+ push ---- push short\r\n");
+			if(Mode_test == true && sensor_ok_flag==true){
+				sw3153_light_select(BLUE, BLINK_LEVEL_2);
+				break;
+			}
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				uint8_t temp = K_VOL_UP;//0x01<<4;
+				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+				temp = 0x00;
+				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+			}
+            break;
+        case BSP_EVENT_KEY_5_LONG://vol+
+    			NRF_LOG_INFO("vol+ push ---- push LONG\r\n");
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+            }
+            break;
+        case BSP_EVENT_KEY_5_RELEASE://vol+
+    			NRF_LOG_INFO("vol+ release ---- release\r\n");
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+            }
+            break;
+        case BSP_EVENT_KEY_6://trigger
+    			NRF_LOG_INFO("trigger push ---- push short\r\n");
+			if(Mode_test == true && sensor_ok_flag==true){
+				sw3153_light_select(RED, BLINK_LEVEL_0);
+				set_enable_pin(LED_EN,1);
+				break;
+			}
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 
+            }
+            break;
+        case BSP_EVENT_KEY_6_LONG://trigger
+    			NRF_LOG_INFO("trigger push ---- push long\r\n");
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+            }
+            break;
+        case BSP_EVENT_KEY_6_RELEASE://trigger
+    			NRF_LOG_INFO("trigger release ---- release\r\n");
+			if(Mode_test == true && sensor_ok_flag==true){
+				set_enable_pin(LED_EN,0);
+				break;
+			}
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+            }
+            break;
+#endif
         default:
             break;
     }
@@ -2699,8 +2785,7 @@ static void buttons_leds_init(bool * p_erase_bonds)
     ret_code_t err_code;
     bsp_event_t startup_event;
 
-    //err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS, bsp_event_handler);
-    err_code = bsp_init( BSP_INIT_BUTTONS, bsp_event_handler);
+    err_code = bsp_init( BSP_INIT_BUTTONS | BSP_INIT_LED, bsp_event_handler);
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_btn_ble_init(NULL, &startup_event);
@@ -3071,7 +3156,7 @@ void sensor_in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t actio
 	}
 #endif
 }
-#define MadgwickAHRSupdate_FRQ 10
+#define MadgwickAHRSupdate_FRQ 1.25
 static void MadgwickAHRSupdate_start()
 {
 	app_timer_start(MadgwickAHRSupdate_timer_id,APP_TIMER_TICKS(MadgwickAHRSupdate_FRQ),NULL);
@@ -3203,10 +3288,10 @@ void sensor_data_poll_handler(void* p_context)
 		SENSOR_READ_TEST_2(dof3_buf);
 		gyro_num +=(dof3_buf[0]+dof3_buf[1]+dof3_buf[2]);
 		gsensor_num +=(dof3_buf[3]+dof3_buf[4]+dof3_buf[5]);
-		if(abs(gyro_num)>1000 && abs(gsensor_num)>50000){
+		if(abs(gyro_num)>1000 && abs(gsensor_num)>50000 && magnet_xyz_int[0]!=0 && magnet_xyz_int[1]!=0 && magnet_xyz_int[2]!=0){
 				sensor_ok_flag = true;
 		}
-  		NRF_LOG_INFO("----- ---------------------- TEST g[%d] s[%d] sensor_ok[%d]\r\n",gyro_num,gsensor_num,sensor_ok_flag);
+  		NRF_LOG_INFO("----- ---------------------- TEST g[%d] s[%d] magx[%d]sensor_ok[%d]\r\n",gyro_num,gsensor_num,magnet_xyz_int[0],sensor_ok_flag);
 	}
 	if(Mode_mouse == true){
 		//interrupter_sensor++;

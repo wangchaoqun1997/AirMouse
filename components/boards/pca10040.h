@@ -49,14 +49,14 @@ extern "C" {
 // LEDs definitions for PCA10040
 #define LEDS_NUMBER    4
 
-#define LED_START      17
-#define LED_1          17
-#define LED_2          18
-#define LED_3          19
-#define LED_4          20
-#define LED_STOP       20
+#define LED_START      27
+#define LED_1          27 //led en
+#define LED_2          28 //power en
+#define LED_3          29
+#define LED_4          30
+#define LED_STOP       30
 
-#define LEDS_ACTIVE_STATE 0
+#define LEDS_ACTIVE_STATE 1
 
 #define LEDS_INV_MASK  LEDS_MASK
 
@@ -67,24 +67,31 @@ extern "C" {
 #define BSP_LED_2      LED_3
 #define BSP_LED_3      LED_4
 
-#define BUTTONS_NUMBER 4
+#define BUTTONS_NUMBER 7
 
 #define BUTTON_START   13
-#define BUTTON_1       4 //TOUCH interrupt pin12
-#define BUTTON_2       5  //back pin5
-#define BUTTON_3       17 //POWERKEY pin17
-#define BUTTON_4       6  //RGB_INT pin6
-#define BUTTON_STOP    20
+	#define BUTTON_1       4 //TOUCH down key pin4
+	#define BUTTON_2       5  //back pin5
+	#define BUTTON_3       17 //POWERKEY pin17
+	#define BUTTON_4       6  //RGB_INT pin6
+	#define BUTTON_5       25  //vol_- pin25
+	#define BUTTON_6       26  //vol_+ pin26
+	#define BUTTON_7       18  //trigger pin18
+#define BUTTON_STOP    26
 #define BUTTON_PULL    NRF_GPIO_PIN_PULLUP
 
 #define BUTTONS_ACTIVE_STATE 0
 
-#define BUTTONS_LIST { BUTTON_1, BUTTON_2, BUTTON_3, BUTTON_4 }
+#define BUTTONS_LIST { BUTTON_1, BUTTON_2, BUTTON_3, BUTTON_4, BUTTON_5, BUTTON_6, BUTTON_7}
+//#define BUTTONS_LIST { BUTTON_1, BUTTON_2, BUTTON_3, BUTTON_4 }
 
 #define BSP_BUTTON_0   BUTTON_1
 #define BSP_BUTTON_1   BUTTON_2
 #define BSP_BUTTON_2   BUTTON_3
 #define BSP_BUTTON_3   BUTTON_4
+#define BSP_BUTTON_4   BUTTON_5
+#define BSP_BUTTON_5   BUTTON_6
+#define BSP_BUTTON_6   BUTTON_7
 
 #define RX_PIN_NUMBER  8
 #define TX_PIN_NUMBER  6
