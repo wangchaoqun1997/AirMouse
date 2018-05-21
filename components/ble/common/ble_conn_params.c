@@ -290,7 +290,8 @@ static void on_conn_params_update(ble_evt_t * p_ble_evt)
 	max_param = m_current_conn_params.max_conn_interval;
     conn_params_negotiation();
 }
-
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
 
 void ble_conn_params_on_ble_evt(ble_evt_t * p_ble_evt)
 {
@@ -310,6 +311,7 @@ void ble_conn_params_on_ble_evt(ble_evt_t * p_ble_evt)
 
         case BLE_GAP_EVT_CONN_PARAM_UPDATE:
             on_conn_params_update(p_ble_evt);
+			NRF_LOG_INFO("-------------- Update param min[%d] max[%d]\n",min_param,max_param);
             break;
 
         default:

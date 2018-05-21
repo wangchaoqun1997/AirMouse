@@ -92,7 +92,7 @@
 
 
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "wangcq327_v1.0.4"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v2.0.0"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                        /**< Battery level measurement interval (ticks). */
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum simulated battery level. */
@@ -106,8 +106,8 @@
 
 /*lint -emacro(524, MIN_CONN_INTERVAL) // Loss of precision */
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)            /**< Minimum connection interval (7.5 ms). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(15, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
-#define SLAVE_LATENCY                   20                                         /**< Slave latency. */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
+#define SLAVE_LATENCY                   0                                      /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(3000, UNIT_10_MS)             /**< Connection supervisory timeout (3000 ms). */
 
 #define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(5000)                       /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
@@ -685,8 +685,8 @@ KEY_VOLUME_UP_START,//151
 KEY_VOLUME_UP_END=151,
 MAX=160,
 };
-#define LED_EN 27//LED_1
-#define PWR_EN 28//LED_2
+#define LED_EN 0
+#define PWR_EN 1
 void set_enable_pin(uint32_t enable_pin,char on_or_off)
 {
 	if(on_or_off){
@@ -1390,6 +1390,9 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 		params.p_len = &data_len;
 
 		err_code = sd_ble_gatts_hvx(conn_handle,&params);
+		if(err_code == 19){
+    		NRF_LOG_INFO("----- ---------------------- send error [19]!\r\n");
+		}
 		if(err_code ==19 && (send_data[0]==GYRO_DATA)){
 			gyro_resent_flag=true;
 		    static int t;
@@ -2093,6 +2096,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
 		case BLE_GATTS_EVT_HVN_TX_COMPLETE:
             //NRF_LOG_DEBUG("GATTs evt_hvn_tx complete !!!!!!!!!!!!!!!!!!!!!!!\r\n");
+			//NRF_LOG_FLUSH();
 			ble_gatts_evt_hvn_tx_complete = true;
 			break;
         case BLE_GATTC_EVT_TIMEOUT:
@@ -2785,7 +2789,7 @@ static void buttons_leds_init(bool * p_erase_bonds)
     ret_code_t err_code;
     bsp_event_t startup_event;
 
-    err_code = bsp_init( BSP_INIT_BUTTONS | BSP_INIT_LED, bsp_event_handler);
+    err_code = bsp_init( BSP_INIT_BUTTONS | BSP_INIT_LED , bsp_event_handler);
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_btn_ble_init(NULL, &startup_event);
@@ -3200,6 +3204,7 @@ if(i==512)i=0;
 		det_tick1 = systick_s_lastest.time - systick_s.time;
 	}
 	NRF_LOG_INFO("----- ---------------------- systick[%d] lastest[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_lastest.time,det_tick1,(det_tick1/64));
+			NRF_LOG_FLUSH();
 	systick_s_lastest.time = systick_s.time;
 #endif
 }
@@ -3300,13 +3305,34 @@ void sensor_data_poll_handler(void* p_context)
 		
 	}
 
-	if(Mode_3D == true){
+	if(Mode_3D == true ){
 
 
 #ifdef TRANSFER_FORMAT_1
 	static char gsensor_frq = 0;
 	int8_t data_flag = 0;
 	gsensor_frq++;
+				uint8_t temp = 0xFF;//0x01<<4;
+				uint8_t const_enter=F12;
+			//	ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM1_INDEX,INPUT_REP_CUSTOM1_LEN,/*&report_key*/&const_enter);
+				//ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
+			#if 0
+				{	static bool ttt=false;
+uint8_t report_key_touch;
+				if(ttt==false){
+									report_key_touch = K_VOL_UP;
+									ttt = true;
+				}else{
+				
+									 report_key_touch = (0x01 << 7);
+									ttt=false;
+				}
+									ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&report_key_touch);
+				}
+#endif
+
+
+	//set_enable_pin(LED_EN,1);
 	if(gsensor_frq != 10){
 		data_flag=GYRO_DATA;
 		memset(sensor_data,0x00, sizeof(sensor_data));
@@ -3321,6 +3347,8 @@ void sensor_data_poll_handler(void* p_context)
 		memcpy(sensor_data+1,(int8_t*)(dof3_buf+3),12);
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	}
+	//set_enable_pin(LED_EN,0);
+
 #else
 	memset(sensor_data,0x00, sizeof(sensor_data));
 
@@ -3449,6 +3477,7 @@ int main(void)
     timers_init();
 	//nrf_delay_ms(500);
     buttons_leds_init(&erase_bonds);
+	//bsp_board_leds_init();
  #ifdef USE_SHADOW_CREATE
 	nrf_gpio_cfg_output(TOUCH_RST_PIN);
 	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
@@ -3456,10 +3485,9 @@ int main(void)
 	nrf_gpio_pin_write(TOUCH_RST_PIN,1);
 	nrf_delay_ms(50);
 
-	 //nrf_drv_gpiote_init();
+	//nrf_drv_gpiote_init();
     nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
     in_config.pull = NRF_GPIO_PIN_PULLUP;
-
     nrf_drv_gpiote_in_init(TOUCH_INT_PIN, &in_config, in_pin_handler);
   	//nrf_drv_gpiote_in_init(SENSOR_INT_PIN, &in_config, sensor_in_pin_handler);
 	nrf_drv_gpiote_in_event_enable(TOUCH_INT_PIN, true);
