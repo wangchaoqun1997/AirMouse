@@ -92,7 +92,7 @@
 
 
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "wangcq327_v2.0.0"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+//#define MANUFACTURER_NAME               "wangcq327_v200_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                        /**< Battery level measurement interval (ticks). */
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum simulated battery level. */
@@ -106,7 +106,7 @@
 
 /*lint -emacro(524, MIN_CONN_INTERVAL) // Loss of precision */
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)            /**< Minimum connection interval (7.5 ms). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
+//#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 #define SLAVE_LATENCY                   0                                      /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(3000, UNIT_10_MS)             /**< Connection supervisory timeout (3000 ms). */
 
@@ -215,6 +215,105 @@ APP_TIMER_DEF(MadgwickAHRSupdate_timer_id);
 
 
 //--------------dfu end
+#define K_RIGHT 0x4F //right
+#define K_LEFT  0x50 //left
+#define K_DOWN  0x51 //down
+#define K_UP    0x52 //up
+#define K_ENTER 0x28 //right
+#define K_VOL_UP (0x01<<5) //right
+#define K_VOL_DOWN (0x01<<4) //right
+#define F8      0x41 //right
+#define F9      0x42 //left
+#define F10     0x43 //down
+#define F11     0x44 //up
+#define F12     0x45 //right
+bool sensor_ok_flag=false;
+bool gyro_move = true;
+bool mode_will_test=false;
+bool mode_will_cal=false;
+bool updata_param_complete=false;
+/* TWI instance. */
+/* TWI instance ID. */
+#define TWI_INSTANCE_ID     0
+bool Mode_2D =false;
+bool Mode_3D =false;
+bool Mode_test =false;
+bool Mode_calibrate =false;
+bool Mode_mouse =false;
+bool Mode_custom1 =false;//mod_vol
+//------
+bool mouse_push =false;
+bool push_button =false;
+static int8_t send_data_t[13];
+//#define touch_sum send_data_t
+static int8_t key_sum[4];
+static uint8_t simple_back_key;
+static uint8_t simple_click;
+static uint8_t touch_sum[4];
+
+enum data_format{
+NON_DATA=0x00,
+GYRO_DATA=0x01,
+GSENSOR_DATA,
+KEY_DATA,
+TOUCH_MOVE,
+DATA_3DOF=0x08,
+TEST_DATA=0xFF,
+};
+enum Mode_select{
+MODE_2D=0x10,
+MODE_3D,
+MODE_TEST,
+MODE_CUSTOM1,
+MODE_CALIBRATE,
+MODE_DISCONNECT,
+};
+
+//init status
+//###################################
+//###################################
+//###################################
+//###################################
+//-----------you work here -------------
+//#define PROJECT_HaloMini
+//#define PROJECT_K02
+#define PROJECT_K07
+
+#ifdef PROJECT_HaloMini
+static enum Mode_select MODE_INIT = MODE_2D;
+static bool report_system_in_3D_mode = true;
+#define MANUFACTURER_NAME               "wangcq327_v200_Halomini"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(15, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
+#endif
+
+
+#ifdef PROJECT_K02
+static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
+static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
+#define MANUFACTURER_NAME               "wangcq327_v200_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
+#define TRANSFER_FORMAT_1
+#endif
+
+
+#ifdef PROJECT_K07
+static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
+static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
+#define MANUFACTURER_NAME               "wangcq327_v200_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
+#define TRANSFER_FORMAT_1
+#endif
+
+static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
+static bool use_touch_wheel = false;   // if use the function of mouse wheel
+static bool open_imu_send = true;     // if use the function of read imu data and transfer it in 3D mode
+bool should_power_on = false;
+//######################################
+//######################################
+//######################################
+//######################################
+
+
 ble_gatts_char_handles_t custom_char_handles;
 uint8_t report_key;
 uint8_t report_key_cache;
@@ -594,97 +693,6 @@ static void dis_init(void)
 #include "nrf_drv_twi.h"
 #include "nrf_delay.h"
 
-#define K_RIGHT 0x4F //right
-#define K_LEFT  0x50 //left
-#define K_DOWN  0x51 //down
-#define K_UP    0x52 //up
-#define K_ENTER 0x28 //right
-#define K_VOL_UP (0x01<<5) //right
-#define K_VOL_DOWN (0x01<<4) //right
-#define F8      0x41 //right
-#define F9      0x42 //left
-#define F10     0x43 //down
-#define F11     0x44 //up
-#define F12     0x45 //right
-bool sensor_ok_flag=false;
-bool gyro_move = true;
-bool mode_will_test=false;
-bool mode_will_cal=false;
-/* TWI instance. */
-/* TWI instance ID. */
-#define TWI_INSTANCE_ID     0
-bool Mode_2D =false;
-bool Mode_3D =false;
-bool Mode_test =false;
-bool Mode_calibrate =false;
-bool Mode_mouse =false;
-bool Mode_custom1 =false;//mod_vol
-//------
-bool mouse_push =false;
-bool push_button =false;
-static int8_t send_data_t[13];
-//#define touch_sum send_data_t
-static int8_t key_sum[4];
-static uint8_t simple_back_key;
-static uint8_t simple_click;
-static uint8_t touch_sum[4];
-
-enum data_format{
-NON_DATA=0x00,
-GYRO_DATA=0x01,
-GSENSOR_DATA,
-KEY_DATA,
-TOUCH_MOVE,
-DATA_3DOF=0x08,
-TEST_DATA=0xFF,
-};
-enum Mode_select{
-MODE_2D=0x10,
-MODE_3D,
-MODE_TEST,
-MODE_CUSTOM1,
-MODE_CALIBRATE,
-MODE_DISCONNECT,
-};
-enum transfer_data{
-TIME_STAMP_START,//0
-TIME_STAMP_END=8,
-PACKET_FLAG_START,//9
-PACKET_FLAG_END=13,
-DATA_MEG_X_START,//14
-DATA_MEG_X_END=26,
-DATA_MEG_Y_START,//27
-DATA_MEG_Y_END=39,
-DATA_MEG_Z_START,//40
-DATA_MEG_Z_END=52,
-DATA_ACC_X_START,//53
-DATA_ACC_X_END=65,
-DATA_ACC_Y_START,//66
-DATA_ACC_Y_END=78,
-DATA_ACC_Z_START,//79
-DATA_ACC_Z_END=91,
-DATA_GYRO_X_START,//92
-DATA_GYRO_X_END=104,
-DATA_GYRO_Y_START,//105
-DATA_GYRO_Y_END=117,
-DATA_GYRO_Z_START,//118
-DATA_GYRO_Z_END=130,
-TOUCH_X_START,//131
-TOUCH_X_END=138,
-TOUCH_Y_START,//139
-TOUCH_Y_END=146,
-KEY_CLICK_START,//147
-KEY_CLICK_END=147,
-KEY_HOME_START,//148
-KEY_HOME_END=148,
-KEY_APP_START,//149
-KEY_APP_END=149,
-KEY_VOLUME_DOWN_START,//150
-KEY_VOLUME_DOWM_END=150,
-KEY_VOLUME_UP_START,//151
-KEY_VOLUME_UP_END=151,
-MAX=160,
-};
 #define LED_EN 0
 #define PWR_EN 1
 void set_enable_pin(uint32_t enable_pin,char on_or_off)
@@ -695,29 +703,6 @@ void set_enable_pin(uint32_t enable_pin,char on_or_off)
 		bsp_board_led_off(enable_pin);
 	}
 }
-//init status
-//###################################
-//###################################
-//###################################
-//###################################
-//-----------you work here -------------
-//#define PROJECT_HaloMini
-#ifdef PROJECT_HaloMini
-static enum Mode_select MODE_INIT = MODE_2D;
-static bool report_system_in_3D_mode = true;
-#else
-static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
-static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
-#define TRANSFER_FORMAT_1
-#endif
-static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
-static bool use_touch_wheel = false;   // if use the function of mouse wheel
-static bool open_imu_send = true;     // if use the function of read imu data and transfer it in 3D mode
-bool should_power_on = false;
-//######################################
-//######################################
-//######################################
-//######################################
 #define SHORT_STATUS 1
 #define LONG_STATUS 2
 enum key_value{
@@ -1109,7 +1094,7 @@ void bmi160_calibration(void)
 	sw3153_light_select(RED, BLINK_LEVEL_0);
 	nrf_delay_ms(1000);
 	sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_NON);
-	nrf_delay_ms(500);
+	nrf_delay_ms(1500);
 	sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_0);
 	for(char i=0;i<100;i++){
 		short cal_buf[6]={0x00};
@@ -2026,6 +2011,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
     {
 		case BLE_GAP_EVT_CONN_PARAM_UPDATE:
             NRF_LOG_INFO("Param update ...............\r\n");
+			updata_param_complete = true;
 		break;
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected\r\n");
@@ -2543,6 +2529,8 @@ static void bsp_event_handler(bsp_event_t event)
 					key_sum[SHORT_STATUS] |= (0x01 << (report_key-F8));
 				#ifdef TRANSFER_FORMAT_1
 					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+				#else
+					key_sum[SHORT_STATUS] = 0x01;
 				#endif
 				}else if(Mode_mouse == true){
     				NRF_LOG_INFO("key_2 press long---------------- down\r\n");
@@ -2559,6 +2547,8 @@ static void bsp_event_handler(bsp_event_t event)
 				key_sum[LONG_STATUS] |= (0x01 << (report_key_cache-F8));
 			#ifdef TRANSFER_FORMAT_1
 				custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+			#else
+				key_sum[SHORT_STATUS] = 0x03;
 			#endif
             }
             break;
@@ -2579,6 +2569,8 @@ static void bsp_event_handler(bsp_event_t event)
 					key_sum[LONG_STATUS] &= (~(0x01 << (report_key_cache-F8)));
 				#ifdef TRANSFER_FORMAT_1
 					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
+				#else
+					key_sum[SHORT_STATUS] = 0x00;
 				#endif
 				}else if(Mode_mouse == true){
     				NRF_LOG_INFO("key_2 press long---------------- up\r\n");
@@ -3265,6 +3257,160 @@ void set_bits(uint8_t start_bit,uint8_t end_bit,uint16_t value)
 	//get_bits(start_bit,end_bit,&get_value);
 }
 
+enum DATA_TYPE{
+	TIME_STAMP,
+	PACKET_ID,
+	MAGX,MAGY,MAGZ,
+	ACCX,ACCY,ACCZ,
+	GYROX,GYROY,GYROZ,
+	TOUCHX,TOUCHY,
+	KEY_ENTER,
+};
+int get_data(enum DATA_TYPE type)
+{
+	int result=0;
+	switch(type){
+		case TIME_STAMP:
+		result = ((sensor_data[0]&0xFF)<<1) | ((sensor_data[1]&0x80)>>7);
+		break;
+		case PACKET_ID:
+		result = ((sensor_data[1]&0x7C)>>2);
+		break;
+		case MAGX:
+		result =(  ((sensor_data[1]&0x03)<<11) | ((sensor_data[2]&0xFF)<<3) | ((sensor_data[3]&0xE0)>>5)   );
+		result = (result<<19)>>19 ;
+		break;
+		case MAGY:
+		result =((sensor_data[3]&0x1F)<<8) | (sensor_data[4]&0xFF);
+		result = (result<<19)>>19 ;
+		break;
+		case MAGZ:
+		result =((sensor_data[5]&0xFF)<<5) | ((sensor_data[6]&0xF8)>>3);
+		result = (result<<19)>>19 ;
+		break;
+		case ACCX:
+		result =(  ((sensor_data[6]&0x07)<<10) | ((sensor_data[7]&0xFF)<<2) | ((sensor_data[8]&0xC0)>>6)   );
+		result = (result<<19)>>19 ;
+		result <<=3;
+		break;
+		case ACCY:
+		result = ((sensor_data[8]&0x3F)<<7) | ((sensor_data[9]&0xFE)>>1);
+		result = (result<<19)>>19 ;
+		result <<=3;
+		break;
+		case ACCZ:
+		result =(  ((sensor_data[9]&0x01)<<12) | ((sensor_data[10]&0xFF)<<4) | ((sensor_data[11]&0xF0)>>4)   );
+		result = (result<<19)>>19 ;
+		result <<=3;
+		break;
+		case GYROX:
+		result =(  ((sensor_data[11]&0x0F)<<9) | ((sensor_data[12]&0xFF)<<1) | ((sensor_data[13]&0x80)>>7)   );
+		result = (result<<19)>>19 ;
+		result <<=3;
+		break;
+		case GYROY:
+		result =(  ((sensor_data[13]&0x7F)<<6) | ((sensor_data[14]&0xFC)>>2)   );
+		result = (result<<19)>>19 ;
+		result <<=3;
+		break;
+		case GYROZ:
+		result =(  ((sensor_data[14]&0x03)<<11) | ((sensor_data[15]&0xFF)<<3) | ((sensor_data[16]&0xE0)>>5)   );
+		result = (result<<19)>>19 ;
+		result <<=3;
+		break;
+		case TOUCHX:
+		result =(  ((sensor_data[16]&0x1F)<<3) | ((sensor_data[17]&0xE0)>>5)   );
+		break;
+		case TOUCHY:
+		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
+		break;
+		case KEY_ENTER:
+		result =(  ((sensor_data[19]&0x3))   );
+		break;
+	}
+	NRF_LOG_INFO("[%5d] ",result);
+	return result;
+}
+int set_data(enum DATA_TYPE type,int data)
+{
+	int result=0;
+	switch(type){
+		case TIME_STAMP:
+			sensor_data[0] |= data>>1;
+			sensor_data[1] |= data<<7; 
+		break;
+		case PACKET_ID:
+			sensor_data[1] |= data<<2;
+		break;
+		case MAGX:
+			data = (data) & 0x1FFF;
+			sensor_data[1] |= data>>11;
+			sensor_data[2] |= data>>3;
+			sensor_data[3] |= data<<5;
+		break;
+		case MAGY:
+			data = (data) & 0x1FFF;
+			sensor_data[3] |= data>>8;
+			sensor_data[4] |= data;
+		break;
+		case MAGZ:
+			data = (data) & 0x1FFF;
+			sensor_data[5] |= data>>5;
+			sensor_data[6] |= data<<3;
+		break;
+		case ACCX:
+			data = (data>>3) & 0x1FFF;
+			sensor_data[6] |= data>>10;
+			sensor_data[7] |= data>>2;
+			sensor_data[8] |= data<<6;
+		break;
+		case ACCY:
+			data = (data>>3) & 0x1FFF;
+			sensor_data[8] |= data>>7;
+			sensor_data[9] |= data<<1;
+		break;
+		case ACCZ:
+			data = (data>>3) & 0x1FFF;
+			sensor_data[9] |= data>>12;
+			sensor_data[10] |= data>>4;
+			sensor_data[11] |= data<<4;
+		break;
+		case GYROX:
+			data = (data>>3) & 0x1FFF;
+			sensor_data[11] |= data>>9;
+			sensor_data[12] |= data>>1;
+			sensor_data[13] |= data<<7;
+		break;
+		case GYROY:
+			data = (data>>3) & 0x1FFF;
+			sensor_data[13] |= data>>6;
+			sensor_data[14] |= data<<2;
+		break;
+		case GYROZ:
+			data = (data>>3) & 0x1FFF;
+			sensor_data[14] |= data>>11;
+			sensor_data[15] |= data>>3;
+			sensor_data[16] |= data<<5;
+		break;
+		case TOUCHX:
+			data = (data) & 0xFF;
+			sensor_data[16] |= data>>3;
+			sensor_data[17] |= data<<5;
+		break;
+		case TOUCHY:
+			data = (data) & 0xFF;
+			sensor_data[17] |= data>>3;
+			sensor_data[18] |= data<<5;
+		break;
+		case KEY_ENTER:
+			sensor_data[19] |= data;
+		break;
+	}
+	//NRF_LOG_INFO("-------------sensor_data [%d][%d][%d]\r\n",sensor_data[0],sensor_data[1],sensor_data[2]);
+	return result;
+}
+
+
 void sensor_data_poll_handler(void* p_context)
 {
 	static nrf_drv_systick_state_t systick_s;
@@ -3287,13 +3433,16 @@ void sensor_data_poll_handler(void* p_context)
 	//app_timer_stop(sensor_poll_timer_id);
 	//if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
 	//	return;
-#if 1
 	ret_code_t err_code;
 	if(Mode_test == true && sensor_ok_flag == false){
 		SENSOR_READ_TEST_2(dof3_buf);
 		gyro_num +=(dof3_buf[0]+dof3_buf[1]+dof3_buf[2]);
 		gsensor_num +=(dof3_buf[3]+dof3_buf[4]+dof3_buf[5]);
+		#ifdef PROJECT_K07
 		if(abs(gyro_num)>1000 && abs(gsensor_num)>50000 && magnet_xyz_int[0]!=0 && magnet_xyz_int[1]!=0 && magnet_xyz_int[2]!=0){
+		#else
+		if(abs(gyro_num)>1000 && abs(gsensor_num)>50000 && magnet_xyz_int[0]!=0){
+		#endif
 				sensor_ok_flag = true;
 		}
   		NRF_LOG_INFO("----- ---------------------- TEST g[%d] s[%d] magx[%d]sensor_ok[%d]\r\n",gyro_num,gsensor_num,magnet_xyz_int[0],sensor_ok_flag);
@@ -3305,33 +3454,13 @@ void sensor_data_poll_handler(void* p_context)
 		
 	}
 
-	if(Mode_3D == true ){
+	if(Mode_3D == true && updata_param_complete == true){
 
 
 #ifdef TRANSFER_FORMAT_1
 	static char gsensor_frq = 0;
 	int8_t data_flag = 0;
 	gsensor_frq++;
-				uint8_t temp = 0xFF;//0x01<<4;
-				uint8_t const_enter=F12;
-			//	ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM1_INDEX,INPUT_REP_CUSTOM1_LEN,/*&report_key*/&const_enter);
-				//ble_hids_inp_rep_send(&m_hids,INPUT_REP_CUSTOM2_INDEX,INPUT_REP_CUSTOM2_LEN,&temp);
-			#if 0
-				{	static bool ttt=false;
-uint8_t report_key_touch;
-				if(ttt==false){
-									report_key_touch = K_VOL_UP;
-									ttt = true;
-				}else{
-				
-									 report_key_touch = (0x01 << 7);
-									ttt=false;
-				}
-									ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&report_key_touch);
-				}
-#endif
-
-
 	//set_enable_pin(LED_EN,1);
 	if(gsensor_frq != 10){
 		data_flag=GYRO_DATA;
@@ -3348,79 +3477,74 @@ uint8_t report_key_touch;
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	}
 	//set_enable_pin(LED_EN,0);
-
 #else
 	memset(sensor_data,0x00, sizeof(sensor_data));
-
+	//NRF_LOG_INFO("\r\n--------------------------------start****\r\n");
+	//TIME_STAMP,
+	//PACKET_ID,
+	//MAGX,MAGY,MAGZ,
+	//ACCX,ACCY,ACCZ,
+	//GYROX,GYROY,GYROZ,
+	//TOUCHX,TOUCHY,
 	static uint16_t time_stamp=0;
 	void *p=sensor_data;
 	time_stamp++;
 	if(time_stamp==512)
 		time_stamp=0;
 //time_stamp 0-8
-	set_bits(0,8,time_stamp);
-	//(*((uint16_t*)p + TIME_STAMP_START)) |= time_stamp;
+	set_data(TIME_STAMP,time_stamp);
 //packet id
 	static uint16_t packet_id=0;
 	packet_id++;
 	if(packet_id == 32)
 		packet_id=0;
 	//(*(uint8_t)(p + PACKET_FLAG_START)) |= packet_id;
-	set_bits(9,13,packet_id);
+	set_data(PACKET_ID,packet_id);
 //mag 13 13 13
 
-	set_bits(14,26,DeagreeArray_int[0]*10);
-	set_bits(27,39,DeagreeArray_int[1]*10);
-	set_bits(40,52,DeagreeArray_int[2]*10);
+	set_data(MAGX,DeagreeArray_int[0]);
+	set_data(MAGY,DeagreeArray_int[1]);
+	set_data(MAGZ,DeagreeArray_int[2]);
 //acc 13 13 13
+	set_data(ACCX,data1[0]);
+	set_data(ACCY,data1[1]);
+	set_data(ACCZ,data1[2]);
 
-	set_bits(53,65,data1[0]);
-	set_bits(66,78,data1[1]);
-	set_bits(79,91,data1[2]);
 
 //gyro 13 13 13
-	set_bits(92,104,data1[3]);
-	set_bits(105,117,data1[4]);
-	set_bits(118,130,data1[5]);
-
+	set_data(GYROX,data1[3]);
+	set_data(GYROY,data1[4]);
+	set_data(GYROZ,data1[5]);
 //touch x y
-	set_bits(131,138,touch_sum[2]);//x
-	set_bits(139,146,touch_sum[3]);//y
+	set_data(TOUCHX,touch_sum[2]);//x
+	set_data(TOUCHY,touch_sum[3]);//y
+
 
 //key
-	set_bits(147,147,simple_click);
-	set_bits(148,149,simple_back_key);//back
-	//set_bits(149,150,key_sum[2]);//long
-	//set_bits(151,151,key_sum[2]);//long
-#if 1
-	//NRF_LOG_INFO("\r\n--------------------------------start****\r\n");
-	//get_bits(0,8,&get_value);
-	//get_bits(9,13,&get_value);
-	//get_bits(14,26,&get_value);
-	//get_bits(27,39,&get_value);
-	//get_bits(40,52,&get_value);
-
-	//get_bits(53,65,&get_value);
-	//get_bits(66,78,&get_value);
-	//get_bits(79,91,&get_value);
-	//get_bits(92,104,&get_value);
-	//get_bits(105,117,&get_value);
-	//get_bits(118,130,&get_value);
-	//get_bits(131,138,&get_value);
-	//get_bits(139,146,&get_value);
-	//get_bits(147,147,&get_value);
-	//get_bits(148,149,&get_value);
-	//NRF_LOG_INFO("[%d][%d][%d]\r\n",data1[3],data1[4],data1[5]);
-	//NRF_LOG_INFO("[%d][%d]\r\n",key_sum[1],key_sum[2]);
+	set_data(KEY_ENTER,key_sum[SHORT_STATUS]);
+#if 0
+	get_data(TIME_STAMP);
+	get_data(PACKET_ID);
+	get_data(MAGX);
+	get_data(MAGY);
+	get_data(MAGZ);
+	get_data(ACCX);
+	get_data(ACCY);
+	get_data(ACCZ);
+	get_data(GYROX);
+	get_data(GYROY);
+	get_data(GYROZ);
+	get_data(TOUCHX);
+	get_data(TOUCHY);
+	get_data(KEY_ENTER);
+	NRF_LOG_INFO("---END[%d][%d][%d]\r\n",data1[3],data1[4],key_sum[SHORT_STATUS]);
 #endif
-	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",touch_sum[2],touch_sum[3],simple_back_key,simple_click);
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
 	//}
 #endif
 	}
 
-#endif
 
 //#define OPEN_LOG_TIME
 #ifdef OPEN_LOG_TIME
