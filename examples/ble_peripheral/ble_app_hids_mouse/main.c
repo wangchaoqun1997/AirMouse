@@ -247,7 +247,7 @@ bool push_button =false;
 static int8_t send_data_t[13];
 //#define touch_sum send_data_t
 static int8_t key_sum[4];
-static uint8_t simple_back_key;
+static uint8_t simple_back_key,simple_enter_key;
 static uint8_t simple_click;
 static uint8_t touch_sum[4];
 
@@ -275,9 +275,9 @@ MODE_DISCONNECT,
 //###################################
 //###################################
 //-----------you work here -------------
-#define PROJECT_HaloMini
+//#define PROJECT_HaloMini
 //#define PROJECT_K02
-//#define PROJECT_K07
+#define PROJECT_K07
 
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
@@ -301,7 +301,7 @@ static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 #define MANUFACTURER_NAME               "wangcq327_v200_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
-#define TRANSFER_FORMAT_1
+//#define TRANSFER_FORMAT_1
 #endif
 
 static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
@@ -2530,7 +2530,7 @@ static void bsp_event_handler(bsp_event_t event)
 				#ifdef TRANSFER_FORMAT_1
 					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
 				#else
-					key_sum[SHORT_STATUS] = 0x01;
+					simple_enter_key = 0x01;
 				#endif
 				}else if(Mode_mouse == true){
     				NRF_LOG_INFO("key_2 press long---------------- down\r\n");
@@ -2548,7 +2548,7 @@ static void bsp_event_handler(bsp_event_t event)
 			#ifdef TRANSFER_FORMAT_1
 				custom_on_send(m_conn_handle,&m_bas,key_sum,13);
 			#else
-				key_sum[SHORT_STATUS] = 0x03;
+				simple_enter_key = 0x03;
 			#endif
             }
             break;
@@ -2570,7 +2570,7 @@ static void bsp_event_handler(bsp_event_t event)
 				#ifdef TRANSFER_FORMAT_1
 					custom_on_send(m_conn_handle,&m_bas,key_sum,13);
 				#else
-					key_sum[SHORT_STATUS] = 0x00;
+					simple_enter_key = 0x00;
 				#endif
 				}else if(Mode_mouse == true){
     				NRF_LOG_INFO("key_2 press long---------------- up\r\n");
@@ -3264,6 +3264,7 @@ enum DATA_TYPE{
 	ACCX,ACCY,ACCZ,
 	GYROX,GYROY,GYROZ,
 	TOUCHX,TOUCHY,
+	KEY_S_BACK,
 	KEY_ENTER,
 };
 int get_data(enum DATA_TYPE type)
@@ -3323,6 +3324,9 @@ int get_data(enum DATA_TYPE type)
 		break;
 		case TOUCHY:
 		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
+		break;
+		case KEY_S_BACK:
+		result =( (sensor_data[19]&0x0C)>>2);
 		break;
 		case KEY_ENTER:
 		result =(  ((sensor_data[19]&0x3))   );
@@ -3402,9 +3406,13 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[17] |= data>>3;
 			sensor_data[18] |= data<<5;
 		break;
+		case KEY_S_BACK:
+			sensor_data[19] |= data<<2;
+		break;
 		case KEY_ENTER:
 			sensor_data[19] |= data;
 		break;
+
 	}
 	//NRF_LOG_INFO("-------------sensor_data [%d][%d][%d]\r\n",sensor_data[0],sensor_data[1],sensor_data[2]);
 	return result;
@@ -3521,8 +3529,9 @@ void sensor_data_poll_handler(void* p_context)
 
 
 //key
-	set_data(KEY_ENTER,key_sum[SHORT_STATUS]);
-#if 0
+	set_data(KEY_S_BACK,simple_back_key);
+	set_data(KEY_ENTER,simple_enter_key);
+#if 1
 	get_data(TIME_STAMP);
 	get_data(PACKET_ID);
 	get_data(MAGX);
@@ -3536,8 +3545,9 @@ void sensor_data_poll_handler(void* p_context)
 	get_data(GYROZ);
 	get_data(TOUCHX);
 	get_data(TOUCHY);
+	get_data(KEY_S_BACK);
 	get_data(KEY_ENTER);
-	NRF_LOG_INFO("---END[%d][%d][%d]\r\n",data1[3],data1[4],key_sum[SHORT_STATUS]);
+	NRF_LOG_INFO("---END[%d][%d][%d]\r\n",data1[3],simple_back_key,simple_enter_key);
 #endif
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
