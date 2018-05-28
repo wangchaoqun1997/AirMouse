@@ -21,7 +21,7 @@
 #define MSE_ERR NRF_LOG_INFO
 #define MSE_LOG NRF_LOG_INFO
 
-#define QMCX983_ADDRESS 0x2D
+#define QMCX983_ADDRESS 0x2C
 //#define QST_Dummygyro		   // enable this if you need use 6D gyro
 #define QMC6983_A1_D1             0
 #define QMC6983_E1		  1	
@@ -191,12 +191,23 @@ static int qmcX983_enable()
 
 	return 0;
 }
+#define CTL_REG_ONE	0x09  /* Contrl register one */
+#define CTL_REG_TWO	0x0a  /* Contrl register two */
+static void qmcX983_stop_measure()
+{
 
-static int qmcX983_disable(struct i2c_client *client)
+	unsigned char data[2];
+	int err;
+
+	data[1] = 0x1c;
+	data[0] = CTL_REG_ONE;
+	err = I2C_TxData(data, 2);
+}
+int qmcX983_disable()
 {
 	qmcX983_fix();
 	MSE_LOG("stop measure!\n");
-	qmcX983_stop_measure(client);
+	qmcX983_stop_measure();
 
 
 	return 0;
@@ -913,7 +924,7 @@ static void qmcX983_start_measure(struct i2c_client *client)
 
 }
 
-static void qmcX983_stop_measure(struct i2c_client *client)
+static void qmcX983_stop_measure()
 {
 
 	unsigned char data[2];
@@ -982,11 +993,11 @@ static int qmcX983_enable(struct i2c_client *client)
 	return 0;
 }
 
-static int qmcX983_disable(struct i2c_client *client)
+int qmcX983_disable()
 {
 	qmcX983_fix();
 	MSE_LOG("stop measure!\n");
-	qmcX983_stop_measure(client);
+	qmcX983_stop_measure();
 
 
 	return 0;
@@ -1012,7 +1023,7 @@ static int qmcX983_SetPowerMode(struct i2c_client *client, bool enable)
 	}
 	else
 	{
-		if(qmcX983_disable(client))
+		if(qmcX983_disable())
 		{
 			MSE_LOG("qmcX983: set power mode failed!\n");
 			return -EINVAL;
@@ -1723,7 +1734,7 @@ static long qmcX983_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned
 			}
 			// check we need stop sensor or not
 			if(v_open_flag==0)
-				qmcX983_disable(this_client);
+				qmcX983_disable();
 
 			atomic_set(&open_flag, v_open_flag);
 
@@ -1980,7 +1991,7 @@ static int qmcX983_m_enable(int en)
 	
 		// check we need stop sensor or not 
 	if(v_open_flag==0)
-		qmcX983_disable(this_client);
+		qmcX983_disable();
 	
 #ifdef MAG_FILTER_ZK
 	 memset(&mag_raw_filter, 0x00, sizeof(mag_raw_filter));
@@ -2052,7 +2063,7 @@ static int qmcX983_o_enable(int en)
 	}	
 	// check we need stop sensor or not 
 	if(v_open_flag==0)
-		qmcX983_disable(this_client);
+		qmcX983_disable();
 	atomic_set(&open_flag, v_open_flag);
 	
 	wake_up(&open_wq);
@@ -2186,7 +2197,7 @@ int qmcX983_operate(void* self, uint32_t command, void* buff_in, int size_in,
 
 				// check we need stop sensor or not 
 				if(v_open_flag==0)
-					qmcX983_disable(this_client);
+					qmcX983_disable();
 					
 				atomic_set(&open_flag, v_open_flag);
 				
@@ -2300,7 +2311,7 @@ int qmcX983_orientation_operate(void* self, uint32_t command, void* buff_in, int
 
 				// check we need stop sensor or not 
 				if(v_open_flag==0)
-					qmcX983_disable(this_client);
+					qmcX983_disable();
 					
 					
 				atomic_set(&open_flag, v_open_flag);
@@ -2410,7 +2421,7 @@ int qmcX983_gyroscope_operate(void* self, uint32_t command, void* buff_in, int s
 
 				// check we need stop sensor or not 
 				if(v_open_flag==0)
-					qmcX983_disable(this_client);	
+					qmcX983_disable();	
 					
 							
 				atomic_set(&open_flag, v_open_flag);
@@ -2520,7 +2531,7 @@ int qmcX983_rotation_vector_operate(void* self, uint32_t command, void* buff_in,
 
 				// check we need stop sensor or not 
 				if(v_open_flag==0)
-						qmcX983_disable(this_client);
+						qmcX983_disable();
 						
 				atomic_set(&open_flag, v_open_flag);
 
@@ -2635,7 +2646,7 @@ int qmcX983_gravity_operate(void* self, uint32_t command, void* buff_in, int siz
 
 			// check we need stop sensor or not 
 			if(v_open_flag==0)
-					qmcX983_disable(this_client);
+					qmcX983_disable();
 					
 			atomic_set(&open_flag, v_open_flag);
 
@@ -2750,7 +2761,7 @@ int qmcX983_linear_accelration_operate(void* self, uint32_t command, void* buff_
 
 				// check we need stop sensor or not 
 				if(v_open_flag==0)
-						qmcX983_disable(this_client);
+						qmcX983_disable();
 						
 						
 				atomic_set(&open_flag, v_open_flag);

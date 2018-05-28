@@ -170,7 +170,6 @@ uint16_t       m_conn_handle  = BLE_CONN_HANDLE_INVALID;                     /**
 static sensorsim_cfg_t   m_battery_sim_cfg;                                         /**< Battery Level sensor simulator configuration. */
 static sensorsim_state_t m_battery_sim_state;                                       /**< Battery Level sensor simulator state. */
 
-APP_TIMER_DEF(m_battery_timer_id);                                                  /**< Battery timer. */
 
 static pm_peer_id_t m_peer_id;                                                      /**< Device reference handle to the current bonded central. */
 
@@ -205,6 +204,7 @@ static void ble_dfu_evt_handler(ble_dfu_t * p_dfu, ble_dfu_evt_t * p_evt)
     }
 }
 APP_TIMER_DEF(touch_timer_id);
+APP_TIMER_DEF(m_battery_timer_id);                                                  /**< Battery timer. */
 APP_TIMER_DEF(mouse_slow_id);
 APP_TIMER_DEF(sensor_cal_id);
 APP_TIMER_DEF(connect_sleep_id);
@@ -880,6 +880,17 @@ Mode_calibrate
 
 static void devices_suspend()
 {
+	app_timer_stop(touch_timer_id);
+	app_timer_stop(m_battery_timer_id);                                                  /**< Battery timer. */
+	app_timer_stop(mouse_slow_id);
+	app_timer_stop(sensor_cal_id);
+	app_timer_stop(connect_sleep_id);
+	app_timer_stop(saadc_sample_id);
+	app_timer_stop(sensor_poll_timer_id);
+	app_timer_stop(touch_action_detect_id);
+	app_timer_stop(MadgwickAHRSupdate_timer_id);
+
+	qmcX983_disable();
 //BMI160 IC
 	bmi160_suspend();
 //WD3153 IC
@@ -2699,7 +2710,7 @@ static void bsp_event_handler(bsp_event_t event)
 				break;
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
-
+				bsp_board_led_invert(LED_EN);
             }
             break;
         case BSP_EVENT_KEY_6_LONG://trigger
@@ -2781,7 +2792,7 @@ static void buttons_leds_init(bool * p_erase_bonds)
     ret_code_t err_code;
     bsp_event_t startup_event;
 
-    err_code = bsp_init( BSP_INIT_BUTTONS | BSP_INIT_LED , bsp_event_handler);
+    err_code = bsp_init( BSP_INIT_BUTTONS , bsp_event_handler);
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_btn_ble_init(NULL, &startup_event);
@@ -3462,7 +3473,7 @@ void sensor_data_poll_handler(void* p_context)
 		
 	}
 
-	if(Mode_3D == true && updata_param_complete == true){
+	if((Mode_3D == true && updata_param_complete == true)){
 
 
 #ifdef TRANSFER_FORMAT_1
@@ -3487,6 +3498,7 @@ void sensor_data_poll_handler(void* p_context)
 	//set_enable_pin(LED_EN,0);
 #else
 	memset(sensor_data,0x00, sizeof(sensor_data));
+	//set_enable_pin(LED_EN,1);
 	//NRF_LOG_INFO("\r\n--------------------------------start****\r\n");
 	//TIME_STAMP,
 	//PACKET_ID,
@@ -3532,22 +3544,22 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(KEY_S_BACK,simple_back_key);
 	set_data(KEY_ENTER,simple_enter_key);
 #if 1
-	get_data(TIME_STAMP);
-	get_data(PACKET_ID);
+	//get_data(TIME_STAMP);
+	//get_data(PACKET_ID);
 	get_data(MAGX);
 	get_data(MAGY);
 	get_data(MAGZ);
-	get_data(ACCX);
-	get_data(ACCY);
-	get_data(ACCZ);
-	get_data(GYROX);
-	get_data(GYROY);
-	get_data(GYROZ);
-	get_data(TOUCHX);
-	get_data(TOUCHY);
-	get_data(KEY_S_BACK);
-	get_data(KEY_ENTER);
-	NRF_LOG_INFO("---END[%d][%d][%d]\r\n",data1[3],simple_back_key,simple_enter_key);
+	//get_data(ACCX);
+	//get_data(ACCY);
+	//get_data(ACCZ);
+//	get_data(GYROX);
+	//get_data(GYROY);
+//	get_data(GYROZ);
+	//get_data(TOUCHX);
+	//get_data(TOUCHY);
+	//get_data(KEY_S_BACK);
+	//get_data(KEY_ENTER);
+	NRF_LOG_INFO("---END [%d][%d][%d]\r\n",magnet_xyz_int[0],magnet_xyz_int[1],magnet_xyz_int[2]);
 #endif
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
@@ -3611,7 +3623,7 @@ int main(void)
     timers_init();
 	//nrf_delay_ms(500);
     buttons_leds_init(&erase_bonds);
-	//bsp_board_leds_init();
+	bsp_board_leds_init();
  #ifdef USE_SHADOW_CREATE
 	nrf_gpio_cfg_output(TOUCH_RST_PIN);
 	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
