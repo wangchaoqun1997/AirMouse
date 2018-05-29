@@ -159,6 +159,8 @@ static enum status_flag_ analyze_plug_status(nrf_saadc_value_t *battery_level_tr
 
 #endif
 }
+
+extern char project_flag;
 void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 {
     if (p_event->type == NRF_DRV_SAADC_EVT_DONE)
@@ -217,9 +219,15 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 				if(level_updata >60){
 					level_updata=0;
 					//battery_level =(char)( (battery_level_adc_slow*0.119));
-					if(battery_level_adc_slow<BATTERY_LOW)
-							battery_level_adc_slow = BATTERY_LOW;
-					battery_level =(char)( ((battery_level_adc_slow-BATTERY_LOW)*0.34));
+					if(project_flag == 0x03){
+						if(battery_level_adc_slow<30)
+								battery_level_adc_slow = 30;
+						battery_level =(char)( ((battery_level_adc_slow-30)*0.34));
+					}else{
+						if(battery_level_adc_slow<BATTERY_LOW)
+								battery_level_adc_slow = BATTERY_LOW;
+						battery_level =(char)( ((battery_level_adc_slow-BATTERY_LOW)*0.34));	
+					}
 					if(battery_level>=88)
 						battery_level=100;
 					if(battery_level<=0)

@@ -10,6 +10,7 @@ static int I2C_Write_Addr8(	const uint8_t slave_addr,uint8_t write_addr,uint8_t 
 	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, write, sizeof(write), false);
 		return err_code;
 }
+extern char project_flag;
 void sw3153_config(void)
 {
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_RESET, WD_LED_RESET_MASK);
@@ -30,9 +31,15 @@ void sw3153_config(void)
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+7, FALL_TIME<<4 | OFF_TIME);
 		nrf_delay_us(8);
 */	
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x02);//pwm
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+1, 0x02);
-		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+2, 0x02);
+		if(project_flag == 0x03){
+			I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x07);//pwm
+			I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+1, 0x07);
+			I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+2, 0x07);
+		}else{
+			I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE,  0x02);//pwm
+			I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+1, 0x02);
+			I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_BRIGHTNESS_BASE+2, 0x02);	
+		}
 		
 		//I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_BLUE);
 }

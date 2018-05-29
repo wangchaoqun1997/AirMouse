@@ -282,6 +282,7 @@ MODE_DISCONNECT,
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
 static bool report_system_in_3D_mode = true;
+char project_flag=0x01;
 #define MANUFACTURER_NAME               "wangcq327_v200_Halomini"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(15, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 #endif
@@ -290,6 +291,7 @@ static bool report_system_in_3D_mode = true;
 #ifdef PROJECT_K02
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
+char project_flag=0x02;
 #define MANUFACTURER_NAME               "wangcq327_v200_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 #define TRANSFER_FORMAT_1
@@ -299,6 +301,7 @@ static bool report_system_in_3D_mode = false;  // if use the function of transfe
 #ifdef PROJECT_K07
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
+char project_flag=0x03;
 #define MANUFACTURER_NAME               "wangcq327_v200_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
@@ -880,6 +883,7 @@ Mode_calibrate
 
 static void devices_suspend()
 {
+//timer
 	app_timer_stop(touch_timer_id);
 	app_timer_stop(m_battery_timer_id);                                                  /**< Battery timer. */
 	app_timer_stop(mouse_slow_id);
@@ -889,7 +893,9 @@ static void devices_suspend()
 	app_timer_stop(sensor_poll_timer_id);
 	app_timer_stop(touch_action_detect_id);
 	app_timer_stop(MadgwickAHRSupdate_timer_id);
-
+//gpio
+	bsp_board_leds_off();
+//mag
 	qmcX983_disable();
 //BMI160 IC
 	bmi160_suspend();
@@ -3543,7 +3549,7 @@ void sensor_data_poll_handler(void* p_context)
 //key
 	set_data(KEY_S_BACK,simple_back_key);
 	set_data(KEY_ENTER,simple_enter_key);
-#if 1
+#if 0
 	//get_data(TIME_STAMP);
 	//get_data(PACKET_ID);
 	get_data(MAGX);
