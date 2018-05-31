@@ -900,7 +900,7 @@ static void devices_suspend()
 //BMI160 IC
 	bmi160_suspend();
 //WD3153 IC
-	sw3153_light_select(OFF, BLINK_LEVEL_NON);
+	sw3153_light_select(SUSPEND, BLINK_LEVEL_NON);
 //TOUCH IC
 	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
 

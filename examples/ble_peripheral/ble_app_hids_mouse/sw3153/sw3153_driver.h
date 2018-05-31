@@ -32,6 +32,7 @@ enum sw3153_light_type{
 OFF,ON,
 GREEN,RED,BLUE,
 BLUE_GREEN,BLUE_GREEN_RED,
+SUSPEND,
 };
 enum sw3153_blink_level{
 BLINK_LEVEL_NON,
