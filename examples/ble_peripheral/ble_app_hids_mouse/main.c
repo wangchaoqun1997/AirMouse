@@ -308,7 +308,7 @@ char project_flag=0x03;
 #endif
 
 static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
-static bool use_touch_wheel = false;   // if use the function of mouse wheel
+static bool use_touch_wheel = true;   // if use the function of mouse wheel
 static bool open_imu_send = true;     // if use the function of read imu data and transfer it in 3D mode
 bool should_power_on = false;
 //######################################
@@ -1343,7 +1343,7 @@ MOVE_DOWN__SLOW_1,
 MOVE_DOWN_FAST_0,
 MOVE_DOWN_FAST_1,
 };
-#define ONE_STEP 25
+#define ONE_STEP 15
 static uint32_t touch_action_detect_flag=0;
 static Touch_Event Touch_Info_record;
 static enum touch_action action=NOTHING;
@@ -1481,16 +1481,20 @@ static void touch_action_detect_handler(void* p_context)
 		step_temp_X = (Touch_Info.X_Axis-Touch_Info.X_Axis_Second) / ONE_STEP;
 		//NRF_LOG_INFO("touch action 100--------------step_Y[%d] step_temp_Y[%d] [%d] [%d][%d]\r\n",step_Y,step_temp_Y,step_temp_Y-step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
 		if(step_temp_Y != step_Y){
-			//NRF_LOG_INFO("touch action 100--------------detY[%d] [%d][%d] [%d][%d]\r\n",step_temp_Y-step_Y,step_temp_Y,step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
+			NRF_LOG_INFO("touch action 100--------------detY[%d] [%d][%d] [%d][%d]\r\n",step_temp_Y-step_Y,step_temp_Y,step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
 			//NRF_LOG_INFO("touch action 100--------------detY[%d]\r\n",step_temp_Y-step_Y);
 			if(step_temp_Y-step_Y>0){//up
 					touch_sum[0] = TOUCH_MOVE;	
 					touch_sum[1] = (0x01);
-					//custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					#ifndef PROJECT_K07
+					custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					#endif
 			}else if(step_temp_Y-step_Y<0){//down
 					touch_sum[0] = TOUCH_MOVE;	
 					touch_sum[1] = (0x02);
-					//custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					#ifndef PROJECT_K07
+					custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					#endif
 			}
 			step_Y=step_temp_Y;
 		}
