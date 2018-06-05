@@ -89,7 +89,7 @@
 #if BUTTONS_NUMBER < 4
 #error "Not enough resources on board to run example"
 #endif
-
+#include "ical_new.h"
 
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
 //#define MANUFACTURER_NAME               "wangcq327_v200_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
@@ -304,7 +304,7 @@ static bool report_system_in_3D_mode = false;  // if use the function of transfe
 char project_flag=0x03;
 #define MANUFACTURER_NAME               "wangcq327_v200_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
-//#define TRANSFER_FORMAT_1
+#define TRANSFER_FORMAT_1
 #endif
 
 static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
@@ -2964,12 +2964,14 @@ void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 							}
 						}					
 				}
-#if 0
+#if 1
 if(Touch_Info.Touch_Status == 1){
 
+set_enable_pin(LED_EN,0);
 NRF_LOG_INFO("sensor interrupt hander--------------push %d %d\r\n",Touch_Info.Finger_ID,iii++);
 }else if(Touch_Info.Touch_Status == 0){
 
+set_enable_pin(LED_EN,1);
 NRF_LOG_INFO("sensor interrupt hander-------------- up %d\r\n",Touch_Info.Finger_ID);
 }
 #endif
@@ -3173,111 +3175,10 @@ void sensor_in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t actio
 	}
 #endif
 }
-#define MadgwickAHRSupdate_FRQ 1.25
-static void MadgwickAHRSupdate_start()
-{
-	app_timer_start(MadgwickAHRSupdate_timer_id,APP_TIMER_TICKS(MadgwickAHRSupdate_FRQ),NULL);
-}
-volatile float DegreeArray[3];
-volatile int16_t DeagreeArray_int[3];
-static void MadgwickAHRSupdate_handler(void* p_context)
-{	static nrf_drv_systick_state_t systick_s;
-	static nrf_drv_systick_state_t systick_s_end;
-	static nrf_drv_systick_state_t systick_s_lastest;
-	static uint32_t det_tick1=0,det_tick2=0;
-	nrf_drv_systick_get(&systick_s);
-	MadgwickAHRSupdate_start();
-#if 1
-	if(open_imu_send == true){
-		SENSOR_READ_TEST(dof3_buf,data1);
-		if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
-			gyro_move = false;
-			//NRF_LOG_INFO("------------------------ gyro no move\n\r");
-		}else{
-			//NRF_LOG_INFO("------------------------ gyro  move\n\r");
-			gyro_move = true;
-		}
-		static int i=0;
-if(i==512)i=0;
-	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
-	//NRF_LOG_INFO("------------------timestamp[%d]  acc*1000  x[%6d] y[%6d] z[%6d]\n",i++,(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[5]*1000));
-	//NRF_LOG_INFO("  gyro*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
-	//NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
-		MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
-		QuaternionToDegreeFast(DegreeArray);
-		DeagreeArray_int[0] =  DegreeArray[0];
-		DeagreeArray_int[1] =  DegreeArray[1];
-		DeagreeArray_int[2] =  DegreeArray[2];
-	//	NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
-	}
-#endif
-//#define OPEN_LOG_TIME1
-#ifdef OPEN_LOG_TIME1
-	if(systick_s_lastest.time >= systick_s.time){
-		det_tick1 = systick_s_lastest.time - systick_s.time;
-	}
-	NRF_LOG_INFO("----- ---------------------- systick[%d] lastest[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_lastest.time,det_tick1,(det_tick1/64));
-			NRF_LOG_FLUSH();
-	systick_s_lastest.time = systick_s.time;
-#endif
-}
-static void MadgwickAHRSupdate_time_init(void)
-{
-	app_timer_create(&MadgwickAHRSupdate_timer_id,APP_TIMER_MODE_SINGLE_SHOT,MadgwickAHRSupdate_handler);
-}
 
-static void MadgwickAHRSupdate_stop(void)
-{
-	app_timer_stop(MadgwickAHRSupdate_timer_id);
-}
-
-#define SENSOR_POLL_INTERVAL 10
-void sensor_poll_start()
-{
-	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
-}
 int16_t min_param,max_param,slave_latency;
 int16_t get_value=0;
 #define bytes sensor_data
-void get_bits(uint8_t start_bit,uint8_t end_bit,int16_t *get_value)
-{
-	int32_t temp =(int32_t)bytes[start_bit/8] | (int32_t)bytes[start_bit/8+1]<<8 | (int32_t)bytes[start_bit/8+2]<<16 | (int32_t)bytes[start_bit/8+3]<<24;
-
-	if(start_bit>=14 && start_bit<=92){
-		*get_value =(int16_t)(((temp >> (start_bit%8))<<3) );
-		NRF_LOG_INFO("*%d-%d* get_value %4d\r\n",start_bit,end_bit,(int16_t)*get_value);
-	}else{
-		*get_value =(uint16_t)(((temp >> (start_bit%8))) & (~(0xFFFFFFFF<<(end_bit-start_bit+1))));
-		NRF_LOG_INFO("*%d-%d* get_value %4d\r\n",start_bit,end_bit,(uint16_t)*get_value);
-	}
-}
-void set_bits(uint8_t start_bit,uint8_t end_bit,uint16_t value)
-{
-	char *Point = sensor_data;
-	//*(uint32_t*)Point=0xFFFF;
-	if(start_bit>=14 && start_bit<=92){
-		*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)((value>>3)))<<(start_bit%8);
-	}else{
-		*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)value)<<(start_bit%8);
-	}
-	//*(uint32_t*)(Point + start_bit/8) |= ((uint32_t)value)<<(32-(end_bit%7+((end_bit-start_bit)/8)*8));
-	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[0],sensor_data[1],sensor_data[2],sensor_data[3]);
-	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[4],sensor_data[5],sensor_data[6],sensor_data[7]);
-	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",sensor_data[8],sensor_data[9],sensor_data[10],sensor_data[11]);
-	//NRF_LOG_INFO("[%d][%d][%d][%d]",sensor_data[12],sensor_data[13],sensor_data[14],sensor_data[15]);
-	//NRF_LOG_INFO("[%d][%d][%d][%d]\r\n",sensor_data[16],sensor_data[17],sensor_data[18],sensor_data[19]);
-	//NRF_LOG_INFO("[%x][%x][%x][%x]",(uint32_t)sensor_data,(uint32_t)(sensor_data+1),(uint32_t)(sensor_data+2),(uint32_t)Point);
-	//NRF_LOG_INFO("*%d-%d* bits %d\r\n",start_bit,end_bit,(*(unsigned short*)(Point + start_bit/8)&(~(0x00<<start_bit/8)))>>(15-(end_bit-start_bit)));
-	//NRF_LOG_INFO("*%d-%d* bits %d\r\n",start_bit,end_bit,((*(uint32_t*)(Point + start_bit/8)<<(start_bit%8))>>(32+(start_bit%8)-(end_bit%7+((end_bit-start_bit)/8)*8))));
-	//if(start_bit >=13 && start_bit <=41 )
-	//if(start_bit>=14 && start_bit<=92){
-	//	NRF_LOG_INFO("*%d-%d* value %4d\r\n",start_bit,end_bit,(int16_t) ( ((*(int32_t*)(Point + start_bit/8)) >>(start_bit%8))<<3 ) );
-	//}else{
-	//	NRF_LOG_INFO("*%d-%d* value %4d\r\n",start_bit,end_bit,(int16_t) ( (*(int32_t*)(Point + start_bit/8)) >>(start_bit%8) ) );
-//	}
-	//get_bits(start_bit,end_bit,&get_value);
-}
-
 enum DATA_TYPE{
 	TIME_STAMP,
 	PACKET_ID,
@@ -3439,7 +3340,69 @@ int set_data(enum DATA_TYPE type,int data)
 	return result;
 }
 
+#define MadgwickAHRSupdate_FRQ 1.25
+static void MadgwickAHRSupdate_start()
+{
+	app_timer_start(MadgwickAHRSupdate_timer_id,APP_TIMER_TICKS(MadgwickAHRSupdate_FRQ),NULL);
+}
+volatile float DegreeArray[3];
+volatile int16_t DeagreeArray_int[3];
+static void MadgwickAHRSupdate_handler(void* p_context)
+{	static nrf_drv_systick_state_t systick_s;
+	static nrf_drv_systick_state_t systick_s_end;
+	static nrf_drv_systick_state_t systick_s_lastest;
+	static uint32_t det_tick1=0,det_tick2=0;
+	nrf_drv_systick_get(&systick_s);
+	MadgwickAHRSupdate_start();
+#if 1
+	if(open_imu_send == true){
+		SENSOR_READ_TEST(dof3_buf,data1);
+		if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
+			gyro_move = false;
+			//NRF_LOG_INFO("------------------------ gyro no move\n\r");
+		}else{
+			//NRF_LOG_INFO("------------------------ gyro  move\n\r");
+			gyro_move = true;
+		}
+		static int i=0;
+if(i==512)i=0;
+	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
+	//NRF_LOG_INFO("------------------timestamp[%d]  acc*1000  x[%6d] y[%6d] z[%6d]\n",i++,(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[5]*1000));
+	//NRF_LOG_INFO("  gyro*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
+	//NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
+		MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
+		QuaternionToDegreeFast(DegreeArray);
+		DeagreeArray_int[0] =  DegreeArray[0];
+		DeagreeArray_int[1] =  DegreeArray[1];
+		DeagreeArray_int[2] =  DegreeArray[2];
+		NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+	}
+#endif
+//#define OPEN_LOG_TIME1
+#ifdef OPEN_LOG_TIME1
+	if(systick_s_lastest.time >= systick_s.time){
+		det_tick1 = systick_s_lastest.time - systick_s.time;
+	}
+	NRF_LOG_INFO("----- ---------------------- systick[%d] lastest[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_lastest.time,det_tick1,(det_tick1/64));
+			NRF_LOG_FLUSH();
+	systick_s_lastest.time = systick_s.time;
+#endif
+}
+static void MadgwickAHRSupdate_time_init(void)
+{
+	app_timer_create(&MadgwickAHRSupdate_timer_id,APP_TIMER_MODE_SINGLE_SHOT,MadgwickAHRSupdate_handler);
+}
 
+static void MadgwickAHRSupdate_stop(void)
+{
+	app_timer_stop(MadgwickAHRSupdate_timer_id);
+}
+
+#define SENSOR_POLL_INTERVAL 10
+void sensor_poll_start()
+{
+	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
+}
 void sensor_data_poll_handler(void* p_context)
 {
 	static nrf_drv_systick_state_t systick_s;
@@ -3453,10 +3416,22 @@ void sensor_data_poll_handler(void* p_context)
 	}
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
 	int magnet_xyz_int[3];
+	float magnet_xyz_float[3];
+	int8_t accuracy=0;
 	read_qmcX983_xyz(magnet_xyz_int);
-	magnet_xyz[0]=(magnet_xyz_int[0]+100)*1.0;
-	magnet_xyz[1]=(magnet_xyz_int[1]-100)*1.0;
-	magnet_xyz[2]=(magnet_xyz_int[2]-300)*1.0;
+	magnet_xyz_float[0]= magnet_xyz_int[0] / 10;
+	magnet_xyz_float[1]= magnet_xyz_int[1] / 10;
+	magnet_xyz_float[2]= magnet_xyz_int[2] / 10;
+	convert_magnetic(magnet_xyz_float,magnet_xyz,&accuracy);
+#ifndef MAG_HAVE
+	magnet_xyz[0]=0.00;
+	magnet_xyz[1]=0.00;
+	magnet_xyz[2]=0.00;
+#endif
+	//NRF_LOG_INFO("---convert_magnetic [%d][%d][%d]\r\n",(int32_t)(magnet_xyz[0]*10),(int32_t)(magnet_xyz[1]*10),(int32_t)(magnet_xyz[2]*10));
+	//magnet_xyz[0]=(magnet_xyz_int[0]+100)*1.0;
+	//magnet_xyz[1]=(magnet_xyz_int[1]-100)*1.0;
+	//magnet_xyz[2]=(magnet_xyz_int[2]-300)*1.0;
 			//nrf_delay_ms(50);
 //nrf_drv_systick_delay_ms(50);
 	//app_timer_stop(sensor_poll_timer_id);
@@ -3683,6 +3658,7 @@ int main(void)
 	MadgwickAHRSupdate_time_init();
 
 	qmcX983_init();
+	qst_ical_init();
 	SENSOR_INIT();
 	SENSOR_INIT_1();
 	sensor_poll_start();

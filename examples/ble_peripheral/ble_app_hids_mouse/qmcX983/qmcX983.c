@@ -132,18 +132,20 @@ int qmcX983_set_range(short range)
 	data[0] = CTL_REG_ONE;
 	err = I2C_RxData(data, 1);
 
+	MSE_ERR("QMCX983 read1 reg 0x09 data[0]0x%x data[1]0x%x\r\n",data[0],data[1]);
 	data[0] &= 0xcf;
 	data[0] |= (range << 4);
 	data[1] = data[0];
 
 	data[0] = CTL_REG_ONE;
+	MSE_ERR("QMCX983 read2 reg 0x09 data[0]0x%x data[1]0x%x\r\n",data[0],data[1]);
 	err = I2C_TxData(data, 2);
 	return err;
 
 }
 int qmcX983_set_ratio(char ratio)
 {
-#define QMCX983_SETRESET_FREQ_FAST  1
+#define QMCX983_SETRESET_FREQ_FAST  0x80
 	int err = 0;
 
 	unsigned char data[2];
@@ -203,12 +205,29 @@ static void qmcX983_stop_measure()
 	data[0] = CTL_REG_ONE;
 	err = I2C_TxData(data, 2);
 }
+void qmcX983_read_reg()
+{
+	for(int i=0;i<=0x0D;i++){
+		uint8_t data=i;
+		I2C_RxData(&data,1);
+		MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
+	}	
+	for(int i=0x1b;i<=0x1b;i++){
+		uint8_t data=i;
+		I2C_RxData(&data,1);
+		MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
+	}
+}
 int qmcX983_disable()
 {
+	return 0;
 	qmcX983_fix();
 	MSE_LOG("stop measure!\n");
 	qmcX983_stop_measure();
-
+	char databuf1 = 0x09;
+	I2C_RxData(&databuf1, 1);
+	MSE_LOG("QMCX983 suspend [0x%x] _A\n",databuf1);
+	qmcX983_read_reg();
 
 	return 0;
 }
@@ -251,6 +270,7 @@ void qmcX983_init()
 		MSE_LOG("QMCX983 check ID faild!\n");
 	}
 	qmcX983_enable();
+	qmcX983_read_reg();
 }
  /*Status registers */
 #define STA_REG_ONE    0x06
@@ -307,8 +327,9 @@ void read_qmcX983_xyz(int *data)
 	data[0] = output[QMCX983_AXIS_X];
 	data[1] = output[QMCX983_AXIS_Y];
 	data[2] = output[QMCX983_AXIS_Z];
-
-	//MSE_LOG("QMCX983 data [%d, %d, %d] _A\n", data[0], data[1], data[2]);
+	char databuf1 = 0x09;
+	I2C_RxData(&databuf1, 1);
+//	MSE_LOG("QMCX983 data [%d, %d, %d ,0x%x] _A\n", data[0], data[1], data[2],databuf1);
 	return ;
 }
 

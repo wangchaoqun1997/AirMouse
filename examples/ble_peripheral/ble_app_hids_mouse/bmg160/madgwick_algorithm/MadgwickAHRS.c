@@ -22,7 +22,7 @@
 // Definitions
 
 #define sampleFreq	800.0f		// sample frequency in Hz
-#define betaDef		0.1f		// 2 * proportional gain
+#define betaDef		0.2f		// 2 * proportional gain
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 //---------------------------------------------------------------------------------------------------
@@ -31,6 +31,9 @@
 volatile float beta = betaDef;								// 2 * proportional gain (Kp)
 volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;	// quaternion of sensor frame relative to auxiliary frame
 volatile float mOrientationDegreeArray[3];
+volatile bool bInitialized = false;
+extern float dof3_buf[6];
+extern int magnet_xyz[3];
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 
@@ -40,10 +43,66 @@ float invSqrt(float x);
 // Functions
 
 //---------------------------------------------------------------------------------------------------
+// AHRS algorithm intialize
+
+bool MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
+{
+	ax = dof3_buf[4];
+	ay = dof3_buf[3];
+	az = dof3_buf[5];
+	mx = magnet_xyz[0];
+	my = magnet_xyz[1];
+	mz = magnet_xyz[2];
+
+	if ((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f))
+		return false;
+
+	float normA = sqrt(ax*ax + ay*ay + az*az);
+	float g = 9.81f;
+	if (normA < 0.8f * g) {
+		// gravity less than 10% of normal value
+		return false;
+	}
+
+	float Hx = my*az - mz*ay;
+	float Hy = mz*ax - mx*az;
+	float Hz = mx*ay - my*ax;
+	float normH = sqrt(Hx*Hx + Hy*Hy + Hz*Hz);
+	if (normH < 0.1f) {
+		// device is close to free fall (or in space?), or close to
+		// magnetic north pole. Typical values are  > 100.
+		return false;
+	}
+
+	float invH = 1.0f / normH;
+	Hx *= invH;
+	Hy *= invH;
+	Hz *= invH;
+
+	float invA = 1.0f / normA;
+	float Ax = ax * invA;
+	float Ay = ay * invA;
+	float Az = az * invA;
+	
+	float Mx = Ay*Hz - Az*Hy;
+	float My = Az*Hx - Ax*Hz;
+	float Mz = Ax*Hy - Ay*Hx;
+
+	float S = 0.5f / sqrt(1 + Mx*Mx + Hy*Hy + Az*Az);
+	q0 = 0.25f / S;
+	q1 = ( Ay + Hz ) * S;
+	q2 = ( Mz - Ax ) * S;
+	q3 = ( -Hx - My ) * S;
+
+	return true;
+}
+
+
+//---------------------------------------------------------------------------------------------------
 // AHRS algorithm update
-extern float dof3_buf[6];
-extern int magnet_xyz[3];
+
 void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
+
 	float recipNorm;
 	float s0, s1, s2, s3;
 	float qDot1, qDot2, qDot3, qDot4;
@@ -57,16 +116,14 @@ void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float 
 	ax = dof3_buf[4];
 	ay = dof3_buf[3];
 	az = dof3_buf[5];
-#define NO_MAG 1
-#if NO_MAG
-	mx = 0.0001f;
-	my = 0.0001f;
-	mz = 0.0001f;
-#else
 	mx = magnet_xyz[0];
 	my = magnet_xyz[1];
 	mz = magnet_xyz[2];
-#endif
+
+	if (!bInitialized) {
+		bInitialized = MadgwickInit(ax, ay, az, mx, my, mz);
+		return;
+	}
 	//NRF_LOG_INFO("------------------------ 12[%d][%d][%d]\n\r",(int32_t)(gx*1000),(int32_t)(gy*1000),(int32_t)(gz*1000));
 	// Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
 	if((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f)) {
