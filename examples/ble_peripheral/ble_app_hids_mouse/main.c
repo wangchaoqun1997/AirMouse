@@ -304,7 +304,7 @@ static bool report_system_in_3D_mode = false;  // if use the function of transfe
 char project_flag=0x03;
 #define MANUFACTURER_NAME               "wangcq327_v200_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
-#define TRANSFER_FORMAT_1
+//#define TRANSFER_FORMAT_1
 #endif
 
 static bool use_mode_custom1 = false; // if use the function of control vol-+ mode
@@ -3340,7 +3340,7 @@ int set_data(enum DATA_TYPE type,int data)
 	return result;
 }
 
-#define MadgwickAHRSupdate_FRQ 1.25
+#define MadgwickAHRSupdate_FRQ 2.5			// 400hz
 static void MadgwickAHRSupdate_start()
 {
 	app_timer_start(MadgwickAHRSupdate_timer_id,APP_TIMER_TICKS(MadgwickAHRSupdate_FRQ),NULL);
@@ -3366,11 +3366,35 @@ static void MadgwickAHRSupdate_handler(void* p_context)
 		}
 		static int i=0;
 if(i==512)i=0;
-	//NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
-	//NRF_LOG_INFO("------------------timestamp[%d]  acc*1000  x[%6d] y[%6d] z[%6d]\n",i++,(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[5]*1000));
-	//NRF_LOG_INFO("  gyro*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
-	//NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
-		MadgwickAHRSupdate(dof3_buf[4],dof3_buf[3],dof3_buf[5],dof3_buf[1],dof3_buf[0],dof3_buf[2],0.00001f,0.00001f,0.00001f);
+		
+//	NRF_LOG_INFO("------------------------ dof3_buf[%d][%d][%d]\n\r",dof3_buf[0]*1000,dof3_buf[1]*1000,dof3_buf[2]*1000);
+//	NRF_LOG_INFO("------------------timestamp[%d]  acc*1000  x[%6d] y[%6d] z[%6d]\n",i++,(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[5]*1000));
+//	NRF_LOG_INFO("  gyro*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
+//	NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
+		
+		float ax,ay,az;
+		ax = dof3_buf[5];
+		ay = -dof3_buf[3];
+		az = dof3_buf[4];
+		
+//		NRF_LOG_INFO("acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
+		
+		float gx,gy,gz;
+		gx = dof3_buf[2];
+		gy = -dof3_buf[0];
+		gz = dof3_buf[1];
+//		NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+		
+		
+		float mx,my,mz;
+		mx = magnet_xyz[2] + 50;
+		my = magnet_xyz[1];
+		mz = -magnet_xyz[0] + 15;
+//		NRF_LOG_INFO("mag: %6d, %6d, %6d\n",(int32_t)(mx),(int32_t)(my),(int32_t)(mz));
+		
+		float imudata[] = {gx,gy,gz,ax,ay,az,mx,my,mz};
+		MadgwickAHRSupdate(imudata);
+		
 		QuaternionToDegreeFast(DegreeArray);
 		DeagreeArray_int[0] =  DegreeArray[0];
 		DeagreeArray_int[1] =  DegreeArray[1];
@@ -3423,11 +3447,11 @@ void sensor_data_poll_handler(void* p_context)
 	magnet_xyz_float[1]= magnet_xyz_int[1] / 10;
 	magnet_xyz_float[2]= magnet_xyz_int[2] / 10;
 	convert_magnetic(magnet_xyz_float,magnet_xyz,&accuracy);
-#ifndef MAG_HAVE
-	magnet_xyz[0]=0.00;
-	magnet_xyz[1]=0.00;
-	magnet_xyz[2]=0.00;
-#endif
+//#ifndef MAG_HAVE
+//	magnet_xyz[0]=0.00;
+//	magnet_xyz[1]=0.00;
+//	magnet_xyz[2]=0.00;
+//#endif
 	//NRF_LOG_INFO("---convert_magnetic [%d][%d][%d]\r\n",(int32_t)(magnet_xyz[0]*10),(int32_t)(magnet_xyz[1]*10),(int32_t)(magnet_xyz[2]*10));
 	//magnet_xyz[0]=(magnet_xyz_int[0]+100)*1.0;
 	//magnet_xyz[1]=(magnet_xyz_int[1]-100)*1.0;
@@ -3679,6 +3703,7 @@ int main(void)
 		Mode_switch(MODE_TEST,false);
 		//Mode_switch(false,false,true);
 	}
+	sd_ble_gap_tx_power_set();
     // Enter main loop.
 	for (;;)
     {

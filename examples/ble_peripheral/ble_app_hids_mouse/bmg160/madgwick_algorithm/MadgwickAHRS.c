@@ -17,23 +17,23 @@
 
 #include "MadgwickAHRS.h"
 #include <math.h>
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
 
 //---------------------------------------------------------------------------------------------------
 // Definitions
 
-#define sampleFreq	800.0f		// sample frequency in Hz
+#define sampleFreq	400.0f		// sample frequency in Hz
 #define betaDef		0.2f		// 2 * proportional gain
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
+
 //---------------------------------------------------------------------------------------------------
 // Variable definitions
 
 volatile float beta = betaDef;								// 2 * proportional gain (Kp)
 volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;	// quaternion of sensor frame relative to auxiliary frame
-volatile float mOrientationDegreeArray[3];
-volatile bool bInitialized = false;
-extern float dof3_buf[6];
-extern int magnet_xyz[3];
+
+volatile int bInitialized = false;
+
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 
@@ -45,15 +45,8 @@ float invSqrt(float x);
 //---------------------------------------------------------------------------------------------------
 // AHRS algorithm intialize
 
-bool MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
+int MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
 {
-	ax = dof3_buf[4];
-	ay = dof3_buf[3];
-	az = dof3_buf[5];
-	mx = magnet_xyz[0];
-	my = magnet_xyz[1];
-	mz = magnet_xyz[2];
-
 	if ((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f))
 		return false;
 
@@ -61,7 +54,7 @@ bool MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
 	float g = 9.81f;
 	if (normA < 0.8f * g) {
 		// gravity less than 10% of normal value
-		return false;
+		return 0;
 	}
 
 	float Hx = my*az - mz*ay;
@@ -71,7 +64,7 @@ bool MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
 	if (normH < 0.1f) {
 		// device is close to free fall (or in space?), or close to
 		// magnetic north pole. Typical values are  > 100.
-		return false;
+		return 0;
 	}
 
 	float invH = 1.0f / normH;
@@ -94,14 +87,35 @@ bool MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
 	q2 = ( Mz - Ax ) * S;
 	q3 = ( -Hx - My ) * S;
 
-	return true;
+	return 1;
 }
 
 
 //---------------------------------------------------------------------------------------------------
 // AHRS algorithm update
 
-void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
+void MadgwickAHRSupdate(float* data) 
+{
+	float gx,gy,gz,ax,ay,az,mx,my,mz;
+	gx = data[0];
+	gy = data[1];
+	gz = data[2];
+	ax = data[3];
+	ay = data[4];
+	az = data[5];
+	mx = data[6];
+	my = data[7];
+	mz = data[8];
+	
+	
+//	NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+//	NRF_LOG_INFO("acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
+//	NRF_LOG_INFO("mag: %6d, %6d, %6d\n",(int32_t)(mx),(int32_t)(my),(int32_t)(mz));
+	
+	if (!bInitialized) {
+		bInitialized = MadgwickInit(ax, ay, az, mx, my, mz);
+		return;
+	}
 
 	float recipNorm;
 	float s0, s1, s2, s3;
@@ -109,21 +123,6 @@ void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float 
 	float hx, hy;
 	float _2q0mx, _2q0my, _2q0mz, _2q1mx, _2bx, _2bz, _4bx, _4bz, _2q0, _2q1, _2q2, _2q3, _2q0q2, _2q2q3, q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
 
-	//mx=my=mz=0.00000f;
-	gx = dof3_buf[1];
-	gy = dof3_buf[0];
-	gz = dof3_buf[2];
-	ax = dof3_buf[4];
-	ay = dof3_buf[3];
-	az = dof3_buf[5];
-	mx = magnet_xyz[0];
-	my = magnet_xyz[1];
-	mz = magnet_xyz[2];
-
-	if (!bInitialized) {
-		bInitialized = MadgwickInit(ax, ay, az, mx, my, mz);
-		return;
-	}
 	//NRF_LOG_INFO("------------------------ 12[%d][%d][%d]\n\r",(int32_t)(gx*1000),(int32_t)(gy*1000),(int32_t)(gz*1000));
 	// Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
 	if((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f)) {
@@ -224,15 +223,6 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, flo
 	float qDot1, qDot2, qDot3, qDot4;
 	float _2q0, _2q1, _2q2, _2q3, _4q0, _4q1, _4q2 ,_8q1, _8q2, q0q0, q1q1, q2q2, q3q3;
 
-	gx = dof3_buf[1];
-	gy = dof3_buf[0];
-	gz = dof3_buf[2];
-	ax = dof3_buf[4];
-	ay = dof3_buf[3];
-	az = dof3_buf[5];
-
-	//NRF_LOG_INFO("-----acc *1000000 x[%8d] y[%8d] z[%8d]",(int32_t)(ax*1000000),(int32_t)(ay*1000000),(int32_t)(az*1000000));
-	//NRF_LOG_INFO("-----gyro*1000000 x[%8d] y[%8d] z[%8d]",(int32_t)(gx*1000000),(int32_t)(gy*1000000),(int32_t)(gz*1000000));
 	// Rate of change of quaternion from gyroscope
 	qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz);
 	qDot2 = 0.5f * (q0 * gx + q2 * gz - q3 * gy);

@@ -18,12 +18,14 @@
 
 extern volatile float beta;				// algorithm gain
 extern volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame
-//extern volatile char bInitialized;      // initialized flag
+extern volatile int bInitialized;      // initialized flag
 
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 
-void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+// bool MadgwickInit(float ax, float ay, float az, float mx, float my, float mz);
+//void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+void MadgwickAHRSupdate(float* data);
 void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
 
 #endif
