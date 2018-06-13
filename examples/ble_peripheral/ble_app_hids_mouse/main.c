@@ -294,7 +294,7 @@ static bool report_system_in_3D_mode = false;  // if use the function of transfe
 char project_flag=0x02;
 #define MANUFACTURER_NAME               "wangcq327_v200_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
-#define TRANSFER_FORMAT_1
+//#define TRANSFER_FORMAT_1
 #endif
 
 
@@ -1384,16 +1384,17 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 	if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
     {
 		ble_gatts_hvx_params_t params;
-
+		static int64_t send_all=0,send_lost=0;
 		memset(&params,0,sizeof(params));
 		params.type = BLE_GATT_HVX_NOTIFICATION;
 		params.handle = custom_char_handles.value_handle;
 		params.p_data = send_data;
 		params.p_len = &data_len;
-
+		send_all++;	
 		err_code = sd_ble_gatts_hvx(conn_handle,&params);
 		if(err_code == 19){
-    		NRF_LOG_INFO("----- ---------------------- send error [19]!\r\n");
+			send_lost ++;
+    		NRF_LOG_INFO("----- ---------------------- send error [19] lost[%d] all[%d] !\r\n",send_lost,send_all);
 		}
 		if(err_code ==19 && (send_data[0]==GYRO_DATA)){
 			gyro_resent_flag=true;
@@ -1435,6 +1436,7 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 static void touch_action_detect_handler(void* p_context)
 {
 	touch_action_detect_flag++;
+	touch_sum[1] = (0x00);
 	//NRF_LOG_INFO("touch interrupt hander--------------%d\r\n",touch_action_detect_flag);
 //#define TOUCH_SPEED
 #ifdef TOUCH_SPEED
@@ -1481,7 +1483,7 @@ static void touch_action_detect_handler(void* p_context)
 		step_temp_X = (Touch_Info.X_Axis-Touch_Info.X_Axis_Second) / ONE_STEP;
 		//NRF_LOG_INFO("touch action 100--------------step_Y[%d] step_temp_Y[%d] [%d] [%d][%d]\r\n",step_Y,step_temp_Y,step_temp_Y-step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
 		if(step_temp_Y != step_Y){
-			NRF_LOG_INFO("touch action 100--------------detY[%d] [%d][%d] [%d][%d]\r\n",step_temp_Y-step_Y,step_temp_Y,step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
+			//NRF_LOG_INFO("touch action 100--------------detY[%d] [%d][%d] [%d][%d]\r\n",step_temp_Y-step_Y,step_temp_Y,step_Y,Touch_Info.Y_Axis,Touch_Info.Y_Axis_Second);
 			//NRF_LOG_INFO("touch action 100--------------detY[%d]\r\n",step_temp_Y-step_Y);
 			if(step_temp_Y-step_Y>0){//up
 					touch_sum[0] = TOUCH_MOVE;	
@@ -2721,11 +2723,13 @@ static void bsp_event_handler(bsp_event_t event)
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				bsp_board_led_invert(LED_EN);
+					simple_enter_key = 0x01;
             }
             break;
         case BSP_EVENT_KEY_6_LONG://trigger
     			NRF_LOG_INFO("trigger push ---- push long\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+					simple_enter_key = 0x03;
             }
             break;
         case BSP_EVENT_KEY_6_RELEASE://trigger
@@ -2735,6 +2739,7 @@ static void bsp_event_handler(bsp_event_t event)
 				break;
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+					simple_enter_key = 0x00;
             }
             break;
 #endif
@@ -2964,7 +2969,7 @@ void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 							}
 						}					
 				}
-#if 1
+#if 0
 if(Touch_Info.Touch_Status == 1){
 
 set_enable_pin(LED_EN,0);
@@ -3186,6 +3191,7 @@ enum DATA_TYPE{
 	ACCX,ACCY,ACCZ,
 	GYROX,GYROY,GYROZ,
 	TOUCHX,TOUCHY,
+	KEY_S_MOV,
 	KEY_S_BACK,
 	KEY_ENTER,
 };
@@ -3246,6 +3252,9 @@ int get_data(enum DATA_TYPE type)
 		break;
 		case TOUCHY:
 		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
+		break;
+		case KEY_S_MOV:
+		result =( (sensor_data[19]&0x30)>>4);
 		break;
 		case KEY_S_BACK:
 		result =( (sensor_data[19]&0x0C)>>2);
@@ -3328,6 +3337,9 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[17] |= data>>3;
 			sensor_data[18] |= data<<5;
 		break;
+		case KEY_S_MOV:
+			sensor_data[19] |= data<<4;
+		break;
 		case KEY_S_BACK:
 			sensor_data[19] |= data<<2;
 		break;
@@ -3347,6 +3359,7 @@ static void MadgwickAHRSupdate_start()
 }
 volatile float DegreeArray[3];
 volatile int16_t DeagreeArray_int[3];
+extern volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame
 static void MadgwickAHRSupdate_handler(void* p_context)
 {	static nrf_drv_systick_state_t systick_s;
 	static nrf_drv_systick_state_t systick_s_end;
@@ -3371,7 +3384,8 @@ if(i==512)i=0;
 //	NRF_LOG_INFO("------------------timestamp[%d]  acc*1000  x[%6d] y[%6d] z[%6d]\n",i++,(int32_t)(dof3_buf[3]*1000),(int32_t)(dof3_buf[4]*1000),(int32_t)(dof3_buf[5]*1000));
 //	NRF_LOG_INFO("  gyro*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(dof3_buf[1]*1000),(int32_t)(dof3_buf[0]*1000),(int32_t)(dof3_buf[2]*1000));
 //	NRF_LOG_INFO("  mag*1000 x[%6d] y[%6d] z[%6d]",(int32_t)(magnet_xyz[0]*1000),(int32_t)(magnet_xyz[1]*1000),(int32_t)(magnet_xyz[2]*1000));
-		
+	
+#ifdef 	PROJECT_K07
 		float ax,ay,az;
 		ax = dof3_buf[5];
 		ay = -dof3_buf[3];
@@ -3390,16 +3404,51 @@ if(i==512)i=0;
 		mx = magnet_xyz[2] + 50;
 		my = magnet_xyz[1];
 		mz = -magnet_xyz[0] + 15;
+mx =my =mz =0;
+#endif
+#ifdef PROJECT_K02
+		float ax,ay,az;
+		ax = -dof3_buf[3];
+		ay = dof3_buf[4];
+		az = dof3_buf[5];
+		
+//		NRF_LOG_INFO("acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
+		
+		float gx,gy,gz;
+		gx = -dof3_buf[0];
+		gy = dof3_buf[1];
+		gz = dof3_buf[2];
+//		NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+		
+		
+		float mx,my,mz;
+		mx = magnet_xyz[2] + 50;
+		my = magnet_xyz[1];
+		mz = -magnet_xyz[0] + 15;
+		
+		mx =my =mz =0.00001;
+#endif
 //		NRF_LOG_INFO("mag: %6d, %6d, %6d\n",(int32_t)(mx),(int32_t)(my),(int32_t)(mz));
 		
 		float imudata[] = {gx,gy,gz,ax,ay,az,mx,my,mz};
 		MadgwickAHRSupdate(imudata);
-		
+//#define _ANGLE
+#ifdef 	_ANGLE	
 		QuaternionToDegreeFast(DegreeArray);
 		DeagreeArray_int[0] =  DegreeArray[0];
 		DeagreeArray_int[1] =  DegreeArray[1];
 		DeagreeArray_int[2] =  DegreeArray[2];
-		NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\n\r",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+#else
+		if(q0 < 0){
+			q1 = -q1;
+			q2 = -q2;
+			q3 = -q3;
+		}
+		DeagreeArray_int[0] =  -q1*4000;
+		DeagreeArray_int[1] =  -q3*4000;
+		DeagreeArray_int[2] =  q2*4000;
+#endif
+		//NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 	}
 #endif
 //#define OPEN_LOG_TIME1
@@ -3550,14 +3599,15 @@ void sensor_data_poll_handler(void* p_context)
 
 
 //key
+	set_data(KEY_S_MOV,touch_sum[1]);
 	set_data(KEY_S_BACK,simple_back_key);
 	set_data(KEY_ENTER,simple_enter_key);
 #if 0
 	//get_data(TIME_STAMP);
 	//get_data(PACKET_ID);
-	get_data(MAGX);
-	get_data(MAGY);
-	get_data(MAGZ);
+	//get_data(MAGX);
+	//get_data(MAGY);
+	//get_data(MAGZ);
 	//get_data(ACCX);
 	//get_data(ACCY);
 	//get_data(ACCZ);
@@ -3566,9 +3616,10 @@ void sensor_data_poll_handler(void* p_context)
 //	get_data(GYROZ);
 	//get_data(TOUCHX);
 	//get_data(TOUCHY);
-	//get_data(KEY_S_BACK);
-	//get_data(KEY_ENTER);
-	NRF_LOG_INFO("---END [%d][%d][%d]\r\n",magnet_xyz_int[0],magnet_xyz_int[1],magnet_xyz_int[2]);
+	get_data(KEY_S_MOV);
+	get_data(KEY_S_BACK);
+	get_data(KEY_ENTER);
+	NRF_LOG_INFO("---END\r\n");
 #endif
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
 		custom_on_send(m_conn_handle,&m_bas,sensor_data,sizeof(sensor_data));
@@ -3703,7 +3754,7 @@ int main(void)
 		Mode_switch(MODE_TEST,false);
 		//Mode_switch(false,false,true);
 	}
-	sd_ble_gap_tx_power_set();
+//	sd_ble_gap_tx_power_set();
     // Enter main loop.
 	for (;;)
     {

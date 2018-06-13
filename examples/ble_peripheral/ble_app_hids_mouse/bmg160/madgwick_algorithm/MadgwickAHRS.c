@@ -113,8 +113,8 @@ void MadgwickAHRSupdate(float* data)
 //	NRF_LOG_INFO("mag: %6d, %6d, %6d\n",(int32_t)(mx),(int32_t)(my),(int32_t)(mz));
 	
 	if (!bInitialized) {
-		bInitialized = MadgwickInit(ax, ay, az, mx, my, mz);
-		return;
+		//bInitialized = MadgwickInit(ax, ay, az, mx, my, mz);
+		//return;
 	}
 
 	float recipNorm;
@@ -126,7 +126,7 @@ void MadgwickAHRSupdate(float* data)
 	//NRF_LOG_INFO("------------------------ 12[%d][%d][%d]\n\r",(int32_t)(gx*1000),(int32_t)(gy*1000),(int32_t)(gz*1000));
 	// Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
 	if((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f)) {
-		//NRF_LOG_INFO("------------------------ no magnet\n\r");
+		NRF_LOG_INFO("------------------------ no magnet\n\r");
 		MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
 		return;
 	}
