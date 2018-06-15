@@ -247,7 +247,7 @@ bool push_button =false;
 static int8_t send_data_t[13];
 //#define touch_sum send_data_t
 static int8_t key_sum[4];
-static uint8_t simple_back_key,simple_enter_key;
+static uint8_t simple_back_key,simple_enter_key,simple_trigger;
 static uint8_t simple_click;
 static uint8_t touch_sum[4];
 
@@ -302,7 +302,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v200_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v201_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -1343,7 +1343,7 @@ MOVE_DOWN__SLOW_1,
 MOVE_DOWN_FAST_0,
 MOVE_DOWN_FAST_1,
 };
-#define ONE_STEP 15
+#define ONE_STEP 45
 static uint32_t touch_action_detect_flag=0;
 static Touch_Event Touch_Info_record;
 static enum touch_action action=NOTHING;
@@ -2723,13 +2723,13 @@ static void bsp_event_handler(bsp_event_t event)
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				bsp_board_led_invert(LED_EN);
-					simple_enter_key = 0x01;
+					simple_trigger = 0x01;
             }
             break;
         case BSP_EVENT_KEY_6_LONG://trigger
     			NRF_LOG_INFO("trigger push ---- push long\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
-					simple_enter_key = 0x03;
+					simple_trigger = 0x03;
             }
             break;
         case BSP_EVENT_KEY_6_RELEASE://trigger
@@ -2739,7 +2739,7 @@ static void bsp_event_handler(bsp_event_t event)
 				break;
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
-					simple_enter_key = 0x00;
+					simple_trigger = 0x00;
             }
             break;
 #endif
@@ -3191,6 +3191,7 @@ enum DATA_TYPE{
 	ACCX,ACCY,ACCZ,
 	GYROX,GYROY,GYROZ,
 	TOUCHX,TOUCHY,
+	KEY_S_TG,
 	KEY_S_MOV,
 	KEY_S_BACK,
 	KEY_ENTER,
@@ -3253,6 +3254,9 @@ int get_data(enum DATA_TYPE type)
 		case TOUCHY:
 		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
 		break;
+		case KEY_S_TG:
+		result =(  ((sensor_data[19]&0x3))   );
+		break;
 		case KEY_S_MOV:
 		result =( (sensor_data[19]&0x30)>>4);
 		break;
@@ -3260,7 +3264,7 @@ int get_data(enum DATA_TYPE type)
 		result =( (sensor_data[19]&0x0C)>>2);
 		break;
 		case KEY_ENTER:
-		result =(  ((sensor_data[19]&0x3))   );
+		result =( (sensor_data[19]&0xC0)>>6);
 		break;
 	}
 	NRF_LOG_INFO("[%5d] ",result);
@@ -3337,6 +3341,9 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[17] |= data>>3;
 			sensor_data[18] |= data<<5;
 		break;
+		case KEY_S_TG:
+			sensor_data[19] |= data;
+		break;
 		case KEY_S_MOV:
 			sensor_data[19] |= data<<4;
 		break;
@@ -3344,7 +3351,7 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[19] |= data<<2;
 		break;
 		case KEY_ENTER:
-			sensor_data[19] |= data;
+			sensor_data[19] |= data<<6;
 		break;
 
 	}
@@ -3358,7 +3365,7 @@ static void MadgwickAHRSupdate_start()
 	app_timer_start(MadgwickAHRSupdate_timer_id,APP_TIMER_TICKS(MadgwickAHRSupdate_FRQ),NULL);
 }
 volatile float DegreeArray[3];
-volatile int16_t DeagreeArray_int[3];
+volatile int16_t DeagreeArray_int[3],DeagreeArray_int_buffer[3];;
 extern volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame
 static void MadgwickAHRSupdate_handler(void* p_context)
 {	static nrf_drv_systick_state_t systick_s;
@@ -3444,9 +3451,39 @@ mx =my =mz =0;
 			q2 = -q2;
 			q3 = -q3;
 		}
-		DeagreeArray_int[0] =  -q1*4000;
-		DeagreeArray_int[1] =  -q3*4000;
-		DeagreeArray_int[2] =  q2*4000;
+		DeagreeArray_int_buffer[0] =  -q1*4000;
+		DeagreeArray_int_buffer[1] =  -q3*4000;
+		DeagreeArray_int_buffer[2] =  q2*4000;
+		
+		
+		if(abs(DeagreeArray_int_buffer[2]-DeagreeArray_int[2]) >0){
+			DeagreeArray_int[0] = DeagreeArray_int_buffer[0];
+			DeagreeArray_int[1] = DeagreeArray_int_buffer[1];
+			DeagreeArray_int[2] = DeagreeArray_int_buffer[2];
+		}
+//#define __AVG
+#ifdef __AVG
+#define BUFFER_SIZE 20
+		static int16_t avg_buffer[3][BUFFER_SIZE]=0;
+		static char time=0;
+		if(time==BUFFER_SIZE)time=0;
+			avg_buffer[0][time]=    DeagreeArray_int[0];
+			avg_buffer[1][time]=    DeagreeArray_int[1];
+			avg_buffer[2][time]=    DeagreeArray_int[2];
+			time++;
+
+			int32_t sum[3]={0,0,0};
+			for(int i=0;i<BUFFER_SIZE;i++){
+				sum[0] += avg_buffer[0][i];
+				sum[1] += avg_buffer[1][i];
+				sum[2] += avg_buffer[2][i];
+			}
+			DeagreeArray_int[0] = sum[0]/BUFFER_SIZE;
+			DeagreeArray_int[1] = sum[1]/BUFFER_SIZE;
+			DeagreeArray_int[2] = sum[2]/BUFFER_SIZE;
+#endif
+		
+		
 #endif
 		//NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 	}
@@ -3602,7 +3639,9 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(KEY_S_MOV,touch_sum[1]);
 	set_data(KEY_S_BACK,simple_back_key);
 	set_data(KEY_ENTER,simple_enter_key);
-#if 0
+	set_data(KEY_S_TG,simple_trigger);
+
+#if 1
 	//get_data(TIME_STAMP);
 	//get_data(PACKET_ID);
 	//get_data(MAGX);
@@ -3619,6 +3658,7 @@ void sensor_data_poll_handler(void* p_context)
 	get_data(KEY_S_MOV);
 	get_data(KEY_S_BACK);
 	get_data(KEY_ENTER);
+	get_data(KEY_S_TG);
 	NRF_LOG_INFO("---END\r\n");
 #endif
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
