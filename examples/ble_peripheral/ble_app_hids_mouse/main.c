@@ -3404,7 +3404,7 @@ if(i==512)i=0;
 		gx = dof3_buf[2];
 		gy = -dof3_buf[0];
 		gz = dof3_buf[1];
-//		NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+		NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
 		
 		
 		float mx,my,mz;
@@ -3456,14 +3456,14 @@ mx =my =mz =0;
 		DeagreeArray_int_buffer[2] =  q2*4000;
 		
 		
-		if(abs(DeagreeArray_int_buffer[2]-DeagreeArray_int[2]) >0){
+		if((abs(gx*1000) <=30 )&& (abs(gy*1000) <=30 )&& (abs(gz*1000) <=30 )){
+		}else{
 			DeagreeArray_int[0] = DeagreeArray_int_buffer[0];
 			DeagreeArray_int[1] = DeagreeArray_int_buffer[1];
-			DeagreeArray_int[2] = DeagreeArray_int_buffer[2];
-		}
-//#define __AVG
+			DeagreeArray_int[2] = DeagreeArray_int_buffer[2];			
+#define __AVG
 #ifdef __AVG
-#define BUFFER_SIZE 20
+#define BUFFER_SIZE 10
 		static int16_t avg_buffer[3][BUFFER_SIZE]=0;
 		static char time=0;
 		if(time==BUFFER_SIZE)time=0;
@@ -3482,7 +3482,7 @@ mx =my =mz =0;
 			DeagreeArray_int[1] = sum[1]/BUFFER_SIZE;
 			DeagreeArray_int[2] = sum[2]/BUFFER_SIZE;
 #endif
-		
+			}
 		
 #endif
 		//NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
@@ -3641,7 +3641,7 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(KEY_ENTER,simple_enter_key);
 	set_data(KEY_S_TG,simple_trigger);
 
-#if 1
+#if 0
 	//get_data(TIME_STAMP);
 	//get_data(PACKET_ID);
 	//get_data(MAGX);
