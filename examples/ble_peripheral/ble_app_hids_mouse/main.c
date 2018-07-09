@@ -247,7 +247,7 @@ bool push_button =false;
 static int8_t send_data_t[13];
 //#define touch_sum send_data_t
 static int8_t key_sum[4];
-static uint8_t simple_back_key,simple_enter_key,simple_trigger;
+static uint8_t simple_back_key,simple_enter_key,simple_trigger,simple_power;
 static uint8_t simple_click;
 static uint8_t touch_sum[4];
 
@@ -292,7 +292,7 @@ char project_flag=0x01;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x02;
-#define MANUFACTURER_NAME               "wangcq327_v200_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v202_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -302,7 +302,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v201_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v202_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -1489,13 +1489,13 @@ static void touch_action_detect_handler(void* p_context)
 					touch_sum[0] = TOUCH_MOVE;	
 					touch_sum[1] = (0x01);
 					#ifndef PROJECT_K07
-					custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					//custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
 					#endif
 			}else if(step_temp_Y-step_Y<0){//down
 					touch_sum[0] = TOUCH_MOVE;	
 					touch_sum[1] = (0x02);
 					#ifndef PROJECT_K07
-					custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
+					//custom_on_send(m_conn_handle,&m_bas,touch_sum,13);
 					#endif
 			}
 			step_Y=step_temp_Y;
@@ -2611,6 +2611,7 @@ static void bsp_event_handler(bsp_event_t event)
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				static  enum Mode_select mode_keep;
+				simple_power = 0x01;
 				if(Mode_2D == true){
 					mode_keep = MODE_2D;
 					if(Mode_mouse == false){	
@@ -2646,6 +2647,7 @@ static void bsp_event_handler(bsp_event_t event)
     		NRF_LOG_INFO("Power key UP ---- UP\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
+					simple_power = 0x00;
             }else{
 			}
 			break;
@@ -2722,7 +2724,7 @@ static void bsp_event_handler(bsp_event_t event)
 				break;
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
-				bsp_board_led_invert(LED_EN);
+				//bsp_board_led_invert(LED_EN);
 					simple_trigger = 0x01;
             }
             break;
@@ -3194,6 +3196,7 @@ enum DATA_TYPE{
 	KEY_S_TG,
 	KEY_S_MOV,
 	KEY_S_BACK,
+	KEY_S_POWER,
 	KEY_ENTER,
 };
 int get_data(enum DATA_TYPE type)
@@ -3253,6 +3256,9 @@ int get_data(enum DATA_TYPE type)
 		break;
 		case TOUCHY:
 		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
+		break;
+		case KEY_S_POWER:
+		result =(  ((sensor_data[18]&0x1))   );
 		break;
 		case KEY_S_TG:
 		result =(  ((sensor_data[19]&0x3))   );
@@ -3341,6 +3347,9 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[17] |= data>>3;
 			sensor_data[18] |= data<<5;
 		break;
+		case KEY_S_POWER:
+			sensor_data[18] |= data;
+		break;
 		case KEY_S_TG:
 			sensor_data[19] |= data;
 		break;
@@ -3404,7 +3413,7 @@ if(i==512)i=0;
 		gx = dof3_buf[2];
 		gy = -dof3_buf[0];
 		gz = dof3_buf[1];
-		NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+		//NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
 		
 		
 		float mx,my,mz;
@@ -3439,12 +3448,32 @@ mx =my =mz =0;
 		
 		float imudata[] = {gx,gy,gz,ax,ay,az,mx,my,mz};
 		MadgwickAHRSupdate(imudata);
-//#define _ANGLE
-#ifdef 	_ANGLE	
-		QuaternionToDegreeFast(DegreeArray);
-		DeagreeArray_int[0] =  DegreeArray[0];
-		DeagreeArray_int[1] =  DegreeArray[1];
-		DeagreeArray_int[2] =  DegreeArray[2];
+#define _ANGLE
+#ifdef 	_ANGLE
+//		QuaternionToDegreeFast(DegreeArray);
+//		DeagreeArray_int[1] =  -(int16_t) (DegreeArray[0]*10);
+//		DeagreeArray_int[0] =  -(int16_t) (DegreeArray[1]*10);
+//		DeagreeArray_int[2] =  -(int16_t) (DegreeArray[2]*10);
+
+{
+		float Q03[4];
+		if(q0 < 0){
+			q0 = -q0;
+			q1 = -q1;
+			q2 = -q2;
+			q3 = -q3;
+		}
+		Q03[0] =  q0;
+		Q03[1] =  -q1;
+		Q03[2] =  -q3;
+		Q03[3] =  q2;
+		//NRF_LOG_INFO("  q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(Q03[0]*1000),(int32_t)(Q03[1]*1000),(int32_t)(Q03[2]*1000),(int32_t)(Q03[3]*1000));
+		quatToEuler1(Q03,DegreeArray);
+		DeagreeArray_int[0] =  (int16_t) (DegreeArray[0]*10);
+		DeagreeArray_int[1] =  (int16_t) (DegreeArray[1]*10);
+		DeagreeArray_int[2] =  (int16_t) (DegreeArray[2]*10);
+}
+		
 #else
 		if(q0 < 0){
 			q1 = -q1;
@@ -3486,6 +3515,7 @@ mx =my =mz =0;
 		
 #endif
 		//NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+			//NRF_LOG_INFO("  q0-3 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(q0*1000),(int32_t)(q1*1000),(int32_t)(q2*1000),(int32_t)(q3*1000));
 	}
 #endif
 //#define OPEN_LOG_TIME1
@@ -3640,13 +3670,17 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(KEY_S_BACK,simple_back_key);
 	set_data(KEY_ENTER,simple_enter_key);
 	set_data(KEY_S_TG,simple_trigger);
+	set_data(KEY_S_POWER,simple_power);
 
+#ifdef PROJECT_K02
+	set_data(KEY_S_TG,simple_enter_key);
+#endif
 #if 0
 	//get_data(TIME_STAMP);
 	//get_data(PACKET_ID);
 	//get_data(MAGX);
-	//get_data(MAGY);
-	//get_data(MAGZ);
+//	get_data(MAGY);
+//	get_data(MAGZ);
 	//get_data(ACCX);
 	//get_data(ACCY);
 	//get_data(ACCZ);
@@ -3655,6 +3689,7 @@ void sensor_data_poll_handler(void* p_context)
 //	get_data(GYROZ);
 	//get_data(TOUCHX);
 	//get_data(TOUCHY);
+	get_data(KEY_S_POWER);
 	get_data(KEY_S_MOV);
 	get_data(KEY_S_BACK);
 	get_data(KEY_ENTER);

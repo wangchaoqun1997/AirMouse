@@ -330,3 +330,31 @@ void QuaternionToDegreeFast(float *DegreeArray)
 	DegreeArray[2]  = mOrientationRadianArray[2]* RAD_TO_DEGREE ;
 
 }
+
+void quatToEuler(float* angle)
+{
+	float q[4];
+	q[0]=q0;
+	q[1]=q1;
+	q[2]=q2;
+	q[3]=q3;
+  float R32 = 2 * (q[2]*q[3]+q[0]*q[1]);
+  float R31 = 2 * (q[1]*q[3]-q[0]*q[2]);
+  float R33 = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
+  float R12 = 2 * (q[1]*q[2]-q[0]*q[3]);
+  float R22 = q[0]*q[0] - q[1]*q[1] + q[2]*q[2] - q[3]*q[3];
+  
+  angle[0] = asin(R32) * RAD_TO_DEGREE;
+  angle[1] = atan2( -R31, R33 ) * RAD_TO_DEGREE;
+  angle[2] = atan2( -R12, R22 ) * RAD_TO_DEGREE;
+}
+
+
+void quatToEuler1(float *q,float* angle)
+{
+	float w = q[0],x = q[1],y = q[2],z = q[3];
+  
+  angle[0] = atan2( 2*(w*x+y*z),1-2*(x*x+y*y) ) * RAD_TO_DEGREE;
+	angle[1] = asin( 2*(w*y - z*x) ) * RAD_TO_DEGREE;
+  angle[2] = atan2( 2*(w*z+x*y),1-2*(y*y+z*z) ) * RAD_TO_DEGREE;	
+}

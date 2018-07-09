@@ -102,7 +102,7 @@ APP_TIMER_DEF(battery_led_id);
 //--saadc oper start
 static void battery_led_start(void)
 {
-	app_timer_start(battery_led_id,APP_TIMER_TICKS(10),NULL);//8min
+	app_timer_start(battery_led_id,APP_TIMER_TICKS(3000),NULL);//8min
 }
 #define BATTERY_CAPCITY 520
 static enum status_flag_ analyze_plug_status(nrf_saadc_value_t *battery_level_trend)
