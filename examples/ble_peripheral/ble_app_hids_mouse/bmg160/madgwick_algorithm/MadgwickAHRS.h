@@ -27,6 +27,7 @@ extern volatile int bInitialized;      // initialized flag
 //void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 void MadgwickAHRSupdate(float* data);
 void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
+void MadgwickAHRSupdateWithoutMag(float* data);
 
 #endif
 //=====================================================================================================

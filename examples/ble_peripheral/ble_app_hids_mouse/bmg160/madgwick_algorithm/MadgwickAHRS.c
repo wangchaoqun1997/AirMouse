@@ -42,13 +42,62 @@ float invSqrt(float x);
 //====================================================================================================
 // Functions
 
+float SIGN(float x) {return (x >= 0.0f) ? +1.0f : -1.0f;}
+float NORM(float a, float b, float c, float d) {return sqrtf(a * a + b * b + c * c + d * d);}
+
+void matToQuat(float* R, float* q)
+{
+    float qw, qx, qy, qz;
+
+    qw = ( R[0] + R[4] + R[8] + 1.0f) / 4.0f;
+    qx = ( R[0] - R[4] - R[8] + 1.0f) / 4.0f;
+    qy = (-R[0] + R[4] - R[8] + 1.0f) / 4.0f;
+    qz = (-R[0] - R[4] + R[8] + 1.0f) / 4.0f;
+    if(qw < 0.0f) qw = 0.0f;
+    if(qx < 0.0f) qx = 0.0f;
+    if(qy < 0.0f) qy = 0.0f;
+    if(qz < 0.0f) qz = 0.0f;
+    qw = sqrtf(qw);
+    qx = sqrtf(qx);
+    qy = sqrtf(qy);
+    qz = sqrtf(qz);
+    if(qw >= qx && qw >= qy && qw >= qz) {
+//        qw *= +1.0f;
+        qx *= SIGN(R[7] - R[5]);
+        qy *= SIGN(R[2] - R[6]);
+        qz *= SIGN(R[3] - R[1]);
+    } else if(qx >= qw && qx >= qy && qx >= qz) {
+        qw *= SIGN(R[7] - R[5]);
+//        qx *= +1.0f;
+        qy *= SIGN(R[3] + R[1]);
+        qz *= SIGN(R[2] + R[6]);
+    } else if(qy >= qw && qy >= qx && qy >= qz) {
+        qw *= SIGN(R[2] - R[6]);
+        qx *= SIGN(R[3] + R[1]);
+//        qy *= +1.0f;
+        qz *= SIGN(R[7] + R[5]);
+    } else if(qz >= qw && qz >= qx && qz >= qy) {
+        qw *= SIGN(R[3] - R[1]);
+        qx *= SIGN(R[6] + R[2]);
+        qy *= SIGN(R[7] + R[5]);
+//        qz *= +1.0f;
+    } else {
+//        printf("coding error\n");
+    }
+    float r = 1 / NORM(qw, qx, qy, qz);
+    q[0] = qw * r;
+    q[1] = qx * r;
+    q[2] = qy * r;
+    q[3] = qz * r;
+}
+
 //---------------------------------------------------------------------------------------------------
 // AHRS algorithm intialize
 
 int MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
 {
-	if ((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f))
-		return false;
+//	if ((mx == 0) && (my == 0) && (mz == 0))
+//		return 0;
 
 	float normA = sqrt(ax*ax + ay*ay + az*az);
 	float g = 9.81f;
@@ -81,11 +130,13 @@ int MadgwickInit(float ax, float ay, float az, float mx, float my, float mz)
 	float My = Az*Hx - Ax*Hz;
 	float Mz = Ax*Hy - Ay*Hx;
 
-	float S = 0.5f / sqrt(1 + Mx*Mx + Hy*Hy + Az*Az);
-	q0 = 0.25f / S;
-	q1 = ( Ay + Hz ) * S;
-	q2 = ( Mz - Ax ) * S;
-	q3 = ( -Hx - My ) * S;
+	float R[] = {Mx, My, Mz, -Hx, -Hy, -Hz, Ax, Ay, Az};
+	float q[4];
+  matToQuat(R, q);
+	q0 = q[0];
+	q1 = q[1];
+	q2 = q[2];
+	q3 = q[3];
 
 	return 1;
 }
@@ -110,11 +161,12 @@ void MadgwickAHRSupdate(float* data)
 	
 //	NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
 //	NRF_LOG_INFO("acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
-//	NRF_LOG_INFO("mag: %6d, %6d, %6d\n",(int32_t)(mx),(int32_t)(my),(int32_t)(mz));
+//	NRF_LOG_INFO("mag: %6d, %6d, %6d\n",(int32_t)(mx*1000),(int32_t)(my*1000),(int32_t)(mz*1000));
 	
 	if (!bInitialized) {
-		//bInitialized = MadgwickInit(ax, ay, az, mx, my, mz);
-		//return;
+		bInitialized = MadgwickInit(ax, ay, az, mx, my, mz);
+		//bInitialized = 0;
+		return;
 	}
 
 	float recipNorm;
@@ -125,10 +177,26 @@ void MadgwickAHRSupdate(float* data)
 
 	//NRF_LOG_INFO("------------------------ 12[%d][%d][%d]\n\r",(int32_t)(gx*1000),(int32_t)(gy*1000),(int32_t)(gz*1000));
 	// Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
-	if((mx <= 0.001f) && (my <= 0.001f) && (mz <= 0.001f)) {
-		//NRF_LOG_INFO("------------------------ no magnet\n\r");
+	static int cnt = 0;
+	float gyroNorm2 = gx*gx + gy*gy + gz*gz;
+	if (gyroNorm2 < 0.1f)
+		cnt++;
+	else
+		cnt = 0;
+	float magNorm2 = mx*mx + my*my + mz*mz;
+	if (cnt > 0.1f*sampleFreq || magNorm2 > 1) {
+		beta = 0.05f;
+		//NRF_LOG_INFO("gyro norm2: %6d\n\r",(int32_t)(gyroNorm2*10000));
+		if (gyroNorm2 < 1e-3) {
+			gx = 0;
+			gy = 0;
+			gz = 0;
+		}
 		MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
 		return;
+	}
+	else {
+		beta = 0.1f;
 	}
 
 	// Rate of change of quaternion from gyroscope
@@ -214,6 +282,11 @@ void MadgwickAHRSupdate(float* data)
 	q3 *= recipNorm;
 }
 
+void MadgwickAHRSupdateWithoutMag(float* data)
+{
+	MadgwickAHRSupdateIMU(data[0], data[1], data[2], data[3], data[4], data[5]);
+}
+
 //---------------------------------------------------------------------------------------------------
 // IMU algorithm update
 
@@ -231,7 +304,7 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, flo
 
 	//NRF_LOG_INFO("-----------------------step 1- qD0-q3[%d][%d][%d][%d]\n\r",(int32_t)(qDot1*10000),(int32_t)(qDot2*10000),(int32_t)(qDot3*10000),(int32_t)(qDot4*10000));
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-	if(!((ax <= 0.001f) && (ay <= 0.001f) && (az <= 0.001f))) {
+	if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
 
 		//NRF_LOG_INFO("-----------------------step 2- gyro no NULL x[%d] y[%d] z[%d]\n\r", (int32_t)(ax*1000),(int32_t)(ay*1000),(int32_t)(az*1000));
 		// Normalise accelerometer measurement

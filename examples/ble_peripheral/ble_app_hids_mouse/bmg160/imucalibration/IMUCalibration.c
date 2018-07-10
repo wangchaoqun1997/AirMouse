@@ -10,8 +10,18 @@
 #endif
 
 
-#define DEBUG_PRINT			0
+#define DEBUG_PRINT			1
+#if DEBUG_PRINT
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
 
+#define  LOGI(...)  NRF_LOG_INFO(__VA_ARGS__)
+#endif
+
+
+#define CALIBRATE_GYRO			0
+#define CALIBRATE_ACC				0
+#define CALIBRATE_MAG				1
 
 
 typedef struct 
@@ -35,12 +45,19 @@ void resetInterval(StaticInterval* interval, int startIndex)
 	}
 }
 
+static int bGyroCalibrating = 0;
+static int bAccCalibrating = 0;
+static int bMagCalibrating = 0;
 
-static int magArray[26];
-static float vMags[26][3];
+
+static int mag_dir_cnt = 0;
+static int magDirArray[26];
+
+
+#define MAG_NUM		100
+static float vMags[MAG_NUM][3];
 static int vmags_size; 
-static double firstMagTime;
-#define MAG_NUM		20
+//static int firstMagTime;
 static float H_mag[MAG_NUM][6]; 
 static float z_mag[MAG_NUM]; 
 static float J_mag[6][6];
@@ -48,10 +65,10 @@ static float Jinv_mag[6][6];
 static float b_mag[6];
 
 
-static int accArray[6];
+static int accDirArray[6];
 static StaticInterval vStaticIntervals[6];
 static int vinterval_size;
-static double firstAccTime; 
+static int firstAccTime; 
 static float H_acc[6][6];
 static float z_acc[6];
 static float J_acc[6][6];
@@ -70,58 +87,41 @@ int matrix_mul_vector(float a[][6], float* b, float* c, int m, int n);
 int matrix_t_mul_vector(float a[][6], float* b, float* c, int m, int n);
 
 
-void resetMagCalibration();
-void resetAccCalibration();
-bool checkMagCalibration(float* mag, float* q, double timestamp);
-int checkGyroAndAccCalibration(float* gyro, float* acc, double timestamp, float* gyro_bias);
-bool calibrateMag(float* mag_scale, float* mag_bias);
-bool calibrateAcc(float* acc_scale, float* acc_bias);
+void resetMagCalibration(void);
+void resetAccCalibration(void);
+int checkMagCalibration(float* mag, float* q);
+int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias);
+int calibrateMag(float* mag_scale, float* mag_bias);
+int calibrateAcc(float* acc_scale, float* acc_bias);
 
 
 //------------------------- Functions Implementations ----------------------------------------------
-extern volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame
-extern float dof3_buf[6];
-extern int magnet_xyz[3];
-CalibResult cal_res;
 
-bool tryCalibration(CalibResult* res,
-					float ax, float ay, float az,
-					float gx, float gy, float gz,
-					float mx, float my, float mz,
-					float q0, float q1, float q2, float q3,
-					double timestamp)
+
+//int tryCalibration(CalibResult* res,
+//					float ax, float ay, float az,
+//					float gx, float gy, float gz,
+//					float mx, float my, float mz,
+//					float q0, float q1, float q2, float q3,
+//					)
+int tryCalibration( CalibResult* res, float* imuData, float* q)
 {
-	gx = dof3_buf[1];
-	gy = dof3_buf[0];
-	gz = dof3_buf[2];
-	ax = dof3_buf[4];
-	ay = dof3_buf[3];
-	az = dof3_buf[5];
-#if NO_MAG
-	mx = 0.0001f;
-	my = 0.0001f;
-	mz = 0.0001f;
-#else
-	mx = magnet_xyz[0];
-	my = magnet_xyz[1];
-	mz = magnet_xyz[2];
-#endif
+	res->bCalibrated_acc = 0;
+	res->bCalibrated_gyro = 0;
+	res->bCalibrated_mag = 0;
 
-
-	res->bCalibrated_acc = false;
-	res->bCalibrated_gyro = false;
-	res->bCalibrated_mag = false;
-
-	float q[] = {q0, q1, q2, q3};
-	float mag[] = {mx, my, mz};
-	float acc[] = {ax, ay, az};
-	float gyro[] = {gx, gy, gz};
-
+//	float q[] = {q0, q1, q2, q3};
+	float* gyro = imuData;
+	float* acc = imuData + 3;
+	float* mag = imuData + 6;
+	
+	
+#if CALIBRATE_MAG
 	// check mag calibration
-	if (checkMagCalibration(mag, q, timestamp)) {
+	if (checkMagCalibration(mag, q)) {
 		float mag_scale[3], mag_bias[3];
 		if (calibrateMag(mag_scale, mag_bias)) {
-			res->bCalibrated_mag = true;
+			res->bCalibrated_mag = 1;
 
 			res->mag_scale[0] = mag_scale[0];
 			res->mag_scale[1] = mag_scale[1];
@@ -131,15 +131,17 @@ bool tryCalibration(CalibResult* res,
 			res->mag_bias[1] = mag_bias[1];
 			res->mag_bias[2] = mag_bias[2];
 		}
-		resetMagCalibration();
+		
 	}
+#endif
 
 
+#if CALIBRATE_ACC || CALIBRATE_GYRO
 	// check gyro and acc calibration
 	float gyro_bias[3];
-	int ret = checkGyroAndAccCalibration(gyro, acc, timestamp, gyro_bias);
+	int ret = checkGyroAndAccCalibration(gyro, acc, gyro_bias);
 	if (ret == 1) {		// gyro calibrated
-		res->bCalibrated_gyro = true;
+		res->bCalibrated_gyro = 1;
 
 		res->gyro_bias[0] = gyro_bias[0];
 		res->gyro_bias[1] = gyro_bias[1];
@@ -148,7 +150,7 @@ bool tryCalibration(CalibResult* res,
 	else if (ret == 2) {	// need to calibrate acc
 		float acc_scale[3], acc_bias[3];
 		if (calibrateAcc(acc_scale, acc_bias)) {
-			res->bCalibrated_acc = true;
+			res->bCalibrated_acc = 1;
 
 			res->acc_scale[0] = acc_scale[0];
 			res->acc_scale[1] = acc_scale[1];
@@ -160,53 +162,55 @@ bool tryCalibration(CalibResult* res,
 		}
 		resetAccCalibration();
 	}
+#endif
 
-	return (res->bCalibrated_acc || res->bCalibrated_gyro || res->bCalibrated_mag);
+	return (res->bCalibrated_acc + res->bCalibrated_gyro + res->bCalibrated_mag);
 }
 
 
 
 // correct acc
-void correctAcc(float* ax, float* ay, float* az, float* acc_scale, float* acc_bias)
+void correctAcc(float* acc, float* acc_scale, float* acc_bias)
 {
-	*ax = acc_scale[0] * (*ax - acc_bias[0]);
-	*ay = acc_scale[1] * (*ay - acc_bias[1]);
-	*az = acc_scale[2] * (*az - acc_bias[2]);
+	acc[0] = acc_scale[0] * (acc[0] - acc_bias[0]);
+	acc[1] = acc_scale[1] * (acc[1] - acc_bias[1]);
+	acc[2] = acc_scale[2] * (acc[2] - acc_bias[2]);
 }
 
 // correct gyro
-void correctGyro(float* gx, float* gy, float* gz, float* gyro_bias)
+void correctGyro(float* gyro, float* gyro_bias)
 {
-	*gx = *gx - gyro_bias[0];
-	*gy = *gy - gyro_bias[1];
-	*gz = *gz - gyro_bias[2];
+	gyro[0] -= gyro_bias[0];
+	gyro[1] -= gyro_bias[1];
+	gyro[2] -= gyro_bias[2];
 }
 
 // correct mag
-void correctMag(float* mx, float* my, float* mz, float* mag_scale, float* mag_bias)
+void correctMag(float* mag, float* mag_scale, float* mag_bias)
 {
-	*mx = mag_scale[0] * (*mx - mag_bias[0]);
-	*my = mag_scale[1] * (*my - mag_bias[1]);
-	*mz = mag_scale[2] * (*mz - mag_bias[2]);
+	mag[0] = mag_scale[0] * (mag[0] - mag_bias[0]);
+	mag[1] = mag_scale[1] * (mag[1] - mag_bias[1]);
+	mag[2] = mag_scale[2] * (mag[2] - mag_bias[2]);
 }
 
 
 
-void resetMagCalibration()
+void resetMagCalibration(void)
 {
 	int i;
 	for (i = 0; i < 26; i++) {
-		magArray[i] = 0;
+		magDirArray[i] = 0;
 	}
+	mag_dir_cnt = 0;
 	
 	vmags_size = 0;
 }
 
-void resetAccCalibration()
+void resetAccCalibration(void)
 {
 	int i;
 	for (i = 0; i < 6; i++) {
-		accArray[i] = 0;
+		accDirArray[i] = 0;
 	}
 
 	vinterval_size = 0; 
@@ -306,126 +310,168 @@ int checkAccDirection(float ax, float ay, float az)
 
 
 
-bool checkMagCalibration(float* mag, float* q, double timestamp)
+//int checkMagCalibration(float* mag, float* q)
+//{
+//	int i;
+//	static unsigned int cnt = 0;
+
+//	static float mag_sum[3];
+//	static float mag_sum2[3];
+
+//	static int big_cnt = 0;
+//	static int small_cnt = 0;
+//	static int large_cnt = 0;
+//	static int large_lost_cnt = 0;
+//	static int bEightWave = 0;
+
+//	// first time reset
+//	static int bFirstTime = 1;
+//	if (bFirstTime) {
+//		bFirstTime = 0;
+
+//		for (i = 0; i < 3; i++) {
+//			mag_sum[i] = 0;
+//			mag_sum2[i] = 0;
+//		}
+//	}
+
+//	for (i = 0; i < 3; i++) {
+//		mag_sum[i] += mag[i];
+//		mag_sum2[i] += mag[i] * mag[i];
+//	}
+
+//	cnt++;
+//	if (bEightWave && (cnt & 3) == 0) {
+
+//		float qw = q[0], qx = q[1], qy = q[2], qz = q[3]; 
+//		int nDir = checkMagDirection(qw*qw + qx*qx - qy*qy - qz*qz,
+//			2 * qx*qy + 2 * qw*qz, 2 * qx*qz - 2 * qw*qy);
+//		//LOGI("nDir: %d\n", nDir);
+//		if (nDir >= 0) {
+////			// check time
+////			if (vmags_size == 0) {
+////				firstMagTime = cnt;
+////			}
+////			else {
+////				if (cnt - firstMagTime > 60*FREQ) {
+////					resetMagCalibration();
+////					//LOGI("resetMagCalibration\n");
+////				}
+////			}
+
+//			if (magDirArray[nDir] == 0) {
+//				magDirArray[nDir] = 1;
+//				
+
+//				for (i = 0; i < 3; i++) {
+//					vMags[vmags_size][i] = mag[i]; 
+//				}
+//				vmags_size++; 
+//				if (vmags_size >= MAG_NUM) {
+//					return 1;
+//				}
+//			}
+//		}
+//	}
+
+//	if (cnt % CHECK_INTERVAL == 0) {
+//		// standard variance
+//		// mag variance
+//		float mag_var[3]; 
+//		for (i = 0; i < 3; i++) {
+//			mag_var[i] = (mag_sum2[i] - mag_sum[i] * mag_sum[i] / CHECK_INTERVAL) / CHECK_INTERVAL;
+//		}
+//		//LOGI("mag_var: %6d, %6d, %6d\n", (int32_t)(mag_var[0]*10000), (int32_t)(mag_var[1]*10000), (int32_t)(mag_var[2]*10000));
+//		if ((mag_var[0] > MAG_VAR0 && mag_var[1] > MAG_VAR1) ||
+//			(mag_var[1] > MAG_VAR1 && mag_var[2] > MAG_VAR2) ||
+//			(mag_var[2] > MAG_VAR2 && mag_var[0] > MAG_VAR0))
+//		{
+//			big_cnt++;
+//			small_cnt = 0;
+
+//			//LOGI("8 wave!!!\n");
+//			if (mag_var[0] > MAG_VAR0 && mag_var[1] > MAG_VAR1 && mag_var[2] > MAG_VAR2) {
+//				large_cnt++;
+//				large_lost_cnt = 0;
+//			}
+//			else {
+//				large_cnt = 0;
+//				large_lost_cnt++;
+//			}
+//		}
+//		else {
+//			big_cnt = 0;
+//			large_cnt = 0;
+//			small_cnt++;
+//			large_lost_cnt++;
+//		}
+
+//		if (bEightWave) {
+//			if (small_cnt >= 4 || large_lost_cnt >= 10) {
+//				bEightWave = 0;
+//			}
+//		}
+//		else {
+//			if (big_cnt >= 3 && large_cnt >= 1) {
+//				bEightWave = 1;
+//			}
+//		}
+//#if DEBUG_PRINT
+//        //LOGI("bEightWave: %d\n", bEightWave);
+//#endif
+
+//		for (i = 0; i < 3; i++) {
+//			mag_sum[i] = 0;
+//			mag_sum2[i] = 0;
+//		}
+//	}
+
+//	return 0;
+//}
+
+
+
+int checkMagCalibration(float* mag, float* q)
 {
 	int i;
 	static unsigned int cnt = 0;
-
-	static float mag_sum[3];
-	static float mag_sum2[3];
-
-	static int big_cnt = 0;
-	static int small_cnt = 0;
-	static int large_cnt = 0;
-	static int large_lost_cnt = 0;
-	static bool bEightWave = false;
-
-	// first time reset
-	static bool bFirstTime = true;
-	if (bFirstTime) {
-		bFirstTime = false;
-
-		for (i = 0; i < 3; i++) {
-			mag_sum[i] = 0;
-			mag_sum2[i] = 0;
-		}
-	}
-
-	for (i = 0; i < 3; i++) {
-		mag_sum[i] += mag[i];
-		mag_sum2[i] += mag[i] * mag[i];
-	}
-
 	cnt++;
-	if (bEightWave && (cnt & 3) == 0) {
+	if ((cnt & 31) != 0)
+		return 0;
+	
+	if (bMagCalibrating)
+		return 0;
 
-		float qw = q[0], qx = q[1], qy = q[2], qz = q[3]; 
-		int nDir = checkMagDirection(qw*qw + qx*qx - qy*qy - qz*qz,
-			2 * qx*qy + 2 * qw*qz, 2 * qx*qz - 2 * qw*qy);
-		//LODI("nDir: %d\n", nDir);
-		if (nDir >= 0) {
-			// check time
-			if (vmags_size == 0) {
-				firstMagTime = timestamp;
-			}
-			else {
-				if (timestamp - firstMagTime > 60) {
-					resetMagCalibration();
-					//LODI("resetMagCalibration\n");
-				}
-			}
-
-			if (magArray[nDir] == 0) {
-				magArray[nDir] = 1;
-
-				for (i = 0; i < 3; i++) {
-					vMags[vmags_size][i] = mag[i]; 
-				}
-				vmags_size++; 
-				if (vmags_size >= MAG_NUM) {
-					return true;
-				}
-			}
+	float qw = q[0], qx = q[1], qy = q[2], qz = q[3]; 
+	int nDir = checkMagDirection(qw*qw + qx*qx - qy*qy - qz*qz,
+		2 * qx*qy + 2 * qw*qz, 2 * qx*qz - 2 * qw*qy);
+	//LOGI("nDir: %d\n", nDir);
+	if (nDir >= 0) {
+		if (magDirArray[nDir] == 0) {
+			magDirArray[nDir] = 1;
+			mag_dir_cnt++;
+			
+			LOGI("nDir: %d, %d\n", nDir, mag_dir_cnt);
 		}
 	}
-
-	if (cnt % CHECK_INTERVAL == 0) {
-		// standard variance
-		// mag variance
-		float mag_var[3]; 
-		for (i = 0; i < 3; i++) {
-			mag_var[i] = (mag_sum2[i] - mag_sum[i] * mag_sum[i] / CHECK_INTERVAL) / CHECK_INTERVAL;
-		}
-		//LODI("mag_var: %f, %f, %f\n", mag_var[0], mag_var[1], mag_var[2]);
-		if ((mag_var[0] > 0.001f && mag_var[1] > 0.001f) ||
-			(mag_var[1] > 0.001f && mag_var[2] > 0.001f) ||
-			(mag_var[2] > 0.001f && mag_var[0] > 0.001f))
-		{
-			big_cnt++;
-			small_cnt = 0;
-
-			//LODI("8 wave!!!\n");
-			if (mag_var[0] > 0.001f && mag_var[1] > 0.001f && mag_var[2] > 0.001f) {
-				large_cnt++;
-				large_lost_cnt = 0;
-			}
-			else {
-				large_cnt = 0;
-				large_lost_cnt++;
-			}
-		}
-		else {
-			big_cnt = 0;
-			large_cnt = 0;
-			small_cnt++;
-			large_lost_cnt++;
-		}
-
-		if (bEightWave) {
-			if (small_cnt >= 4 || large_lost_cnt >= 10) {
-				bEightWave = false;
-			}
-		}
-		else {
-			if (big_cnt >= 3 && large_cnt >= 1) {
-				bEightWave = true;
-			}
-		}
-#if DEBUG_PRINT
-        //LODI("bEightWave: %d\n", bEightWave);
-#endif
-
-		for (i = 0; i < 3; i++) {
-			mag_sum[i] = 0;
-			mag_sum2[i] = 0;
-		}
+	
+	for (i = 0; i < 3; i++) {
+		vMags[vmags_size][i] = mag[i]; 
+	}
+	vmags_size++; 
+	//LOGI("mag: %d,%d,%d\n", (int32_t)(mag[0]*100), (int32_t)(mag[1]*100), (int32_t)(mag[2]*100));
+	if (vmags_size >= MAG_NUM) {
+		if (mag_dir_cnt >= 20)
+			return 1;
+		else
+			resetMagCalibration();
 	}
 
-	return false;
+	return 0;
 }
 
 
-int checkGyroAndAccCalibration(float* gyro, float* acc, double timestamp, float* gyro_bias)
+int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 {
 	int i;
 	int retval = 0;
@@ -438,9 +484,9 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, double timestamp, float*
 	static unsigned int cnt = 0;
 
 	// first time reset
-	static bool bFirstTime = true;
+	static int bFirstTime = 1;
 	if (bFirstTime) {
-		bFirstTime = false;
+		bFirstTime = 0;
 
 		resetInterval(&staticInterval, cnt); 
 
@@ -465,10 +511,10 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, double timestamp, float*
 		for (i = 0; i < 3; i++) {
 			acc_var[i] = (acc_sum2[i] - acc_sum[i] * acc_sum[i] / CHECK_INTERVAL) / CHECK_INTERVAL;
 		}
-		//LODI("acc_var: %f\n", acc_var.sum());
+		//LOGI("acc_var: %6d\n", (int32_t)((acc_var[0] + acc_var[1] + acc_var[2])*10000));
 
 		if (acc_var[0] + acc_var[1] + acc_var[2] < NOISE) {	// static
-			//LODI("Staic! Standard Variance: %f\n", acc_var.sum());
+			//LOGI("Staic! Standard Variance: %f\n", acc_var.sum());
 
 			// static interval continue
 			for (i = 0; i < 3; i++) {
@@ -491,25 +537,26 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, double timestamp, float*
 				}
 				retval = 1;
 #if DEBUG_PRINT
-                LODI("gyro bias: %f, %f, %f\n", staticInterval.gyro[0], staticInterval.gyro[1], staticInterval.gyro[2]);
+                LOGI("gyro bias: %6d, %6d, %6d\n", (int32_t)(staticInterval.gyro[0]*10000), (int32_t)(staticInterval.gyro[1]*10000), (int32_t)(staticInterval.gyro[2]*10000));
 #endif
 
+#if CALIBRATE_ACC
 				static int last_dir = -1;
 				int dir = checkAccDirection(staticInterval.acc[0], staticInterval.acc[1], staticInterval.acc[2]);
 				if (dir >= 0 && dir != last_dir) {
 					// check time
 					if (vinterval_size == 0) {
-						firstAccTime = timestamp;
+						firstAccTime = cnt;
 					}
 					else {
-						if (timestamp - firstAccTime > 300) {
+						if (cnt - firstAccTime > 300*FREQ) {
 							resetAccCalibration();
-							//LODI("resetAccCalibration\n");
+							//LOGI("resetAccCalibration\n");
 						}
 					}
 
-					if (accArray[dir] < 1) {
-						accArray[dir]++;
+					if (accDirArray[dir] < 1) {
+						accDirArray[dir]++;
 
 						vStaticIntervals[vinterval_size].startIndex = staticInterval.startIndex;
 						vStaticIntervals[vinterval_size].endIndex = staticInterval.endIndex;
@@ -521,11 +568,12 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, double timestamp, float*
 						
 						resetInterval(&staticInterval, cnt+1);
 #if DEBUG_PRINT
-                        LODI("StaticInterval num: %d\n", vinterval_size);
+                        LOGI("StaticInterval num: %d\n", vinterval_size);
 #endif
 					}
 				}
 				last_dir = dir;
+#endif
 
 				// clear
 				resetInterval(&staticInterval, cnt + 1);
@@ -552,11 +600,11 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, double timestamp, float*
 
 
 
-bool calibrateAcc(float* acc_scale, float* acc_bias)
+int calibrateAcc(float* acc_scale, float* acc_bias)
 {
-	int i, j;
+	int i;
 	int n = vinterval_size;
-	if (n < 6) return false;
+	if (n < 6) return 0;
 
 #if USE_EIGEN
 	Eigen::MatrixXf H(n, 6);
@@ -598,7 +646,7 @@ bool calibrateAcc(float* acc_scale, float* acc_bias)
 	matrix_mul_vector(Jinv_acc, b_acc, x, 6, 6);
 #endif
 
-	if (x[3] <= 0 || x[4] <= 0) return false; 
+	if (x[3] <= 0 || x[4] <= 0) return 0; 
 	float sx_2 = 1 / x[3];
 	float sy_2 = 1 / x[4];
 
@@ -607,7 +655,7 @@ bool calibrateAcc(float* acc_scale, float* acc_bias)
 	float bz = x[2];
 
 	float sz2 = (_GRAVITY * _GRAVITY) / (x[0] * bx + x[1] * by + x[2] * bz - x[5]);
-	if (sz2 <= 0) return false;
+	if (sz2 <= 0) return 0;
 	float sx2 = sz2 * x[3];
 	float sy2 = sz2 * x[4];
 
@@ -623,52 +671,54 @@ bool calibrateAcc(float* acc_scale, float* acc_bias)
 
 	// show results
 #if DEBUG_PRINT
-    LODI("\n============================= Acc Calibration ==================================\n");
-    LODI("Scale:\n %f, %f, %f\n", acc_scale[0], acc_scale[1], acc_scale[2]);
-    LODI("Bias:\n %f, %f, %f\n", acc_bias[0], acc_bias[1], acc_bias[2]);
+    LOGI("\n============================= Acc Calibration ==================================\n");
+    LOGI("Scale:\n %f, %f, %f\n", acc_scale[0], acc_scale[1], acc_scale[2]);
+    LOGI("Bias:\n %f, %f, %f\n", acc_bias[0], acc_bias[1], acc_bias[2]);
 
-    LODI("\nCalibrated norm: \n");
+    LOGI("\nCalibrated norm: \n");
 
 	float sample_sum = 0;
 	float sample_sum2 = 0;
 	for (i = 0; i < vinterval_size; i++)
 	{
 		float sample_norm = 0;
-		for (j = 0; j < 3; j++) {
+		for (int j = 0; j < 3; j++) {
 			float sample = acc_scale[j] * (vStaticIntervals[i].acc[j] - acc_bias[j]);
 			sample_norm += sample * sample;
 		}
 		sample_norm = sqrtf(sample_norm);
-        LODI("%f ", sample_norm);
+        LOGI("%f ", sample_norm);
 		sample_sum += sample_norm;
 		sample_sum2 += sample_norm * sample_norm;
 	}
-    LODI("\n");
+    LOGI("\n");
 
 	float mean = sample_sum / vinterval_size;
 	float stdVar = sqrtf((sample_sum2 - sample_sum * sample_sum / vinterval_size) / vinterval_size);
-    LODI("Mean and Standard Variance:\n %f, %f\n", mean, stdVar);
+    LOGI("Mean and Standard Variance:\n %f, %f\n", mean, stdVar);
 #endif
 
 	// check result
 	for (i = 0; i < 3; i++) {
-		if (abs(acc_bias[i]) > 0.3f)
-			return false;
-		if (abs(acc_scale[i] - 1) > 0.1f)
-			return false;
+		if (fabs(acc_bias[i]) > 0.3f)
+			return 0;
+		if (fabs(acc_scale[i] - 1) > 0.1f)
+			return 0;
 	}
 
 	//// reset calibration
 	//resetAccCalibration(); 
 
-	return true;
+	return 1;
 }
 
 
 
-bool calibrateMag(float* mag_scale, float* mag_bias)
+int calibrateMag(float* mag_scale, float* mag_bias)
 {
-	int i, j;
+	int i;
+	
+	bMagCalibrating = 1;
 
 	//// save data
 	//FILE* pfile = fopen("mag.txt", "w");
@@ -677,9 +727,8 @@ bool calibrateMag(float* mag_scale, float* mag_bias)
 	//}
 	//fclose(pfile);
 
-	int n = vmags_size;
-
 #if USE_EIGEN
+	int n = vmags_size;
 	Eigen::MatrixXf H(n, 6);
 	Eigen::VectorXf z(n);
 
@@ -723,7 +772,7 @@ bool calibrateMag(float* mag_scale, float* mag_bias)
 	float sx2 = x[3];
 	float sy2 = x[4];
 	if (sx2 <= 0 || sy2 <= 0) {
-		return false;
+		return 0;
 	}
 
 	/// Scale factor
@@ -739,17 +788,17 @@ bool calibrateMag(float* mag_scale, float* mag_bias)
 
 	// show results
 #if DEBUG_PRINT
-    LODI("============================= Mag Calibration ==================================\n");
-    LODI("Scale: \n%f, %f, %f\n", mag_scale[0], mag_scale[1], mag_scale[2]);
-    LODI("Bias: \n%f, %f, %f\n", mag_bias[0], mag_bias[1], mag_bias[2]);
-    LODI("\n");
+    LOGI("============================= Mag Calibration ==================================\n");
+    LOGI("Scale: \n%6d, %6d, %6d\n", (int32_t)(mag_scale[0]*1000), (int32_t)(mag_scale[1]*1000), (int32_t)(mag_scale[2]*1000));
+    LOGI("Bias: \n%6d, %6d, %6d\n", (int32_t)(mag_bias[0]*1000), (int32_t)(mag_bias[1]*1000), (int32_t)(mag_bias[2]*1000));
+    LOGI("\n");
 
 	float sample_sum = 0;
 	float sample_sum2 = 0;
 	for (i = 0; i < vmags_size; i++)
 	{
 		float mag_norm = 0;
-		for (j = 0; j < 3; j++) {
+		for (int j = 0; j < 3; j++) {
 			float sample = mag_scale[j] * (vMags[i][j] - mag_bias[j]);
 			mag_norm += sample * sample;
 		}
@@ -762,21 +811,23 @@ bool calibrateMag(float* mag_scale, float* mag_bias)
 	float mean = sample_sum / vmags_size;
 	float stdVar = sqrtf((sample_sum2 - sample_sum * sample_sum / vmags_size) / vmags_size);
 
-    LODI("Mean and Standard Variance: \n%f %f\n", mean, stdVar);
+    LOGI("Mean and Standard Variance: \n%6d %6d\n", (int32_t)mean, (int32_t)(stdVar*1000));
 #endif
 
-	// check result
-	for (i = 0; i < 3; i++) {
-		if (abs(mag_bias[i]) > 0.8f)
-			return false;
-		if (abs(mag_scale[i] - 1) > 0.2f)
-			return false;
-	}
+	// reset calibration
+	resetMagCalibration();
+	
+//	// check result
+//	for (i = 0; i < 3; i++) {
+//		if (fabs(mag_bias[i]) > 1.0f)
+//			return 0;
+//		if (fabs(mag_scale[i] - 1) > 0.2f)
+//			return 0;
+//	}
+	
+	bMagCalibrating = 0;
 
-	//// reset calibration
-	//resetMagCalibration();
-
-	return true;
+	return 1;
 }
 
 
@@ -785,7 +836,7 @@ bool calibrateMag(float* mag_scale, float* mag_bias)
 //-------------------------------- Matrix functions ---------------------------
 int cholesky(float orig[][6], int n, float chol[][6])
 {
-	int i, j, k, l;
+	int i, j, k;
 	int retval = 1;
 
 	for (i = 0; i < n; i++) {
@@ -794,7 +845,7 @@ int cholesky(float orig[][6], int n, float chol[][6])
 			chol[i][i] -= chol[k][i] * chol[k][i];
 		//if (chol[i][i] <= 0) {
 		//	//fprintf(stderr, "\nERROR: non-positive definite matrix!\n");
-		//	LODI("\nproblem from %d %f\n", i, chol[i][i]);
+		//	LOGI("\nproblem from %d %f\n", i, chol[i][i]);
 		//	retval = 0;
 		//	return retval;
 		//}
@@ -902,3 +953,4 @@ int matrix_t_mul_vector(float a[][6], float* b, float* c, int m, int n)
 
 	return 1;
 }
+

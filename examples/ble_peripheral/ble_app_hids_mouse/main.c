@@ -91,6 +91,25 @@
 #endif
 #include "ical_new.h"
 
+typedef struct
+{
+    int bCalibrated_gyro;
+    int bCalibrated_acc;
+    int bCalibrated_mag;
+
+    // gyro_truth = gyro - gyro_bias
+    float gyro_bias[3];
+
+    // acc_truth = acc_scale * (acc - acc_bias)
+    float acc_scale[3];
+    float acc_bias[3];
+
+    // mag_truth = mag_scale * (mag - mag_bias)
+    float mag_scale[3];
+    float mag_bias[3];
+
+
+} CalibResult;
 #define DEVICE_NAME                     "AIR MOUSE"                              /**< Name of device. Will be included in the advertising data. */
 //#define MANUFACTURER_NAME               "wangcq327_v200_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 
@@ -302,7 +321,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v202_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v203_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -1343,7 +1362,7 @@ MOVE_DOWN__SLOW_1,
 MOVE_DOWN_FAST_0,
 MOVE_DOWN_FAST_1,
 };
-#define ONE_STEP 45
+#define ONE_STEP 28
 static uint32_t touch_action_detect_flag=0;
 static Touch_Event Touch_Info_record;
 static enum touch_action action=NOTHING;
@@ -3143,6 +3162,7 @@ mouse_slow_start();
 float raw_buf[3];
 float dof3_buf[6];
 int16_t data1[6];
+bool bNewMag = false;
 float magnet_xyz[3];
 uint8_t interrupter_sensor;
 int gyro_num=0;
@@ -3367,6 +3387,9 @@ int set_data(enum DATA_TYPE type,int data)
 	//NRF_LOG_INFO("-------------sensor_data [%d][%d][%d]\r\n",sensor_data[0],sensor_data[1],sensor_data[2]);
 	return result;
 }
+CalibResult calib;
+int bMagCalibrated = 0;
+int bGyroCalibrated = 0;
 
 #define MadgwickAHRSupdate_FRQ 2.5			// 400hz
 static void MadgwickAHRSupdate_start()
@@ -3416,11 +3439,8 @@ if(i==512)i=0;
 		//NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
 		
 		
-		float mx,my,mz;
-		mx = magnet_xyz[2] + 50;
-		my = magnet_xyz[1];
-		mz = -magnet_xyz[0] + 15;
-mx =my =mz =0;
+		
+
 #endif
 #ifdef PROJECT_K02
 		float ax,ay,az;
@@ -3446,8 +3466,34 @@ mx =my =mz =0;
 #endif
 //		NRF_LOG_INFO("mag: %6d, %6d, %6d\n",(int32_t)(mx),(int32_t)(my),(int32_t)(mz));
 		
-		float imudata[] = {gx,gy,gz,ax,ay,az,mx,my,mz};
-		MadgwickAHRSupdate(imudata);
+
+
+		float mx,my,mz;
+		mx = magnet_xyz[2];// + 50;
+		my = magnet_xyz[1];// - 8;
+		mz = -magnet_xyz[0];// + 15;
+		
+		//NRF_LOG_INFO("mag: %6d, %6d, %6d\n", (int32_t)(mx), (int32_t)(my), (int32_t)(mz));
+		
+		float imudata[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
+		float imudata_uncalib[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
+		
+		if (bNewMag) {
+			if (bGyroCalibrated) {
+				//NRF_LOG_INFO("gyro 1: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+				correctGyro(imudata, calib.gyro_bias);
+				//NRF_LOG_INFO("gyro 2: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+			}
+			
+			//MadgwickAHRSupdate(imudata);
+			MadgwickAHRSupdateWithoutMag(imudata);
+			
+			
+			float q[] = {q0, q1, q2, q3};
+			tryCalibration(&calib, imudata_uncalib, q);
+			if (calib.bCalibrated_gyro)
+				bGyroCalibrated = 1;
+		}
 #define _ANGLE
 #ifdef 	_ANGLE
 //		QuaternionToDegreeFast(DegreeArray);
@@ -3559,10 +3605,16 @@ void sensor_data_poll_handler(void* p_context)
 	float magnet_xyz_float[3];
 	int8_t accuracy=0;
 	read_qmcX983_xyz(magnet_xyz_int);
-	magnet_xyz_float[0]= magnet_xyz_int[0] / 10;
-	magnet_xyz_float[1]= magnet_xyz_int[1] / 10;
-	magnet_xyz_float[2]= magnet_xyz_int[2] / 10;
-	convert_magnetic(magnet_xyz_float,magnet_xyz,&accuracy);
+//	magnet_xyz_float[0]= magnet_xyz_int[0] * 0.1f;
+//	magnet_xyz_float[1]= magnet_xyz_int[1] * 0.1f;
+//	magnet_xyz_float[2]= magnet_xyz_int[2] * 0.1f;
+//	convert_magnetic(magnet_xyz_float,magnet_xyz,&accuracy);
+	
+	magnet_xyz[0]= magnet_xyz_int[0] * 0.1f;
+	magnet_xyz[1]= magnet_xyz_int[1] * 0.1f;
+	magnet_xyz[2]= magnet_xyz_int[2] * 0.1f;
+	
+	bNewMag = true;
 //#ifndef MAG_HAVE
 //	magnet_xyz[0]=0.00;
 //	magnet_xyz[1]=0.00;
