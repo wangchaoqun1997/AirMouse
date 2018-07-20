@@ -220,7 +220,6 @@ void qmcX983_read_reg()
 }
 int qmcX983_disable()
 {
-	return 0;
 	qmcX983_fix();
 	MSE_LOG("stop measure!\n");
 	qmcX983_stop_measure();
