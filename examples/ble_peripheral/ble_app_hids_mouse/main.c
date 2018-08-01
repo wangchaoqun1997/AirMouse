@@ -232,7 +232,6 @@ APP_TIMER_DEF(sensor_poll_timer_id);
 APP_TIMER_DEF(touch_action_detect_id);
 APP_TIMER_DEF(MadgwickAHRSupdate_timer_id);
 
-
 //--------------dfu end
 #define K_RIGHT 0x4F //right
 #define K_LEFT  0x50 //left
@@ -3218,6 +3217,7 @@ enum DATA_TYPE{
 	KEY_S_BACK,
 	KEY_S_POWER,
 	KEY_ENTER,
+	KEY_EARSE_BONDS,
 };
 int get_data(enum DATA_TYPE type)
 {
@@ -3279,6 +3279,9 @@ int get_data(enum DATA_TYPE type)
 		break;
 		case KEY_S_POWER:
 		result =(  ((sensor_data[18]&0x1))   );
+		break;
+		case KEY_EARSE_BONDS:
+		result =(  ((sensor_data[18]&0x2))>>1  );
 		break;
 		case KEY_S_TG:
 		result =(  ((sensor_data[19]&0x3))   );
@@ -3370,6 +3373,9 @@ int set_data(enum DATA_TYPE type,int data)
 		case KEY_S_POWER:
 			sensor_data[18] |= data;
 		break;
+		case KEY_EARSE_BONDS:
+			sensor_data[18] |= data<<1;
+		break;
 		case KEY_S_TG:
 			sensor_data[19] |= data;
 		break;
@@ -3382,6 +3388,7 @@ int set_data(enum DATA_TYPE type,int data)
 		case KEY_ENTER:
 			sensor_data[19] |= data<<6;
 		break;
+
 
 	}
 	//NRF_LOG_INFO("-------------sensor_data [%d][%d][%d]\r\n",sensor_data[0],sensor_data[1],sensor_data[2]);
@@ -3727,6 +3734,20 @@ void sensor_data_poll_handler(void* p_context)
 #ifdef PROJECT_K02
 	set_data(KEY_S_TG,simple_enter_key);
 #endif
+	//NRF_LOG_INFO("----- -------------%d %d %d --------------- \r\n",bsp_button_is_pressed(0),bsp_button_is_pressed(1),bsp_button_is_pressed(2));
+	static int touchBackKeyTime = 0;
+	if(bsp_button_is_pressed(0) == 1 && bsp_button_is_pressed(1) == 1 ){
+		touchBackKeyTime++;
+		if((touchBackKeyTime * SENSOR_POLL_INTERVAL) > 3500  ){//3s
+			touchBackKeyTime = 0;
+			set_data(KEY_EARSE_BONDS,0x01);
+			NRF_LOG_INFO("----- ------------- Earse bonds\r\n");
+		}
+	}else{
+		//sw3153_light_select(GREEN, BLINK_LEVEL_2);
+		touchBackKeyTime=0;
+		set_data(KEY_EARSE_BONDS,0x00);
+	}
 #if 0
 	//get_data(TIME_STAMP);
 	//get_data(PACKET_ID);
@@ -3739,13 +3760,14 @@ void sensor_data_poll_handler(void* p_context)
 //	get_data(GYROX);
 	//get_data(GYROY);
 //	get_data(GYROZ);
-	//get_data(TOUCHX);
-	//get_data(TOUCHY);
+	get_data(TOUCHX);
+	get_data(TOUCHY);
 	get_data(KEY_S_POWER);
-	get_data(KEY_S_MOV);
-	get_data(KEY_S_BACK);
-	get_data(KEY_ENTER);
-	get_data(KEY_S_TG);
+	get_data(KEY_EARSE_BONDS);
+	//get_data(KEY_S_MOV);
+	//get_data(KEY_S_BACK);
+	//get_data(KEY_ENTER);
+	//get_data(KEY_S_TG);
 	NRF_LOG_INFO("---END\r\n");
 #endif
 	//if(sensor_data[0]!=NON_DATA || sensor_data[13]!=NON_DATA || sensor_data[26]!=NON_DATA){
@@ -3753,6 +3775,8 @@ void sensor_data_poll_handler(void* p_context)
 	//}
 #endif
 	}
+
+
 
 
 //#define OPEN_LOG_TIME
@@ -3801,6 +3825,41 @@ void sensor_cal_status()
 	}
 
 }
+
+void DeviceAddressSet(bool erase_bonds){
+	if(erase_bonds == false)
+		return;
+	{
+	char i =0;
+	ble_gap_addr_t device_addr;
+	uint32_t err_code = sd_ble_gap_addr_get(&device_addr);
+	uint8_t random[6] = {0};
+	nrf_drv_systick_state_t get_tick;
+	nrf_drv_systick_get(&get_tick);
+	random[0] =(uint8_t )(get_tick.time % 10); 
+	random[1] =(uint8_t )(get_tick.time % 100)/10; 
+	random[2] =(uint8_t )(get_tick.time % 1000)/100; 
+	random[3] =(uint8_t )(get_tick.time % 10000)/1000; 
+	random[4] =(uint8_t )(get_tick.time % 8); 
+	random[5] =(uint8_t )(get_tick.time % 18)/10; 
+	for(i=0;i<8;i++){
+    	NRF_LOG_INFO("device_addr :[%d] 0x%x   random:%d\r\n",i,device_addr.addr[i],random[i]);
+	}
+	if(erase_bonds == true){
+		device_addr.addr[0] += random[0];
+		device_addr.addr[1] += random[1];
+		device_addr.addr[2] += random[2];
+		device_addr.addr[3] += random[3];
+		device_addr.addr[4] += random[4];
+		device_addr.addr[5] += random[5];
+		err_code = sd_ble_gap_addr_set(&device_addr);
+	}
+	for(i=0;i<8;i++){
+    	NRF_LOG_INFO("device_addr :[%d] 0x%x   random:%d\r\n",i,device_addr.addr[i],random[i]);
+	}
+	}
+}
+
 int main(void)
 {
     bool erase_bonds;
@@ -3851,7 +3910,8 @@ int main(void)
 	fds_test_init();
 	sensor_cal_status();
 	
-
+	DeviceAddressSet(erase_bonds);
+	
 	touch_timer_init();
 	mouse_slow_init();
 	connect_sleep_init();
@@ -3873,7 +3933,7 @@ int main(void)
 	}
 	bmi160_cal_offset_apply();
 
-		//erase_bonds = true;
+	erase_bonds = false;
     advertising_start(erase_bonds);
 	if(should_power_on == true)
 	sw3153_light_select(BLUE, BLINK_LEVEL_2);
