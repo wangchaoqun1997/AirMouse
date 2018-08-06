@@ -231,6 +231,7 @@ APP_TIMER_DEF(saadc_sample_id);
 APP_TIMER_DEF(sensor_poll_timer_id);
 APP_TIMER_DEF(touch_action_detect_id);
 APP_TIMER_DEF(MadgwickAHRSupdate_timer_id);
+APP_TIMER_DEF(No_PowerKey_timer_id);
 
 //--------------dfu end
 #define K_RIGHT 0x4F //right
@@ -310,7 +311,7 @@ char project_flag=0x01;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x02;
-#define MANUFACTURER_NAME               "wangcq327_v203_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v210_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -320,7 +321,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v204_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v210_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -475,8 +476,15 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
                 NRF_LOG_INFO("\tm_whitelist_peer_cnt %d, MAX_PEERS_WLIST %d\r\n",
                                m_whitelist_peer_cnt + 1,
                                BLE_GAP_WHITELIST_ADDR_MAX_COUNT);
-
-                if (m_whitelist_peer_cnt < BLE_GAP_WHITELIST_ADDR_MAX_COUNT)
+				bool already_added = false;
+				for(uint8_t i=0; i<m_whitelist_peer_cnt;i++){
+					if(m_whitelist_peers[i] == m_peer_id){
+                		NRF_LOG_INFO("Bond, already_added\r\n");
+						already_added = true;
+						break;
+					}
+				}
+                if (!already_added && (m_whitelist_peer_cnt < BLE_GAP_WHITELIST_ADDR_MAX_COUNT))
                 {
                     // Bonded to a new peer, add it to the whitelist.
                     m_whitelist_peers[m_whitelist_peer_cnt++] = m_peer_id;
@@ -626,13 +634,9 @@ static void battery_level_meas_timeout_handler(void * p_context)
  *
  * @details Initializes the timer module.
  */
-static void timers_init(void)
+static void BatteryLevelTimersInit(void)
 {
     ret_code_t err_code;
-
-    err_code = app_timer_init();
-    APP_ERROR_CHECK(err_code);
-
     // Create battery timer.
     err_code = app_timer_create(&m_battery_timer_id,
                                 APP_TIMER_MODE_REPEATED,
@@ -911,6 +915,9 @@ static void devices_suspend()
 	app_timer_stop(sensor_poll_timer_id);
 	app_timer_stop(touch_action_detect_id);
 	app_timer_stop(MadgwickAHRSupdate_timer_id);
+	
+	if(should_power_on == false)
+		return;
 //gpio
 	bsp_board_leds_off();
 //mag
@@ -939,12 +946,12 @@ void sleep_mode_enter_power(void)
 	devices_suspend();
     NRF_LOG_INFO("power Enter sleep mode ........\r\n");
     err_code = bsp_btn_ble_sleep_mode_prepare();
-    NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
+    //NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
     //APP_ERROR_CHECK(err_code);
 
     // Go to system-off mode (this function will not return; wakeup will cause a reset).
     err_code = sd_power_system_off();
-    NRF_LOG_INFO("Enter sleep mode2 ........%d\r\n",err_code);
+    //NRF_LOG_INFO("Enter sleep mode2 ........%d\r\n",err_code);
     //APP_ERROR_CHECK(err_code);
 }
 
@@ -1152,7 +1159,7 @@ void bmi160_calibration(void)
 	if(abs(cal_offset[0])>100 || abs(cal_offset[1])>100 || abs(cal_offset[2]>100)){
 		cal_offset[0] = cal_offset[1] = cal_offset[2] = 50;
 		cal_status=0x00;
-		Mode_switch(MODE_DISCONNECT,false);
+		//Mode_switch(MODE_DISCONNECT,false);
 		sw3153_light_select(RED, BLINK_LEVEL_0);
 		nrf_delay_ms(2000);
     	NRF_LOG_INFO("sensor calibrate fail ,into sleep !!! \r\n");
@@ -1169,7 +1176,7 @@ void bmi160_calibration(void)
 		err_code = fds_test_find_and_delete();
 		err_code = fds_test_write(gyro_offset_l,gyro_offset_h);
 		//nrf_delay_ms(2000);
-		Mode_switch(MODE_DISCONNECT,false);
+		//Mode_switch(MODE_DISCONNECT,false);
 		sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_2);
 		//sleep_mode_enter_power();
 	}
@@ -1245,7 +1252,7 @@ static void saadc_sample_handler(void* p_context)
 }
 static void saadc_sample_init(void)
 {
-	NRF_LOG_INFO("saadc_sample_init -------------\r\n");
+	//NRF_LOG_INFO("saadc_sample_init -------------\r\n");
 	app_timer_create(&saadc_sample_id,APP_TIMER_MODE_SINGLE_SHOT,saadc_sample_handler);
 }
 
@@ -1875,7 +1882,7 @@ static void conn_params_init(void)
 
 /**@brief Function for starting timers.
  */
-static void timers_start(void)
+static void BatteryLevelTimersStart(void)
 {
     ret_code_t err_code;
 
@@ -1900,12 +1907,12 @@ if(Mode_test ==false){
 	devices_suspend();
     NRF_LOG_INFO("not test Enter sleep mode ........\r\n");
     err_code = bsp_btn_ble_sleep_mode_prepare();
-    NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
+    //NRF_LOG_INFO("Enter sleep mode1 ........%d\r\n",err_code);
     //APP_ERROR_CHECK(err_code);
 
     // Go to system-off mode (this function will not return; wakeup will cause a reset).
     err_code = sd_power_system_off();
-    NRF_LOG_INFO("Enter sleep mode2 ........%d\r\n",err_code);
+    //NRF_LOG_INFO("Enter sleep mode2 ........%d\r\n",err_code);
     //APP_ERROR_CHECK(err_code);
 }
 }
@@ -2110,10 +2117,16 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
                 // The whitelist has been modified, update it in the Peer Manager.
                 err_code = pm_whitelist_set(m_whitelist_peers, m_whitelist_peer_cnt);
                 APP_ERROR_CHECK(err_code);
-
+				{int i=0;
+				for(i;i<m_whitelist_peer_cnt;i++){
+            		NRF_LOG_INFO("Disconnected [%d]\r\n",m_whitelist_peers[i]);
+				}
+				}
                 err_code = pm_device_identities_list_set(m_whitelist_peers, m_whitelist_peer_cnt);
                 if (err_code != NRF_ERROR_NOT_SUPPORTED)
                 {
+
+            NRF_LOG_INFO("Disconnected 2 %d\r\n",err_code);
                     APP_ERROR_CHECK(err_code);
                 }
 
@@ -2497,6 +2510,7 @@ static void bsp_event_handler(bsp_event_t event)
 
         case BSP_EVENT_KEY_1: //back
 
+    				NRF_LOG_INFO("---------------- %d %d\r\n",Mode_test,sensor_ok_flag);
 			if(Mode_test == true && sensor_ok_flag==true){
 				sw3153_light_select(GREEN, BLINK_LEVEL_2);
 				break;
@@ -2630,6 +2644,12 @@ static void bsp_event_handler(bsp_event_t event)
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				static  enum Mode_select mode_keep;
 				simple_power = 0x01;
+#ifdef PROJECT_K02
+				break;
+#endif
+#ifdef PROJECT_K07
+				break;
+#endif
 				if(Mode_2D == true){
 					mode_keep = MODE_2D;
 					if(Mode_mouse == false){	
@@ -2907,6 +2927,8 @@ static void mouse_slow_handler(void* p_context)
 
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(10),NULL);
 }
+
+
 static void mouse_slow_init(void)
 {
 	app_timer_create(&mouse_slow_id,APP_TIMER_MODE_SINGLE_SHOT,mouse_slow_handler);
@@ -2937,6 +2959,25 @@ static void sensor_cal_stop(void)
 	app_timer_stop(sensor_cal_id);
 }
 
+static void go_to_sleep_handler(void* p_context)
+{
+	if(should_power_on == false){
+    	NRF_LOG_INFO("----- NO power key ,enter sleep !!!!!!!!\r\n");
+		sleep_mode_enter_power();
+	}
+}
+static void go_to_sleep_init(void)
+{
+	app_timer_create(&No_PowerKey_timer_id,APP_TIMER_MODE_SINGLE_SHOT,go_to_sleep_handler);
+}
+static void go_to_sleep_start(void)
+{
+	app_timer_start(No_PowerKey_timer_id,APP_TIMER_TICKS(10),NULL);
+}
+static void go_to_sleep_stop(void)
+{
+	app_timer_stop(No_PowerKey_timer_id);
+}
 
 
 
@@ -2982,9 +3023,25 @@ void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 									Touch_Info.Y_Axis = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
 									Touch_Info.X_Axis_Second = ((sample_data[1+i*6] << 8) & 0x0F00)|sample_data[2+i*6];
 									Touch_Info.Y_Axis_Second = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
+#ifdef PROJECT_K07
+Touch_Info.X_Axis =(uint16_t)(Touch_Info.X_Axis * 0.781);
+Touch_Info.Y_Axis =(uint16_t)(Touch_Info.Y_Axis * 0.781);
+Touch_Info.X_Axis_Second =(uint16_t)(Touch_Info.X_Axis_Second * 0.781);
+Touch_Info.Y_Axis_Second =(uint16_t)(Touch_Info.Y_Axis_Second * 0.781);
+#endif
+Touch_Info.X_Axis = 250 - Touch_Info.X_Axis;
+Touch_Info.Y_Axis = 250 - Touch_Info.Y_Axis;
+Touch_Info.X_Axis_Second = 250 - Touch_Info.X_Axis_Second;
+Touch_Info.Y_Axis_Second = 250 - Touch_Info.Y_Axis_Second;
 								}else{
 									Touch_Info.X_Axis_Second = ((sample_data[1+i*6] << 8) & 0x0F00)|sample_data[2+i*6];
 									Touch_Info.Y_Axis_Second = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
+#ifdef PROJECT_K07
+Touch_Info.X_Axis_Second =(uint16_t)(Touch_Info.X_Axis_Second * 0.781);
+Touch_Info.Y_Axis_Second =(uint16_t)(Touch_Info.Y_Axis_Second * 0.781);
+#endif
+Touch_Info.X_Axis_Second = 250 - Touch_Info.X_Axis_Second;
+Touch_Info.Y_Axis_Second = 250 - Touch_Info.Y_Axis_Second;
 								}
 							}
 						}					
@@ -3603,10 +3660,7 @@ void sensor_data_poll_handler(void* p_context)
 	static nrf_drv_systick_state_t systick_s_lastest;
 	static uint32_t det_tick1=0,det_tick2=0;
 	nrf_drv_systick_get(&systick_s);
-	if(should_power_on == false){
-    	NRF_LOG_INFO("----- NO power key ,enter sleep !!!!!!!!\r\n");
-		sleep_mode_enter_power();
-	}
+
 	app_timer_start(sensor_poll_timer_id,APP_TIMER_TICKS(SENSOR_POLL_INTERVAL),NULL);
 	int magnet_xyz_int[3];
 	float magnet_xyz_float[3];
@@ -3795,7 +3849,7 @@ void sensor_data_poll_handler(void* p_context)
 	NRF_LOG_INFO("----- ---------------------- start_systick[%d] end_systick[%d] det[%d] us[%d]\r\n",systick_s.time,systick_s_end.time,det_tick2,(det_tick2/64));
 #endif
 }
-void SENSOR_INIT_1(void)
+void SensorPollTimerInit(void)
 {
 	app_timer_create(&sensor_poll_timer_id,APP_TIMER_MODE_SINGLE_SHOT,sensor_data_poll_handler);
 }
@@ -3860,37 +3914,8 @@ void DeviceAddressSet(bool erase_bonds){
 	}
 }
 
-int main(void)
-{
-    bool erase_bonds;
 
-    // Initialize.
-    log_init();
-    timers_init();
-	//nrf_delay_ms(500);
-    buttons_leds_init(&erase_bonds);
-	bsp_board_leds_init();
- #ifdef USE_SHADOW_CREATE
-	nrf_gpio_cfg_output(TOUCH_RST_PIN);
-	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
-	nrf_delay_ms(10);
-	nrf_gpio_pin_write(TOUCH_RST_PIN,1);
-	nrf_delay_ms(50);
-
-	//nrf_drv_gpiote_init();
-    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
-    in_config.pull = NRF_GPIO_PIN_PULLUP;
-    nrf_drv_gpiote_in_init(TOUCH_INT_PIN, &in_config, in_pin_handler);
-  	//nrf_drv_gpiote_in_init(SENSOR_INT_PIN, &in_config, sensor_in_pin_handler);
-	nrf_drv_gpiote_in_event_enable(TOUCH_INT_PIN, true);
-	//nrf_drv_gpiote_in_event_enable(SENSOR_INT_PIN, true);
-	twi_init();
-	twi_init_1();
-	bmg160_init();
-	uint16_t tp_version = tp_firmware_version();
-    NRF_LOG_INFO("----- tp_version  [0x%x] %d\r\n",tp_version,should_power_on);
-
- #endif
+void BleInit(){
     ble_stack_init();
     scheduler_init();
     gap_params_init();
@@ -3900,49 +3925,147 @@ int main(void)
     sensor_simulator_init();
     conn_params_init();
     peer_manager_init();
-    // Start execution.
-    NRF_LOG_INFO("HID Mouse example started. erase_bonds %d\r\n",erase_bonds);
-    timers_start();
+}
+
+void InitCore(){
+    log_init();
+	NRF_LOG_INFO("Hello World ! meachine running ########################################\r\n");
+	twi_init();
+	twi_init_1();
 	saadc_init();
-	
 	nrf_drv_systick_init();
-	sw3153_config();
 	fds_test_init();
-	sensor_cal_status();
-	
-	//DeviceAddressSet(erase_bonds);
-	
+	app_timer_init();
+
+}
+void InitButtonAndLedsGPIO(bool* erase_bonds){
+    buttons_leds_init(erase_bonds);
+
+	bsp_board_leds_init();
+	sw3153_config();
+}
+void InitSomeTimer(){
+    BatteryLevelTimersInit();
+	sensor_cal_init();
 	touch_timer_init();
 	mouse_slow_init();
 	connect_sleep_init();
 	saadc_sample_init();
 	touch_atcion_detect_init();
 	MadgwickAHRSupdate_time_init();
-
+	SensorPollTimerInit();
+	go_to_sleep_init();
+}
+void InitTouchDevice(){
+	nrf_gpio_cfg_output(TOUCH_RST_PIN);
+	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
+	nrf_delay_ms(10);
+	nrf_gpio_pin_write(TOUCH_RST_PIN,1);
+	nrf_delay_ms(50);
+	//nrf_drv_gpiote_init();
+    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
+    in_config.pull = NRF_GPIO_PIN_PULLUP;
+    nrf_drv_gpiote_in_init(TOUCH_INT_PIN, &in_config, in_pin_handler);
+  	//nrf_drv_gpiote_in_init(SENSOR_INT_PIN, &in_config, sensor_in_pin_handler);
+	nrf_drv_gpiote_in_event_enable(TOUCH_INT_PIN, true);
+	//nrf_drv_gpiote_in_event_enable(SENSOR_INT_PIN, true);
+	{
+		uint16_t tp_version = tp_firmware_version();
+    	NRF_LOG_INFO("----- tp_version  [0x%x] %d\r\n",tp_version,should_power_on);
+	}
+}
+void InitICRegisters(){
+	SENSOR_INIT();
 	qmcX983_init();
 	qst_ical_init();
-	SENSOR_INIT();
-	SENSOR_INIT_1();
+	sensor_cal_status();
+}
+void SomeTimerStart(){
+    BatteryLevelTimersStart();
 	sensor_poll_start();
 	saadc_sample_start();
 	MadgwickAHRSupdate_start();
-	if(mode_will_cal == true){
-		//Mode_switch(MODE_CALIBRATE,false);
-		sensor_cal_init();
-		sensor_cal_start();
-	}
-	bmi160_cal_offset_apply();
+}
 
-	erase_bonds = false;
-    advertising_start(erase_bonds);
-	if(should_power_on == true)
-	sw3153_light_select(BLUE, BLINK_LEVEL_2);
-	if(mode_will_test == true){
-		Mode_switch(MODE_TEST,false);
-		//Mode_switch(false,false,true);
+
+#define INDEX_TOUCH_KEY 0
+#define INDEX_BACK_KEY 	1
+#define INDEX_POWER_KEY 2
+
+void FlagsSet(){
+		uint32_t i=0;
+//		should_power_on = false;
+		mode_will_cal = false;
+		mode_will_test = false;
+		while(1){
+			i++;
+			if(bsp_button_is_pressed(INDEX_POWER_KEY) == true && should_power_on == false){
+				should_power_on = true;
+    			NRF_LOG_INFO("********************** Press PowerKey\r\n");
+			}
+			if(bsp_button_is_pressed(INDEX_BACK_KEY) == true && mode_will_cal == false){
+				mode_will_cal = true;
+    			NRF_LOG_INFO("********************** Press BackKey\r\n");
+			}
+			if(bsp_button_is_pressed(INDEX_TOUCH_KEY) == true && mode_will_test == false){
+				mode_will_test = true;
+    			NRF_LOG_INFO("********************** Press TouchKey\r\n");	
+			}
+			if(i>100000){
+				if(should_power_on == true && mode_will_cal==false && mode_will_test==false ){
+					sw3153_light_select(BLUE, BLINK_LEVEL_2);
+				}
+				break;
+			}
+/*
+		if(bsp_button_is_pressed(INDEX_BACK_KEY) == false && bsp_button_is_pressed(INDEX_TOUCH_KEY) == false ){
+			sw3153_light_select(BLUE, BLINK_LEVEL_2);
+		}else if(bsp_button_is_pressed(INDEX_BACK_KEY) == true ){
+			mode_will_cal = true;
+    		NRF_LOG_INFO("********************** Into Calibration Mode\r\n");
+		}else if(bsp_button_is_pressed(INDEX_TOUCH_KEY) == true){
+			mode_will_test = true;
+    		NRF_LOG_INFO("********************** Into FactoryTest Mode\r\n");	
+		}*/
 	}
-//	sd_ble_gap_tx_power_set();
+}
+
+int main(void)
+{
+    bool erase_bonds;
+
+	InitCore();
+	InitButtonAndLedsGPIO(&erase_bonds);
+	if(bsp_button_is_pressed(INDEX_POWER_KEY) == true){
+		should_power_on = true;
+    	NRF_LOG_INFO("********************** Press PowerKey\r\n");
+	}
+	BleInit();//must here!
+	FlagsSet();
+	InitSomeTimer();
+	//DeviceAddressSet(true);
+	if(should_power_on == false){
+		go_to_sleep_start();
+		goto WHILE;
+	}
+
+	InitICRegisters();
+	if(mode_will_cal){
+		sensor_cal_start();
+		goto WHILE;
+	}
+
+	sw3153_light_select(BLUE, BLINK_LEVEL_2);
+	bmi160_cal_offset_apply();
+	InitTouchDevice();
+	advertising_start(false);
+	SomeTimerStart();
+	if(mode_will_test){
+		Mode_switch(MODE_TEST,false);
+	}
+
     // Enter main loop.
+WHILE:
 	for (;;)
     {
         app_sched_execute();

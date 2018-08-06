@@ -37,12 +37,13 @@ uint8_t sw3153_read_reg(void)
 	NRF_LOG_INFO("sw3153 reg START -----------------\r\n");
 	for(int i=0;i<4;i++){
 		I2C_Read_Addr8(WD3153_ADDRESS,i,&data,1);
-		NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x\r\n",i,data);
+		NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x",i,data);
 	}
 	for(int i=0x30;i<0x40;i++){
 		I2C_Read_Addr8(WD3153_ADDRESS,i,&data,1);
-		NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x\r\n",i,data);
+		NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x",i,data);
 	}
+	NRF_LOG_INFO("\r\n");
 	return data;
 }
 
@@ -50,7 +51,7 @@ extern char project_flag;
 void sw3153_config(void)
 {
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_RESET, WD_LED_RESET_MASK);
-		sw3153_read_reg();
+	//	sw3153_read_reg();
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_GLOBAL_CONTROL, WD_LED_MOUDLE_ENABLE_MASK);
 		I2C_Write_Addr8(WD3153_ADDRESS,0x03, 0x00);
 	
@@ -137,7 +138,7 @@ void sw3153_suspend(void)
 {
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_RESET, WD_LED_RESET_MASK);
 		I2C_Write_Addr8(WD3153_ADDRESS,0x03, 0x00);
-		sw3153_read_reg();
+	//	sw3153_read_reg();
 }
 void sw3153_light_select(enum sw3153_light_type type,enum sw3153_blink_level level)
 {
