@@ -295,8 +295,8 @@ MODE_DISCONNECT,
 //###################################
 //-----------you work here -------------
 //#define PROJECT_HaloMini
-#define PROJECT_K02
-//#define PROJECT_K07
+//#define PROJECT_K02
+#define PROJECT_K07
 
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
@@ -897,7 +897,7 @@ Mode_calibrate
 		if(Mode == MODE_3D || Mode == MODE_TEST || Mode == MODE_CALIBRATE || Mode_mouse == true || Mode == MODE_CUSTOM1){
 			bmi160_resume();
 		}else{
-			bmi160_suspend();
+			//bmi160_suspend();
 		}
 
     	NRF_LOG_INFO("Mode switch Mode[%d] use_mouse[%d]\r\n",Mode,use_mouse);
@@ -2696,10 +2696,13 @@ static void bsp_event_handler(bsp_event_t event)
             {
             }else{
 			}
-			sw3153_light_select(RED, BLINK_LEVEL_NON);
-			nrf_delay_ms(2000);
-    		NRF_LOG_INFO("power  key  push  to sleep !!! \r\n");
-			sleep_mode_enter_power();
+
+			if(mode_will_cal == false){
+				sw3153_light_select(RED, BLINK_LEVEL_NON);
+				nrf_delay_ms(2000);
+    			NRF_LOG_INFO("power  key  push  to sleep !!! \r\n");
+				sleep_mode_enter_power();
+			}
             break;
         case BSP_EVENT_KEY_3:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -3780,6 +3783,7 @@ void sensor_data_poll_handler(void* p_context)
 
 //key
 	set_data(KEY_S_MOV,touch_sum[1]);
+	touch_sum[1] = (0x00);
 	set_data(KEY_S_BACK,simple_back_key);
 	set_data(KEY_ENTER,simple_enter_key);
 	set_data(KEY_S_TG,simple_trigger);
