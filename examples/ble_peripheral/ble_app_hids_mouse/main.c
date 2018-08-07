@@ -295,8 +295,8 @@ MODE_DISCONNECT,
 //###################################
 //-----------you work here -------------
 //#define PROJECT_HaloMini
-//#define PROJECT_K02
-#define PROJECT_K07
+#define PROJECT_K02
+//#define PROJECT_K07
 
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
