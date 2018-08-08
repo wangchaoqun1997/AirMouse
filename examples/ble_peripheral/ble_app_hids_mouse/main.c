@@ -295,8 +295,8 @@ MODE_DISCONNECT,
 //###################################
 //-----------you work here -------------
 //#define PROJECT_HaloMini
-//#define PROJECT_K02
-#define PROJECT_K07
+#define PROJECT_K02
+//#define PROJECT_K07
 
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
@@ -2694,11 +2694,22 @@ static void bsp_event_handler(bsp_event_t event)
     			NRF_LOG_INFO("Power key LONG ---- LONG\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
+#ifdef PROJECT_K07
 				simple_power = 0x03;
+#endif
             }else{
 
 
 			}
+#ifdef PROJECT_K02
+				if(mode_will_cal == true )
+					break;
+				sw3153_light_select(RED, BLINK_LEVEL_NON);
+				nrf_delay_ms(2000);
+    			NRF_LOG_INFO("power  key  push  to sleep !!! \r\n");
+				sleep_mode_enter_power();
+#endif
+#ifdef PROJECT_K07
 			if(mode_will_test==true || (m_conn_handle == BLE_CONN_HANDLE_INVALID)  ){
 				if(mode_will_cal == true )
 					break;
@@ -2707,6 +2718,7 @@ static void bsp_event_handler(bsp_event_t event)
     			NRF_LOG_INFO("power  key  push  to sleep !!! \r\n");
 				sleep_mode_enter_power();
 			}
+#endif
             break;
         case BSP_EVENT_KEY_3:
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -3342,11 +3354,20 @@ int get_data(enum DATA_TYPE type)
 		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
 		break;
 		case KEY_S_POWER:
+#ifdef PROJECT_k07
 		result =(  ((sensor_data[18]&0x3))   );
 		break;
 		case KEY_EARSE_BONDS:
 		result =(  ((sensor_data[18]&0x04))>>2  );
 		break;
+#endif
+#ifdef PROJECT_k02
+		result =(  ((sensor_data[18]&0x1))   );
+		break;
+		case KEY_EARSE_BONDS:
+		result =(  ((sensor_data[18]&0x02))>>1  );
+		break;
+#endif
 		case KEY_S_TG:
 		result =(  ((sensor_data[19]&0x3))   );
 		break;
@@ -3434,6 +3455,18 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[17] |= data>>3;
 			sensor_data[18] |= data<<5;
 		break;
+
+#ifdef PROJECT_k02
+		case KEY_S_POWER:
+			data = (data) & 0x03;
+			sensor_data[18] |= data;
+		break;
+		case KEY_EARSE_BONDS:
+			data = (data) & 0x01;
+			sensor_data[18] |= data<<1;
+		break;
+#endif
+#ifdef PROJECT_k07
 		case KEY_S_POWER:
 			data = (data) & 0x03;
 			sensor_data[18] |= data;
@@ -3442,6 +3475,7 @@ int set_data(enum DATA_TYPE type,int data)
 			data = (data) & 0x01;
 			sensor_data[18] |= data<<2;
 		break;
+#endif
 		case KEY_S_TG:
 			sensor_data[19] |= data;
 		break;
