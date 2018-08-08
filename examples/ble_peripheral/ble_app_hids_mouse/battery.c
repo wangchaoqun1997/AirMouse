@@ -381,12 +381,12 @@ static void battery_led_handler(void* p_context)
 }
 static void battery_led_init(void)
 {
-	//NRF_LOG_INFO("battery_led_init -------------\r\n");
+	NRF_LOG_INFO("battery_led_init -------------\r\n");
 	app_timer_create(&battery_led_id,APP_TIMER_MODE_SINGLE_SHOT,battery_led_handler);
 }
 void saadc_init(void)
 {
-    //NRF_LOG_INFO("SAADC HAL simple example.\r\n");
+    NRF_LOG_INFO("SAADC HAL simple example.\r\n");
     ret_code_t err_code;
     nrf_saadc_channel_config_t channel_config =
         NRF_DRV_SAADC_DEFAULT_CHANNEL_CONFIG_SE(NRF_SAADC_INPUT_AIN1);

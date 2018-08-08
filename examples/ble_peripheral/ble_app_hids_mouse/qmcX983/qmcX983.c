@@ -132,13 +132,13 @@ int qmcX983_set_range(short range)
 	data[0] = CTL_REG_ONE;
 	err = I2C_RxData(data, 1);
 
-	//MSE_ERR("QMCX983 read1 reg 0x09 data[0]0x%x data[1]0x%x\r\n",data[0],data[1]);
+	MSE_ERR("QMCX983 read1 reg 0x09 data[0]0x%x data[1]0x%x\r\n",data[0],data[1]);
 	data[0] &= 0xcf;
 	data[0] |= (range << 4);
 	data[1] = data[0];
 
 	data[0] = CTL_REG_ONE;
-	//MSE_ERR("QMCX983 read2 reg 0x09 data[0]0x%x data[1]0x%x\r\n",data[0],data[1]);
+	MSE_ERR("QMCX983 read2 reg 0x09 data[0]0x%x data[1]0x%x\r\n",data[0],data[1]);
 	err = I2C_TxData(data, 2);
 	return err;
 
@@ -185,7 +185,7 @@ static int qmcX983_enable()
 	
 #endif
 	
-	//MSE_LOG("start measure!\n");
+	MSE_LOG("start measure!\n");
 	qmcX983_start_measure();
 	qmcX983_set_range(QMCX983_RNG_8G);
 	qmcX983_set_ratio(QMCX983_SETRESET_FREQ_FAST);				//the ratio must not be 0, different with qmc5983
@@ -210,14 +210,13 @@ void qmcX983_read_reg()
 	for(int i=0;i<=0x0D;i++){
 		uint8_t data=i;
 		I2C_RxData(&data,1);
-		MSE_ERR("QMCX983 read reg 0x%x 0x%x",i,data);
+		MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
 	}	
 	for(int i=0x1b;i<=0x1b;i++){
 		uint8_t data=i;
 		I2C_RxData(&data,1);
-		MSE_ERR("QMCX983 read reg 0x%x 0x%x",i,data);
+		MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
 	}
-	MSE_ERR("\r\n");
 }
 int qmcX983_disable()
 {
@@ -227,7 +226,7 @@ int qmcX983_disable()
 	char databuf1 = 0x09;
 	I2C_RxData(&databuf1, 1);
 	MSE_LOG("QMCX983 suspend [0x%x] _A\n",databuf1);
-	//qmcX983_read_reg();
+	qmcX983_read_reg();
 
 	return 0;
 }
@@ -240,7 +239,7 @@ void qmcX983_init()
 		MSE_ERR("QMCX983 I2C_RxData error!\n");
 	}
 
-	//MSE_ERR("QMCX983 I2C_RxData 0x%x\n",databuf[0]);
+	MSE_ERR("QMCX983 I2C_RxData 0x%x\n",databuf[0]);
 	if (databuf[0] == 0xff )
 	{
 		chip_id = QMC6983_A1_D1;
@@ -267,10 +266,10 @@ void qmcX983_init()
 	}
 	else 
 	{
-		MSE_LOG("QMCX983 check ID failed! [0x%x]\n",databuf[0]);
+		MSE_LOG("QMCX983 check ID faild!\n");
 	}
 	qmcX983_enable();
-//	qmcX983_read_reg();
+	qmcX983_read_reg();
 }
  /*Status registers */
 #define STA_REG_ONE    0x06

@@ -311,7 +311,7 @@ char project_flag=0x01;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x02;
-#define MANUFACTURER_NAME               "wangcq327_v210_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v220_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -321,7 +321,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v210_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v220_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -915,7 +915,8 @@ static void devices_suspend()
 	app_timer_stop(sensor_poll_timer_id);
 	app_timer_stop(touch_action_detect_id);
 	app_timer_stop(MadgwickAHRSupdate_timer_id);
-	
+//WD3153 IC
+	sw3153_light_select(SUSPEND, BLINK_LEVEL_NON);
 	if(should_power_on == false)
 		return;
 //gpio
@@ -924,8 +925,7 @@ static void devices_suspend()
 	qmcX983_disable();
 //BMI160 IC
 	bmi160_suspend();
-//WD3153 IC
-	sw3153_light_select(SUSPEND, BLINK_LEVEL_NON);
+
 //TOUCH IC
 	nrf_gpio_pin_write(TOUCH_RST_PIN,0);
 
@@ -2694,10 +2694,14 @@ static void bsp_event_handler(bsp_event_t event)
     			NRF_LOG_INFO("Power key LONG ---- LONG\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
             {
+				simple_power = 0x03;
             }else{
-			}
 
-			if(mode_will_cal == false){
+
+			}
+			if(mode_will_test==true || (m_conn_handle == BLE_CONN_HANDLE_INVALID)  ){
+				if(mode_will_cal == true )
+					break;
 				sw3153_light_select(RED, BLINK_LEVEL_NON);
 				nrf_delay_ms(2000);
     			NRF_LOG_INFO("power  key  push  to sleep !!! \r\n");
@@ -3338,10 +3342,10 @@ int get_data(enum DATA_TYPE type)
 		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
 		break;
 		case KEY_S_POWER:
-		result =(  ((sensor_data[18]&0x1))   );
+		result =(  ((sensor_data[18]&0x3))   );
 		break;
 		case KEY_EARSE_BONDS:
-		result =(  ((sensor_data[18]&0x2))>>1  );
+		result =(  ((sensor_data[18]&0x04))>>2  );
 		break;
 		case KEY_S_TG:
 		result =(  ((sensor_data[19]&0x3))   );
@@ -3431,10 +3435,12 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[18] |= data<<5;
 		break;
 		case KEY_S_POWER:
+			data = (data) & 0x03;
 			sensor_data[18] |= data;
 		break;
 		case KEY_EARSE_BONDS:
-			sensor_data[18] |= data<<1;
+			data = (data) & 0x01;
+			sensor_data[18] |= data<<2;
 		break;
 		case KEY_S_TG:
 			sensor_data[19] |= data;
