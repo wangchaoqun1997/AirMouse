@@ -239,8 +239,8 @@ APP_TIMER_DEF(No_PowerKey_timer_id);
 #define K_DOWN  0x51 //down
 #define K_UP    0x52 //up
 #define K_ENTER 0x28 //right
-#define K_VOL_UP (0x01<<5) //right
-#define K_VOL_DOWN (0x01<<4) //right
+#define K_VOL_UP (0x01<<4) //right
+#define K_VOL_DOWN (0x01<<5) //right
 #define F8      0x41 //right
 #define F9      0x42 //left
 #define F10     0x43 //down
@@ -321,7 +321,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v221_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v222_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -3354,14 +3354,14 @@ int get_data(enum DATA_TYPE type)
 		result =(  ((sensor_data[17]&0x1F)<<3) | ((sensor_data[18]&0xE0)>>5)   );
 		break;
 		case KEY_S_POWER:
-#ifdef PROJECT_k07
+#ifdef PROJECT_K07
 		result =(  ((sensor_data[18]&0x3))   );
 		break;
 		case KEY_EARSE_BONDS:
 		result =(  ((sensor_data[18]&0x04))>>2  );
 		break;
 #endif
-#ifdef PROJECT_k02
+#ifdef PROJECT_K02
 		result =(  ((sensor_data[18]&0x1))   );
 		break;
 		case KEY_EARSE_BONDS:
@@ -3456,7 +3456,7 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[18] |= data<<5;
 		break;
 
-#ifdef PROJECT_k02
+#ifdef PROJECT_K02
 		case KEY_S_POWER:
 			data = (data) & 0x03;
 			sensor_data[18] |= data;
@@ -3466,7 +3466,7 @@ int set_data(enum DATA_TYPE type,int data)
 			sensor_data[18] |= data<<1;
 		break;
 #endif
-#ifdef PROJECT_k07
+#ifdef PROJECT_K07
 		case KEY_S_POWER:
 			data = (data) & 0x03;
 			sensor_data[18] |= data;
@@ -4003,6 +4003,11 @@ void InitButtonAndLedsGPIO(bool* erase_bonds){
     buttons_leds_init(erase_bonds);
 
 	bsp_board_leds_init();
+#define INDEX_POWER_KEY 2
+	if(bsp_button_is_pressed(INDEX_POWER_KEY) == true){
+		should_power_on = true;
+    	NRF_LOG_INFO("********************** Press PowerKey\r\n");
+	}
 	sw3153_config();
 }
 void InitSomeTimer(){
