@@ -266,7 +266,7 @@ bool push_button =false;
 static int8_t send_data_t[13];
 //#define touch_sum send_data_t
 static int8_t key_sum[4];
-static uint8_t simple_back_key,simple_enter_key,simple_trigger,simple_power;
+static uint8_t simple_back_key,simple_enter_key,simple_trigger,simple_power,simple_vol;
 static uint8_t simple_click;
 static uint8_t touch_sum[4];
 
@@ -295,8 +295,8 @@ MODE_DISCONNECT,
 //###################################
 //-----------you work here -------------
 //#define PROJECT_HaloMini
-#define PROJECT_K02
-//#define PROJECT_K07
+//#define PROJECT_K02
+#define PROJECT_K07
 
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
@@ -321,7 +321,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v222_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v223_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -2734,10 +2734,11 @@ static void bsp_event_handler(bsp_event_t event)
 				break;
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				simple_vol |= 0x01;//vol+
 				uint8_t temp = K_VOL_DOWN;//0x01<<4;
-				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+				//ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
 				temp = 0x00;
-				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+				//ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
 			}
             break;
         case BSP_EVENT_KEY_4_LONG://vol -
@@ -2748,6 +2749,7 @@ static void bsp_event_handler(bsp_event_t event)
         case BSP_EVENT_KEY_4_RELEASE://vol-
     			NRF_LOG_INFO("vol- release ---- release\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				simple_vol &= 0x02;//vol-
             }
             break;
         case BSP_EVENT_KEY_5://vol +
@@ -2757,10 +2759,11 @@ static void bsp_event_handler(bsp_event_t event)
 				break;
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				simple_vol |= 0x02;//vol-
 				uint8_t temp = K_VOL_UP;//0x01<<4;
-				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+				//ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
 				temp = 0x00;
-				ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
+				//ble_hids_inp_rep_send(&m_hids,INPUT_REP_MPLAYER_INDEX,INPUT_REP_MEDIA_PLAYER_LEN,&temp);
 			}
             break;
         case BSP_EVENT_KEY_5_LONG://vol+
@@ -2771,6 +2774,7 @@ static void bsp_event_handler(bsp_event_t event)
         case BSP_EVENT_KEY_5_RELEASE://vol+
     			NRF_LOG_INFO("vol+ release ---- release\r\n");
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
+				simple_vol &= 0x01;//vol-
             }
             break;
         case BSP_EVENT_KEY_6://trigger
@@ -3294,6 +3298,7 @@ enum DATA_TYPE{
 	KEY_S_POWER,
 	KEY_ENTER,
 	KEY_EARSE_BONDS,
+	KEY_VOL,
 };
 int get_data(enum DATA_TYPE type)
 {
@@ -3359,6 +3364,9 @@ int get_data(enum DATA_TYPE type)
 		break;
 		case KEY_EARSE_BONDS:
 		result =(  ((sensor_data[18]&0x04))>>2  );
+		break;
+		case KEY_VOL:
+		result =(  ((sensor_data[18]&0x18))>>3  );
 		break;
 #endif
 #ifdef PROJECT_K02
@@ -3474,6 +3482,10 @@ int set_data(enum DATA_TYPE type,int data)
 		case KEY_EARSE_BONDS:
 			data = (data) & 0x01;
 			sensor_data[18] |= data<<2;
+		break;
+		case KEY_VOL:
+			data = (data) & 0x03;
+			sensor_data[18] |= data<<3;
 		break;
 #endif
 		case KEY_S_TG:
@@ -3828,6 +3840,7 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(KEY_ENTER,simple_enter_key);
 	set_data(KEY_S_TG,simple_trigger);
 	set_data(KEY_S_POWER,simple_power);
+	set_data(KEY_VOL,simple_vol);
 
 #ifdef PROJECT_K02
 	set_data(KEY_S_TG,simple_enter_key);
@@ -3878,6 +3891,7 @@ void sensor_data_poll_handler(void* p_context)
 	get_data(TOUCHX);
 	get_data(TOUCHY);
 	get_data(KEY_S_POWER);
+	get_data(KEY_VOL);
 	get_data(KEY_EARSE_BONDS);
 	//get_data(KEY_S_MOV);
 	//get_data(KEY_S_BACK);
