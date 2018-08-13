@@ -322,7 +322,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v224_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v225_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -3524,6 +3524,10 @@ int set_data(enum DATA_TYPE type,int data)
 	//NRF_LOG_INFO("-------------sensor_data [%d][%d][%d]\r\n",sensor_data[0],sensor_data[1],sensor_data[2]);
 	return result;
 }
+
+
+
+
 CalibResult calib;
 int bMagCalibrated = 0;
 int bGyroCalibrated = 0;
@@ -3650,8 +3654,37 @@ if(i==512)i=0;
 		Q03[1] =  -q1;
 		Q03[2] =  -q3;
 		Q03[3] =  q2;
-		//NRF_LOG_INFO("  q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(Q03[0]*1000),(int32_t)(Q03[1]*1000),(int32_t)(Q03[2]*1000),(int32_t)(Q03[3]*1000));
-		quatToEuler1(Q03,DegreeArray);
+		//NRF_LOG_INFO("start  q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(Q03[0]*1000),(int32_t)(Q03[1]*1000),(int32_t)(Q03[2]*1000),(int32_t)(Q03[3]*1000));
+#if 1
+		quaternion2AxisAngle(Q03,DegreeArray);
+		//NRF_LOG_INFO("               Deagree [%5d][%5d][%5d]\r\n",(int16_t) (DegreeArray[0]*10),(int16_t) (DegreeArray[1]*10),(int16_t) (DegreeArray[2]*10));
+		{
+		float q[] = {q0, q1, q2, q3};
+		axisAngle2Quaternion(DegreeArray,q);
+		//NRF_LOG_INFO("end    q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(q[0]*1000),(int32_t)(q[1]*1000),(int32_t)(q[2]*1000),(int32_t)(q[3]*1000));
+		quatToEuler1(q,DegreeArray);
+		}
+#else		
+	//	quatToEuler1(Q03,DegreeArray);
+#endif
+#if 0
+		if(bsp_button_is_pressed(5) == 1){
+			quaternion2AxisAngle(Q03,DegreeArray);
+			//NRF_LOG_INFO("o               Deagree [%5d][%5d][%5d]\r\n",(int16_t) (DegreeArray[0]*10),(int16_t) (DegreeArray[1]*10),(int16_t) (DegreeArray[2]*10));
+			{
+			float q[] = {q0, q1, q2, q3};
+			axisAngle2Quaternion(DegreeArray,q);
+			//NRF_LOG_INFO("end    q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(q[0]*1000),(int32_t)(q[1]*1000),(int32_t)(q[2]*1000),(int32_t)(q[3]*1000));
+			quatToEuler1(q,DegreeArray);
+			NRF_LOG_INFO("star    q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(q[0]*1000),(int32_t)(q[1]*1000),(int32_t)(q[2]*1000),(int32_t)(q[3]*1000));
+			}
+		}else{
+			quatToEuler1(Q03,DegreeArray);
+			NRF_LOG_INFO("end     q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(Q03[0]*1000),(int32_t)(Q03[1]*1000),(int32_t)(Q03[2]*1000),(int32_t)(Q03[3]*1000));
+			//NRF_LOG_INFO("e               Deagree [%5d][%5d][%5d]\r\n",(int16_t) (DegreeArray[0]*10),(int16_t) (DegreeArray[1]*10),(int16_t) (DegreeArray[2]*10));
+		}
+#endif
+		
 		DeagreeArray_int[0] =  (int16_t) (DegreeArray[0]*10);
 		DeagreeArray_int[1] =  (int16_t) (DegreeArray[1]*10);
 		DeagreeArray_int[2] =  (int16_t) (DegreeArray[2]*10);
