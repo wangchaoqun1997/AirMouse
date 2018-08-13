@@ -232,6 +232,7 @@ APP_TIMER_DEF(sensor_poll_timer_id);
 APP_TIMER_DEF(touch_action_detect_id);
 APP_TIMER_DEF(MadgwickAHRSupdate_timer_id);
 APP_TIMER_DEF(No_PowerKey_timer_id);
+APP_TIMER_DEF(tp_timer_id);
 
 //--------------dfu end
 #define K_RIGHT 0x4F //right
@@ -268,7 +269,7 @@ static int8_t send_data_t[13];
 static int8_t key_sum[4];
 static uint8_t simple_back_key,simple_enter_key,simple_trigger,simple_power,simple_vol;
 static uint8_t simple_click;
-static uint8_t touch_sum[4];
+static uint16_t touch_sum[4];
 
 enum data_format{
 NON_DATA=0x00,
@@ -321,7 +322,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v223_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v224_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -3012,13 +3013,19 @@ char key_cal_x;
 char key_cal_y;
 char iii=0;
 char iiii=0;
-void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+static void tp_time_start(void)
+{
+	app_timer_start(tp_timer_id,APP_TIMER_TICKS(10),NULL);
+}
+//void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+static void tp_time_handler(void* p_context)
 {
 //NRF_LOG_INFO("sensor interrupt hander--------------\r\n");
 	  ret_code_t err_code;
     static uint8_t * p_key = m_sample_key_press_scan_str;
     static uint8_t   size  = 0;
 		interr++;
+tp_time_start();
 /*
 		keys_send(1, p_key);
     p_key++;
@@ -3047,10 +3054,10 @@ void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 									Touch_Info.X_Axis_Second = ((sample_data[1+i*6] << 8) & 0x0F00)|sample_data[2+i*6];
 									Touch_Info.Y_Axis_Second = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
 #ifdef PROJECT_K07
-Touch_Info.X_Axis =(uint16_t)(Touch_Info.X_Axis * 0.781);
-Touch_Info.Y_Axis =(uint16_t)(Touch_Info.Y_Axis * 0.781);
-Touch_Info.X_Axis_Second =(uint16_t)(Touch_Info.X_Axis_Second * 0.781);
-Touch_Info.Y_Axis_Second =(uint16_t)(Touch_Info.Y_Axis_Second * 0.781);
+Touch_Info.X_Axis =(uint16_t)(Touch_Info.X_Axis * 0.78);
+Touch_Info.Y_Axis =(uint16_t)(Touch_Info.Y_Axis * 0.78);
+Touch_Info.X_Axis_Second =(uint16_t)(Touch_Info.X_Axis_Second * 0.78);
+Touch_Info.Y_Axis_Second =(uint16_t)(Touch_Info.Y_Axis_Second * 0.78);
 #endif
 Touch_Info.X_Axis = 250 - Touch_Info.X_Axis;
 Touch_Info.Y_Axis = 250 - Touch_Info.Y_Axis;
@@ -3060,8 +3067,8 @@ Touch_Info.Y_Axis_Second = 250 - Touch_Info.Y_Axis_Second;
 									Touch_Info.X_Axis_Second = ((sample_data[1+i*6] << 8) & 0x0F00)|sample_data[2+i*6];
 									Touch_Info.Y_Axis_Second = ((sample_data[1+i*6] << 4) & 0x0F00)|sample_data[3+i*6];
 #ifdef PROJECT_K07
-Touch_Info.X_Axis_Second =(uint16_t)(Touch_Info.X_Axis_Second * 0.781);
-Touch_Info.Y_Axis_Second =(uint16_t)(Touch_Info.Y_Axis_Second * 0.781);
+Touch_Info.X_Axis_Second =(uint16_t)(Touch_Info.X_Axis_Second * 0.78);
+Touch_Info.Y_Axis_Second =(uint16_t)(Touch_Info.Y_Axis_Second * 0.78);
 #endif
 Touch_Info.X_Axis_Second = 250 - Touch_Info.X_Axis_Second;
 Touch_Info.Y_Axis_Second = 250 - Touch_Info.Y_Axis_Second;
@@ -3069,6 +3076,7 @@ Touch_Info.Y_Axis_Second = 250 - Touch_Info.Y_Axis_Second;
 							}
 						}					
 				}
+
 #if 0
 if(Touch_Info.Touch_Status == 1){
 
@@ -3225,7 +3233,7 @@ app_timer_stop(sensor_poll_timer_id);
 mouse_slow_start();
 #endif
 								mouse_click_send(report_mouse,0);
-    NRF_LOG_INFO("----- ###################### DOWN %d\r\n",iiii++);
+    //NRF_LOG_INFO("----- ###################### DOWN %d\r\n",iiii++);
 							}
 						}else if(Touch_Info.Touch_Status == 0 && Mode_mouse == true && mouse_push == true){
 							mouse_push = false;
@@ -3234,10 +3242,20 @@ mouse_slow_start();
 							mouse_dpi=MAX_SUB_MOVE_ADD;
 #endif
 
-    NRF_LOG_INFO("----- ---------------------- UP \r\n");
+    //NRF_LOG_INFO("----- ---------------------- UP \r\n");
 						}
+
+
+}
+static void tp_time_init(void)
+{
+	app_timer_create(&tp_timer_id,APP_TIMER_MODE_SINGLE_SHOT,tp_time_handler);
 }
 
+static void tp_time_stop(void)
+{
+	app_timer_stop(tp_timer_id);
+}
 float raw_buf[3];
 float dof3_buf[6];
 int16_t data1[6];
@@ -3859,7 +3877,7 @@ void sensor_data_poll_handler(void* p_context)
 		touchBackKeyTime=0;
 		set_data(KEY_EARSE_BONDS,0x00);
 	}
-#ifdef PROJECT_K07
+#ifdef PROJECT_K07_NOUSE
 	static int powerKeyTime = 0;
 	if(bsp_button_is_pressed(2) == 1 ){
 		powerKeyTime++;
@@ -4002,26 +4020,25 @@ void BleInit(){
     peer_manager_init();
 }
 
-void InitCore(){
-    log_init();
-	NRF_LOG_INFO("Hello World ! meachine running ########################################\r\n");
-	twi_init();
-	twi_init_1();
-	saadc_init();
-	nrf_drv_systick_init();
-	fds_test_init();
+void InitCore(bool* erase_bonds){
+    log_init();	
 	app_timer_init();
-
-}
-void InitButtonAndLedsGPIO(bool* erase_bonds){
+	NRF_LOG_INFO("Hello World ! meachine running ########################################\r\n");
     buttons_leds_init(erase_bonds);
-
 	bsp_board_leds_init();
 #define INDEX_POWER_KEY 2
 	if(bsp_button_is_pressed(INDEX_POWER_KEY) == true){
 		should_power_on = true;
     	NRF_LOG_INFO("********************** Press PowerKey\r\n");
 	}
+	twi_init();
+	twi_init_1();
+	saadc_init();
+	nrf_drv_systick_init();
+	fds_test_init();
+
+}
+void InitButtonAndLedsGPIO(){
 	sw3153_config();
 }
 void InitSomeTimer(){
@@ -4035,6 +4052,7 @@ void InitSomeTimer(){
 	MadgwickAHRSupdate_time_init();
 	SensorPollTimerInit();
 	go_to_sleep_init();
+	tp_time_init();
 }
 void InitTouchDevice(){
 	nrf_gpio_cfg_output(TOUCH_RST_PIN);
@@ -4045,7 +4063,7 @@ void InitTouchDevice(){
 	//nrf_drv_gpiote_init();
     nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
     in_config.pull = NRF_GPIO_PIN_PULLUP;
-    nrf_drv_gpiote_in_init(TOUCH_INT_PIN, &in_config, in_pin_handler);
+    //nrf_drv_gpiote_in_init(TOUCH_INT_PIN, &in_config, in_pin_handler);
   	//nrf_drv_gpiote_in_init(SENSOR_INT_PIN, &in_config, sensor_in_pin_handler);
 	nrf_drv_gpiote_in_event_enable(TOUCH_INT_PIN, true);
 	//nrf_drv_gpiote_in_event_enable(SENSOR_INT_PIN, true);
@@ -4062,6 +4080,7 @@ void InitICRegisters(){
 }
 void SomeTimerStart(){
     BatteryLevelTimersStart();
+tp_time_start();
 	sensor_poll_start();
 	saadc_sample_start();
 	MadgwickAHRSupdate_start();
@@ -4114,8 +4133,8 @@ int main(void)
 {
     bool erase_bonds;
 
-	InitCore();
-	InitButtonAndLedsGPIO(&erase_bonds);
+	InitCore(&erase_bonds);
+	InitButtonAndLedsGPIO();
 	if(bsp_button_is_pressed(INDEX_POWER_KEY) == true){
 		should_power_on = true;
     	NRF_LOG_INFO("********************** Press PowerKey\r\n");

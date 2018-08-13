@@ -431,3 +431,40 @@ void quatToEuler1(float *q,float* angle)
 	angle[1] = asin( 2*(w*y - z*x) ) * RAD_TO_DEGREE;
   angle[2] = atan2( 2*(w*z+x*y),1-2*(y*y+z*z) ) * RAD_TO_DEGREE;	
 }
+
+void quaternion2AxisAngle(float* q, float* axisAngle) 
+{
+	float x = sqrt(q[1]*q[1] + q[2]*q[2] + q[3]*q[3]);
+	float theta = 2 * atan2(x, q[0]);
+
+	float scale = 0;
+	if (theta == 0)
+		scale = 0;
+	else 
+		scale = theta / sin(theta/2);
+
+	// keep q[0] positive
+	if (q[0] < 0)
+		scale *= -1;
+
+	axisAngle[0] = q[1] * scale;
+  axisAngle[1] = q[2] * scale;
+	axisAngle[2] = q[3] * scale;
+}
+
+void axisAngle2Quaternion(float* axisAngle, float* q) 
+{
+	float theta = sqrt(axisAngle[0]*axisAngle[0] + axisAngle[1]*axisAngle[1] + axisAngle[2]*axisAngle[2]);
+
+	float scale = 0;
+	if (theta == 0)
+		scale = 0;
+	else 
+		scale = sin(theta/2) / theta;
+
+	q[1] = axisAngle[0] * scale;
+    q[2] = axisAngle[1] * scale;
+	q[3] = axisAngle[2] * scale;
+
+	q[0] = sqrt(1 - q[1]*q[1] - q[2]*q[2] - q[3]*q[3]);
+}
