@@ -805,6 +805,19 @@ Touch_Event Touch_Info;
 #define TOUCH_ADDRESS 0x48
 
 uint8_t sample_data[16];
+void I2C_Write_Addr16(	const uint8_t slave_addr,const uint16_t write_addr,uint16_t data)
+{
+		uint8_t addr[4];
+		ret_code_t err_code;
+		addr[0] = (uint8_t)((write_addr & 0xFF00) >> 8);
+		addr[1] = (uint8_t) (write_addr & 0x00FF);
+		addr[2] = (uint8_t) (data & 0xFF);		
+	  err_code = nrf_drv_twi_tx(&m_twi, slave_addr, addr, sizeof(addr), false);
+	  if (err_code == NRF_SUCCESS){
+				//nrf_drv_gpiote_out_set(PIN_OUT);
+    }
+
+}
 int I2C_Read_Addr8(	const uint8_t slave_addr,const uint8_t *read_addr,uint8_t addr_len,uint8_t *data,uint8_t data_num)
 {
 		ret_code_t err_code;
@@ -2902,12 +2915,22 @@ uint8_t interr;
 static uint16_t tp_firmware_version(void)
 {
 	uint16_t temp;
-	uint8_t firmware[2];
+	uint8_t firmware[2]={0,0};
 	const uint8_t version_addr[2]={0x01,0x26};
+	//const uint8_t version_addr[2]={0x06,0x11};
 	//I2C_Read_Addr16(TOUCH_ADDRESS,0x0126,firmware,2);
  I2C_Read_Addr8(TOUCH_ADDRESS,version_addr,2,firmware,2);
 	temp=firmware[1];
 	return (uint16_t)(temp<<8 | firmware[0]);
+}
+#define InterruptMode 0x01
+#define PollingMode   0x02
+static void ChangeMode(int mode)
+{
+	const uint8_t version_addr[2]={0x06,0x11};
+ 	I2C_Write_Addr16(TOUCH_ADDRESS,0x0611,mode);
+
+	return ;
 }
 
 #define TOUCH_INTER_INTERVAL 10
@@ -3025,6 +3048,12 @@ tp_time_start();
       size  = 0;
     }						
 */
+{
+				const uint8_t pack_info_addr[2]={0x06,0x01};
+				I2C_Read_Addr8(TOUCH_ADDRESS,pack_info_addr,2,sample_data,1);
+				if(sample_data[0] != 1)
+						return;
+}
 				const uint8_t pack_info_addr[2]={0x02,0x10};
 				I2C_Read_Addr8(TOUCH_ADDRESS,pack_info_addr,2,sample_data,1);
 				eventsize = sample_data[0] & 0x7F;
@@ -4089,6 +4118,7 @@ void InitTouchDevice(){
   	//nrf_drv_gpiote_in_init(SENSOR_INT_PIN, &in_config, sensor_in_pin_handler);
 	nrf_drv_gpiote_in_event_enable(TOUCH_INT_PIN, true);
 	//nrf_drv_gpiote_in_event_enable(SENSOR_INT_PIN, true);
+	ChangeMode(PollingMode);
 	{
 		uint16_t tp_version = tp_firmware_version();
     	NRF_LOG_INFO("----- tp_version  [0x%x] %d\r\n",tp_version,should_power_on);
