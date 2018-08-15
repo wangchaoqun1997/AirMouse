@@ -299,6 +299,11 @@ void print_parameters(void)
 
 /** @brief Function for main application entry.
  */
+
+#define NRF_LOG_MODULE_NAME "APP"
+
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
 int main(void)
 {
     uint32_t err_code;
@@ -306,46 +311,53 @@ int main(void)
     radio_tests_t cur_test = RADIO_TEST_NOP;
 
     init();
-    const app_uart_comm_params_t comm_params =
-    {
-        RX_PIN_NUMBER,
-        TX_PIN_NUMBER,
-        RTS_PIN_NUMBER,
-        CTS_PIN_NUMBER,
-        APP_UART_FLOW_CONTROL_ENABLED,
-        false,
-        UART_BAUDRATE_BAUDRATE_Baud115200
-    };
+    APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
+    NRF_LOG_INFO("TWI scanner.\r\n");
+    NRF_LOG_FLUSH();
 
-    APP_UART_FIFO_INIT(&comm_params,
-                         UART_RX_BUF_SIZE,
-                         UART_TX_BUF_SIZE,
-                         uart_error_handle,
-                         APP_IRQ_PRIORITY_LOWEST,
-                         err_code);
 
-    APP_ERROR_CHECK(err_code);
-    printf("RF Test\r\n");
-    NVIC_EnableIRQ(TIMER0_IRQn);
-    __enable_irq();
+    //NVIC_EnableIRQ(TIMER0_IRQn);
+    //__enable_irq();
+		NRF_LOG_INFO("TWI scanner1.\r\n");
+	NRF_LOG_FLUSH();
     while (true)
     {
         uint8_t control;
-        scanf("%c",&control);
+        //scanf("%c",&control);
+			static uint8_t time=0;
+			if(time==0){
+				control = 'a';
+				NRF_LOG_INFO("---------0.\r\n");
+				NRF_LOG_FLUSH();
+			}else if(time==1){
+				control = 'b';
+				NRF_LOG_INFO("---------1.\r\n");
+				NRF_LOG_FLUSH();
+			}else if(time==2){
+				control = 'c';
+				NRF_LOG_INFO("---------2.\r\n");
+				NRF_LOG_FLUSH();
+			}
+			if(time <= 2){
+				time ++;
+				NRF_LOG_INFO("---------time++.\r\n");
+				NRF_LOG_FLUSH();
+			}
         switch (control)
         {
             case 'a':
                 while (true)
                 {
-                    printf("Enter start channel (two decimal digits, 00 to 80):\r\n");
-                    scanf("%d",&channel_start_);
+                    //printf("Enter start channel (two decimal digits, 00 to 80):\r\n");
+                    //scanf("%d",&channel_start_);
+									channel_start_ = 0;
                     if ((channel_start_ <= 80)&&(channel_start_ >= 0))
                     {
-                        printf("%d\r\n", channel_start_);
+                        //printf("%d\r\n", channel_start_);
                         break;
                     }
 
-                    printf("Channel must be between 0 and 80\r\n");
+                    //printf("Channel must be between 0 and 80\r\n");
                 }
                 test = cur_test;
                 break;
@@ -353,14 +365,15 @@ int main(void)
             case 'b':
                 while (true)
                 {
-                    printf("Enter end channel (two decimal digits, 00 to 80):\r\n");
-                    scanf("%d",&channel_end_);
+                    //printf("Enter end channel (two decimal digits, 00 to 80):\r\n");
+                    //scanf("%d",&channel_end_);
+									channel_end_ = 0;
                     if ((channel_end_ <= 80)&&(channel_start_ >= 0))
                     {
-                        printf("%d\r\n", channel_end_);
+                        //printf("%d\r\n", channel_end_);
                         break;
                     }
-                    printf("Channel must be between 0 and 80\r\n");
+                    //printf("Channel must be between 0 and 80\r\n");
                 }
                 test = cur_test;
                 break;
@@ -372,14 +385,15 @@ int main(void)
             case 'd':
                 while (true)
                 {
-                    printf("Enter delay in ms (two decimal digits, 01 to 99):\r\n");
-                    scanf("%d",&delayms_);
+                    //printf("Enter delay in ms (two decimal digits, 01 to 99):\r\n");
+                    //scanf("%d",&delayms_);
+									delayms_ = 1;
                     if ((delayms_ > 0) && (delayms_ < 100))
                     {
-                        printf("%d\r\n", delayms_);
+                        //printf("%d\r\n", delayms_);
                         break;
                     }
-                    printf("Delay must be between 1 and 99\r\n");
+                    //printf("Delay must be between 1 and 99\r\n");
                 }
                 test = cur_test;
                 break;
@@ -396,7 +410,7 @@ int main(void)
 
             case 'o':
                 test = RADIO_TEST_TXMC;
-                printf("TX modulated carrier\r\n");
+                //printf("TX modulated carrier\r\n");
                 break;
 
             case 'p':
@@ -406,25 +420,25 @@ int main(void)
 
             case 'r':
                 test = RADIO_TEST_RXSWEEP;
-                printf("RX Sweep\r\n");
+                //printf("RX Sweep\r\n");
                 break;
 
             case 's':
-                print_parameters();
+                //print_parameters();
                 break;
 
             case 't':
                 test = RADIO_TEST_TXSWEEP;
-                printf("TX Sweep\r\n");
+                //printf("TX Sweep\r\n");
                 break;
 
             case 'x':
                 test = RADIO_TEST_RXC;
-                printf("RX constant carrier\r\n");
+                //printf("RX constant carrier\r\n");
                 break;
 
             case 'h':
-                help();
+                //help();
                 break;
 
             default:
