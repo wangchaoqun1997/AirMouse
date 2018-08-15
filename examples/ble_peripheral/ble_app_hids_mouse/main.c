@@ -322,7 +322,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v226_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v227_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -2065,6 +2065,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
  */
+
 static void on_ble_evt(ble_evt_t * p_ble_evt)
 {
     ret_code_t err_code;
@@ -3701,9 +3702,45 @@ if(i==512)i=0;
 		}
 #endif
 		
+
+		{
+//#define __AVG
+#ifndef __AVG
 		DeagreeArray_int[0] =  (int16_t) (DegreeArray[0]*10);
 		DeagreeArray_int[1] =  (int16_t) (DegreeArray[1]*10);
 		DeagreeArray_int[2] =  (int16_t) (DegreeArray[2]*10);
+#else
+		//NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+
+			DeagreeArray_int_buffer[0] = (int16_t) (DegreeArray[0]*10);
+			DeagreeArray_int_buffer[1] = (int16_t) (DegreeArray[1]*10);
+			DeagreeArray_int_buffer[2] = (int16_t) (DegreeArray[2]*10);
+#define BUFFER_SIZE 30
+		static int16_t avg_buffer[3][BUFFER_SIZE]=0;
+		static char time=0;
+		if(time==BUFFER_SIZE)time=0;
+			avg_buffer[0][time]=    DeagreeArray_int_buffer[0];
+			avg_buffer[1][time]=    DeagreeArray_int_buffer[1];
+			avg_buffer[2][time]=    DeagreeArray_int_buffer[2];
+			time++;
+
+			int32_t sum[3]={0,0,0};
+			for(int i=0;i<BUFFER_SIZE;i++){
+				sum[0] += avg_buffer[0][i];
+				sum[1] += avg_buffer[1][i];
+				sum[2] += avg_buffer[2][i];
+			}
+		if(1 || (abs(gx*1000) >=20 ) ||  (abs(gy*1000) >=20 ) || (abs(gz*1000) >=20  )){
+				
+		//NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+			DeagreeArray_int[0] = sum[0]/BUFFER_SIZE;
+			DeagreeArray_int[1] = sum[1]/BUFFER_SIZE;
+			DeagreeArray_int[2] = sum[2]/BUFFER_SIZE;
+		}
+#endif
+		}
+
+		//NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
 }
 		
 #else
@@ -3914,7 +3951,7 @@ void sensor_data_poll_handler(void* p_context)
 #endif
 	//NRF_LOG_INFO("----- -------------%d %d %d --------------- \r\n",bsp_button_is_pressed(0),bsp_button_is_pressed(1),bsp_button_is_pressed(2));
 	static int touchBackKeyTime = 0;
-	if(bsp_button_is_pressed(0) == 1 && bsp_button_is_pressed(1) == 1 ){
+	if(bsp_button_is_pressed(0) == 1 && bsp_button_is_pressed(1) == 1 && bsp_button_is_pressed(2) == 0  ){
 		touchBackKeyTime++;
 		if((touchBackKeyTime * SENSOR_POLL_INTERVAL) > 3500  ){//3s
 			touchBackKeyTime = 0;
@@ -3965,7 +4002,19 @@ void sensor_data_poll_handler(void* p_context)
 			powerKeyTime = 0;
 			NRF_LOG_INFO("----- ------------- power touch back key 3s sleep\r\n");
 			sw3153_light_select(RED, BLINK_LEVEL_NON);
+	app_timer_stop(touch_timer_id);
+	app_timer_stop(m_battery_timer_id);                                                  /**< Battery timer. */
+	app_timer_stop(mouse_slow_id);
+	app_timer_stop(sensor_cal_id);
+	app_timer_stop(connect_sleep_id);
+	app_timer_stop(saadc_sample_id);
+	app_timer_stop(sensor_poll_timer_id);
+	app_timer_stop(touch_action_detect_id);
+	app_timer_stop(MadgwickAHRSupdate_timer_id);
 			nrf_delay_ms(2000);
+			sw3153_light_select(SUSPEND, BLINK_LEVEL_NON);
+			nrf_delay_ms(1500);
+			NRF_LOG_INFO("----- ------------- power touch back key 3s1 sleep\r\n");
 			sleep_mode_enter_power();
 		}
 	}else{
@@ -4150,11 +4199,11 @@ void FlagsSet(){
 				should_power_on = true;
     			NRF_LOG_INFO("********************** Press PowerKey\r\n");
 			}
-			if(bsp_button_is_pressed(INDEX_BACK_KEY) == true && mode_will_cal == false){
+			if(bsp_button_is_pressed(INDEX_BACK_KEY) == true && bsp_button_is_pressed(INDEX_TOUCH_KEY) == false && mode_will_cal == false){
 				mode_will_cal = true;
     			NRF_LOG_INFO("********************** Press BackKey\r\n");
 			}
-			if(bsp_button_is_pressed(INDEX_TOUCH_KEY) == true && mode_will_test == false){
+			if(bsp_button_is_pressed(INDEX_TOUCH_KEY) == true && bsp_button_is_pressed(INDEX_BACK_KEY) == false && mode_will_test == false){
 				mode_will_test = true;
     			NRF_LOG_INFO("********************** Press TouchKey\r\n");	
 			}
