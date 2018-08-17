@@ -353,13 +353,8 @@ static ret_code_t set_adv_mode_fast(ble_gap_adv_params_t * p_adv_params)
 static ret_code_t set_adv_mode_slow(ble_gap_adv_params_t * p_adv_params)
 {
     ret_code_t ret;
-/*
     p_adv_params->interval = m_adv_modes_config.ble_adv_slow_interval;
     p_adv_params->timeout  = m_adv_modes_config.ble_adv_slow_timeout;
-*/
-    p_adv_params->interval = m_adv_modes_config.ble_adv_fast_interval;
-    p_adv_params->timeout  = m_adv_modes_config.ble_adv_fast_timeout;
-
 	if ((m_adv_modes_config.ble_adv_whitelist_enabled) &&
         (!m_whitelist_temporarily_disabled) &&
         (whitelist_has_entries()))
