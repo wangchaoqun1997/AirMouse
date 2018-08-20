@@ -316,136 +316,157 @@ int main(void)
     NRF_LOG_FLUSH();
 
 
-    //NVIC_EnableIRQ(TIMER0_IRQn);
-    //__enable_irq();
+    NVIC_EnableIRQ(TIMER0_IRQn);
+    __enable_irq();
 		NRF_LOG_INFO("TWI scanner1.\r\n");
 	NRF_LOG_FLUSH();
+	
     while (true)
     {
         uint8_t control;
         //scanf("%c",&control);
-			static uint8_t time=0;
-			if(time==0){
-				control = 'a';
-				NRF_LOG_INFO("---------0.\r\n");
-				NRF_LOG_FLUSH();
-			}else if(time==1){
-				control = 'b';
-				NRF_LOG_INFO("---------1.\r\n");
-				NRF_LOG_FLUSH();
-			}else if(time==2){
-				control = 'c';
-				NRF_LOG_INFO("---------2.\r\n");
-				NRF_LOG_FLUSH();
+			static uint32_t time=0;
+//			if(time==0){
+//				control = 'a';
+//				NRF_LOG_INFO("---------0.\r\n");
+//				NRF_LOG_FLUSH();
+//			}else if(time==1){
+//				control = 'b';
+//				NRF_LOG_INFO("---------1.\r\n");
+//				NRF_LOG_FLUSH();
+//			}else if(time==2){
+//				control = 'c';
+//				NRF_LOG_INFO("---------2.\r\n");
+//				NRF_LOG_FLUSH();
+//			}
+//			if(time <= 2){
+//				time ++;
+//				NRF_LOG_INFO("---------time++.\r\n");
+//				NRF_LOG_FLUSH();
+//			}
+			channel_start_ = 80;
+			channel_end_ = 80;
+			
+			
+			time ++;
+			test = RADIO_TEST_TXCC;
+			if(time   >= 5000 && time   <= 6000){
+				test = 2;			
+			}else if(time   > 6000 && time   <= 18000){
+				test = 3;			
+			}else if(time   > 18000 && time   <= 25000){
+				//test = 4;			
+			}else if(time   > 25000 && time   <= 30000){
+				//test = 5;
+							
+			}else if(time   > 30000){
+			time = 0;	
 			}
-			if(time <= 2){
-				time ++;
-				NRF_LOG_INFO("---------time++.\r\n");
+			test = 3;
+				NRF_LOG_INFO("---------channel_end_  [%d] ;test  [%d]\r\n",channel_end_,test);
 				NRF_LOG_FLUSH();
-			}
-        switch (control)
-        {
-            case 'a':
-                while (true)
-                {
-                    //printf("Enter start channel (two decimal digits, 00 to 80):\r\n");
-                    //scanf("%d",&channel_start_);
-									channel_start_ = 0;
-                    if ((channel_start_ <= 80)&&(channel_start_ >= 0))
-                    {
-                        //printf("%d\r\n", channel_start_);
-                        break;
-                    }
+//        switch (control)
+//        {
+//            case 'a':
+//                while (true)
+//                {
+//                    //printf("Enter start channel (two decimal digits, 00 to 80):\r\n");
+//                    //scanf("%d",&channel_start_);
+//									channel_start_ = 1;
+//                    if ((channel_start_ <= 80)&&(channel_start_ >= 0))
+//                    {
+//                        //printf("%d\r\n", channel_start_);
+//                        break;
+//                    }
 
-                    //printf("Channel must be between 0 and 80\r\n");
-                }
-                test = cur_test;
-                break;
+//                    //printf("Channel must be between 0 and 80\r\n");
+//                }
+//                test = cur_test;
+//                break;
 
-            case 'b':
-                while (true)
-                {
-                    //printf("Enter end channel (two decimal digits, 00 to 80):\r\n");
-                    //scanf("%d",&channel_end_);
-									channel_end_ = 0;
-                    if ((channel_end_ <= 80)&&(channel_start_ >= 0))
-                    {
-                        //printf("%d\r\n", channel_end_);
-                        break;
-                    }
-                    //printf("Channel must be between 0 and 80\r\n");
-                }
-                test = cur_test;
-                break;
+//            case 'b':
+//                while (true)
+//                {
+//                    //printf("Enter end channel (two decimal digits, 00 to 80):\r\n");
+//                    //scanf("%d",&channel_end_);
+//									channel_end_ = 79;
+//                    if ((channel_end_ <= 80)&&(channel_start_ >= 0))
+//                    {
+//                        //printf("%d\r\n", channel_end_);
+//                        break;
+//                    }
+//                    //printf("Channel must be between 0 and 80\r\n");
+//                }
+//                test = cur_test;
+//                break;
 
-            case 'c':
-                test = RADIO_TEST_TXCC;
-                break;
+//            case 'c':
+//                test = RADIO_TEST_TXCC;
+//                break;
 
-            case 'd':
-                while (true)
-                {
-                    //printf("Enter delay in ms (two decimal digits, 01 to 99):\r\n");
-                    //scanf("%d",&delayms_);
-									delayms_ = 1;
-                    if ((delayms_ > 0) && (delayms_ < 100))
-                    {
-                        //printf("%d\r\n", delayms_);
-                        break;
-                    }
-                    //printf("Delay must be between 1 and 99\r\n");
-                }
-                test = cur_test;
-                break;
+//            case 'd':
+//                while (true)
+//                {
+//                    //printf("Enter delay in ms (two decimal digits, 01 to 99):\r\n");
+//                    //scanf("%d",&delayms_);
+//									delayms_ = 1;
+//                    if ((delayms_ > 0) && (delayms_ < 100))
+//                    {
+//                        //printf("%d\r\n", delayms_);
+//                        break;
+//                    }
+//                    //printf("Delay must be between 1 and 99\r\n");
+//                }
+//                test = cur_test;
+//                break;
 
-            case 'e':
-                radio_sweep_end();
-                cur_test = RADIO_TEST_NOP;
-                break;
+//            case 'e':
+//                radio_sweep_end();
+//                cur_test = RADIO_TEST_NOP;
+//                break;
 
-            case 'm':
-                get_datarate();
-                test = cur_test;
-                break;
+//            case 'm':
+//                get_datarate();
+//                test = cur_test;
+//                break;
 
-            case 'o':
-                test = RADIO_TEST_TXMC;
-                //printf("TX modulated carrier\r\n");
-                break;
+//            case 'o':
+//                test = RADIO_TEST_TXMC;
+//                //printf("TX modulated carrier\r\n");
+//                break;
 
-            case 'p':
-                get_power();
-                test = cur_test;
-                break;
+//            case 'p':
+//                get_power();
+//                test = cur_test;
+//                break;
 
-            case 'r':
-                test = RADIO_TEST_RXSWEEP;
-                //printf("RX Sweep\r\n");
-                break;
+//            case 'r':
+//                test = RADIO_TEST_RXSWEEP;
+//                //printf("RX Sweep\r\n");
+//                break;
 
-            case 's':
-                //print_parameters();
-                break;
+//            case 's':
+//                //print_parameters();
+//                break;
 
-            case 't':
-                test = RADIO_TEST_TXSWEEP;
-                //printf("TX Sweep\r\n");
-                break;
+//            case 't':
+//                test = RADIO_TEST_TXSWEEP;
+//                //printf("TX Sweep\r\n");
+//                break;
 
-            case 'x':
-                test = RADIO_TEST_RXC;
-                //printf("RX constant carrier\r\n");
-                break;
+//            case 'x':
+//                test = RADIO_TEST_RXC;
+//                //printf("RX constant carrier\r\n");
+//                break;
 
-            case 'h':
-                //help();
-                break;
+//            case 'h':
+//                //help();
+//                break;
 
-            default:
-                // No implementation needed
-                break;
-        }
-
+//            default:
+//                // No implementation needed
+//                break;
+//        }
         switch (test)
         {
             case RADIO_TEST_TXCC:
