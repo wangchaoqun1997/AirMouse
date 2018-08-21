@@ -299,11 +299,20 @@ void print_parameters(void)
 
 /** @brief Function for main application entry.
  */
-
 #define NRF_LOG_MODULE_NAME "APP"
-
+#include "nrf_gpio.h"
+#include "bsp.h"
+#include "nrf_drv_gpiote.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+#define TOUCH 4
+#define BACK 5
+#define POWER 17
+#include "nrf_delay.h"
+bool bsp_board_button_state_get_1(uint32_t button_idx){
+	bool pin_set = nrf_gpio_pin_read(button_idx)? true:false;
+	return (pin_set == (0? true:false));
+}
 int main(void)
 {
     uint32_t err_code;
@@ -311,75 +320,108 @@ int main(void)
     radio_tests_t cur_test = RADIO_TEST_NOP;
 
     init();
+		nrf_drv_gpiote_init();
+	bsp_board_buttons_init();
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-    NRF_LOG_INFO("TWI scanner.\r\n");
+    NRF_LOG_INFO("RF Test\r\n");
     NRF_LOG_FLUSH();
 
 
     NVIC_EnableIRQ(TIMER0_IRQn);
     __enable_irq();
-		NRF_LOG_INFO("TWI scanner1.\r\n");
-	NRF_LOG_FLUSH();
-	
+//while(1){
+//NRF_LOG_INFO("---%d %d %d",bsp_board_button_state_get_1(TOUCH),bsp_board_button_state_get_1(BACK),bsp_board_button_state_get_1(POWER));
+//	NRF_LOG_FLUSH();
+//}
+        uint8_t control = 0;
+		uint8_t countMode=0;
+		uint8_t countChannal=0;
+		bool isModify = true;
+		test = 0;
     while (true)
     {
-        uint8_t control;
+			while(!isModify){
         //scanf("%c",&control);
-			static uint32_t time=0;
-//			if(time==0){
-//				control = 'a';
-//				NRF_LOG_INFO("---------0.\r\n");
-//				NRF_LOG_FLUSH();
-//			}else if(time==1){
-//				control = 'b';
-//				NRF_LOG_INFO("---------1.\r\n");
-//				NRF_LOG_FLUSH();
-//			}else if(time==2){
-//				control = 'c';
-//				NRF_LOG_INFO("---------2.\r\n");
-//				NRF_LOG_FLUSH();
-//			}
-//			if(time <= 2){
-//				time ++;
-//				NRF_LOG_INFO("---------time++.\r\n");
-//				NRF_LOG_FLUSH();
-//			}
-			channel_start_ = 80;
-			channel_end_ = 80;
-			
-			
-			time ++;
-			test = RADIO_TEST_TXCC;
-			if(time   >= 5000 && time   <= 6000){
-				test = 2;			
-			}else if(time   > 6000 && time   <= 18000){
-				test = 3;			
-			}else if(time   > 18000 && time   <= 25000){
-				//test = 4;			
-			}else if(time   > 25000 && time   <= 30000){
-				//test = 5;
-							
-			}else if(time   > 30000){
-			time = 0;	
+//			NRF_LOG_INFO("No Key ....\r\n");
+//			NRF_LOG_FLUSH();
+			if(bsp_board_button_state_get_1(POWER) == 1){
+				nrf_delay_ms(10);
+				if(bsp_board_button_state_get_1(POWER) == 1){
+					while(1){
+						if(bsp_board_button_state_get_1(POWER) == 0){
+							countMode++;	
+							isModify = true;
+							break;
+						}
+					}
+				}
 			}
+
+			if(bsp_board_button_state_get_1(BACK) == 1){
+				nrf_delay_ms(10);
+				if(bsp_board_button_state_get_1(BACK) == 1){
+					while(1){
+						if(bsp_board_button_state_get_1(BACK) == 0){
+							countChannal +=1;
+							isModify = true;
+							break;
+						}
+					}
+				}
+			}
+			nrf_delay_ms(2);
+
+			
+		}	
+//    RADIO_TEST_NOP,      /**< No test running.      */
+//    RADIO_TEST_TXCC,     /**< TX constant carrier.  */
+//    RADIO_TEST_TXMC,     /**< TX modulated carrier. */
+//    RADIO_TEST_TXSWEEP,  /**< TX sweep.             */
+//    RADIO_TEST_RXC,      /**< RX constant carrier.  */
+//    RADIO_TEST_RXSWEEP,  /**< RX sweep.             */
+		if(countMode == 1){
+			test = 1;
+		}else if(countMode == 2){
+			test = 2;
+		}else if(countMode == 3){
 			test = 3;
-				NRF_LOG_INFO("---------channel_end_  [%d] ;test  [%d]\r\n",channel_end_,test);
-				NRF_LOG_FLUSH();
+		}else if(countMode == 4){
+			test = 4;
+		}else if(countMode == 5){
+			test = 5;
+		}else if(countMode == 6){
+			countMode = 0;
+		}
+		if(countChannal >80) countChannal=0;
+		channel_start_ = countChannal;
+		channel_end_ = countChannal;
+		
+		
+	
+		
+
+		isModify = false;
+		NRF_LOG_INFO("---countMode :[%d] countChannal :[%d] ",countMode,countChannal);
+		NRF_LOG_INFO("---test :[%d] channel_start_ :[%d] \r\n",test,channel_start_);
+		NRF_LOG_FLUSH();			
+		
 //        switch (control)
 //        {
 //            case 'a':
 //                while (true)
 //                {
-//                    //printf("Enter start channel (two decimal digits, 00 to 80):\r\n");
-//                    //scanf("%d",&channel_start_);
-//									channel_start_ = 1;
+//                    printf("Enter start channel (two decimal digits, 00 to 80):\r\n");
+//					NRF_LOG_FLUSH();
+//                    scanf("%d",&channel_start_);
 //                    if ((channel_start_ <= 80)&&(channel_start_ >= 0))
 //                    {
-//                        //printf("%d\r\n", channel_start_);
+//                        printf("%d\r\n", channel_start_);
+//						NRF_LOG_FLUSH();
 //                        break;
 //                    }
 
-//                    //printf("Channel must be between 0 and 80\r\n");
+//                    printf("Channel must be between 0 and 80\r\n");
+//					NRF_LOG_FLUSH();
 //                }
 //                test = cur_test;
 //                break;
@@ -387,15 +429,15 @@ int main(void)
 //            case 'b':
 //                while (true)
 //                {
-//                    //printf("Enter end channel (two decimal digits, 00 to 80):\r\n");
-//                    //scanf("%d",&channel_end_);
-//									channel_end_ = 79;
+//                    printf("Enter end channel (two decimal digits, 00 to 80):\r\n");
+//					NRF_LOG_FLUSH();
+//                    scanf("%d",&channel_end_);
 //                    if ((channel_end_ <= 80)&&(channel_start_ >= 0))
 //                    {
-//                        //printf("%d\r\n", channel_end_);
+//                        printf("%d\r\n", channel_end_);
 //                        break;
 //                    }
-//                    //printf("Channel must be between 0 and 80\r\n");
+//                    printf("Channel must be between 0 and 80\r\n");
 //                }
 //                test = cur_test;
 //                break;
@@ -407,15 +449,14 @@ int main(void)
 //            case 'd':
 //                while (true)
 //                {
-//                    //printf("Enter delay in ms (two decimal digits, 01 to 99):\r\n");
-//                    //scanf("%d",&delayms_);
-//									delayms_ = 1;
+//                    printf("Enter delay in ms (two decimal digits, 01 to 99):\r\n");
+//                    scanf("%d",&delayms_);
 //                    if ((delayms_ > 0) && (delayms_ < 100))
 //                    {
-//                        //printf("%d\r\n", delayms_);
+//                        printf("%d\r\n", delayms_);
 //                        break;
 //                    }
-//                    //printf("Delay must be between 1 and 99\r\n");
+//                    printf("Delay must be between 1 and 99\r\n");
 //                }
 //                test = cur_test;
 //                break;
@@ -432,7 +473,7 @@ int main(void)
 
 //            case 'o':
 //                test = RADIO_TEST_TXMC;
-//                //printf("TX modulated carrier\r\n");
+//                printf("TX modulated carrier\r\n");
 //                break;
 
 //            case 'p':
@@ -442,31 +483,32 @@ int main(void)
 
 //            case 'r':
 //                test = RADIO_TEST_RXSWEEP;
-//                //printf("RX Sweep\r\n");
+//                printf("RX Sweep\r\n");
 //                break;
 
 //            case 's':
-//                //print_parameters();
+//                print_parameters();
 //                break;
 
 //            case 't':
 //                test = RADIO_TEST_TXSWEEP;
-//                //printf("TX Sweep\r\n");
+//                printf("TX Sweep\r\n");
 //                break;
 
 //            case 'x':
 //                test = RADIO_TEST_RXC;
-//                //printf("RX constant carrier\r\n");
+//                printf("RX constant carrier\r\n");
 //                break;
 
 //            case 'h':
-//                //help();
+//                help();
 //                break;
 
 //            default:
 //                // No implementation needed
 //                break;
 //        }
+
         switch (test)
         {
             case RADIO_TEST_TXCC:
