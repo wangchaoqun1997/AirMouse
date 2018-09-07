@@ -4278,9 +4278,9 @@ int main(void)
 	}
 
 	sw3153_light_select(BLUE, BLINK_LEVEL_2);
-	bmi160_cal_offset_apply();
 	InitTouchDevice();
 	advertising_start(false);
+	bmi160_cal_offset_apply();
 	SomeTimerStart();
 	if(mode_will_test){
 		Mode_switch(MODE_TEST,false);

@@ -490,11 +490,13 @@ uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
     uint32_t             ret;
     ble_gap_adv_params_t adv_params;
 
+NRF_LOG_INFO("ble_advertising_start 1 \r\n");
     if (m_initialized == false)
     {
         return NRF_ERROR_INVALID_STATE;
     }
 
+NRF_LOG_INFO("ble_advertising_start 2 \r\n");
     m_adv_mode_current = advertising_mode;
 
     // Delay starting advertising until the flash operations are complete.
@@ -504,6 +506,7 @@ uint32_t ble_advertising_start(ble_adv_mode_t advertising_mode)
         return NRF_SUCCESS;
     }
 
+NRF_LOG_INFO("ble_advertising_start 3 \r\n");
    memset(&m_peer_address, 0, sizeof(m_peer_address));
 
     if (  ((m_adv_modes_config.ble_adv_directed_enabled)      && (m_adv_mode_current == BLE_ADV_MODE_DIRECTED))
