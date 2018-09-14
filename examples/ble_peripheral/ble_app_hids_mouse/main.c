@@ -2421,6 +2421,7 @@ static void scheduler_init(void)
 
 static void mouse_click_send(uint8_t left_right_buffer,uint8_t Scroll_Value)
 {
+	return;
     uint32_t err_code;
     uint8_t buffer[3];
     if (m_in_boot_mode)
@@ -2625,6 +2626,7 @@ static void bsp_event_handler(bsp_event_t event)
 						mouse_click_send(0x01,0);
 					}
 				}
+						mouse_click_send(0x01,0);
             }
             break;
         case BSP_EVENT_KEY_0_LONG:
@@ -2665,6 +2667,7 @@ static void bsp_event_handler(bsp_event_t event)
 						mouse_click_send(0,0);
 					}
 				}
+						mouse_click_send(0x00,0);
             }
             break;
         case BSP_EVENT_KEY_2:
@@ -2806,6 +2809,8 @@ static void bsp_event_handler(bsp_event_t event)
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 				//bsp_board_led_invert(LED_EN);
 					simple_trigger = 0x01;
+
+						mouse_click_send(0x01,0);
             }
             break;
         case BSP_EVENT_KEY_6_LONG://trigger
@@ -2822,6 +2827,7 @@ static void bsp_event_handler(bsp_event_t event)
 			}
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID){
 					simple_trigger = 0x00;
+						mouse_click_send(0x00,0);
             }
             break;
 #endif
@@ -3266,12 +3272,12 @@ mouseY_sub=0;
 app_timer_stop(sensor_poll_timer_id);
 mouse_slow_start();
 #endif
-								mouse_click_send(report_mouse,0);
+								//mouse_click_send(report_mouse,0);
     //NRF_LOG_INFO("----- ###################### DOWN %d\r\n",iiii++);
 							}
 						}else if(Touch_Info.Touch_Status == 0 && Mode_mouse == true && mouse_push == true){
 							mouse_push = false;
-							mouse_click_send(0,0);
+							//mouse_click_send(0,0);
 #if 1
 							mouse_dpi=MAX_SUB_MOVE_ADD;
 #endif
@@ -3880,11 +3886,15 @@ void sensor_data_poll_handler(void* p_context)
 		}
   		NRF_LOG_INFO("----- ---------------------- TEST g[%d] s[%d] magx[%d]sensor_ok[%d]\r\n",gyro_num,gsensor_num,magnet_xyz_int[0],sensor_ok_flag);
 	}
-	if(Mode_mouse == true){
-		//interrupter_sensor++;
-		SENSOR_READ_RAW_INT(raw_buf);
-		send_mouse_data(raw_buf);
-		
+	if(Mode_mouse == true || 1){
+		static int i =0;
+		i++;
+		if(i > 10){
+			i=0;
+			//interrupter_sensor++;
+			SENSOR_READ_RAW_INT(raw_buf);
+			send_mouse_data(raw_buf);
+		}
 	}
 
 	if((Mode_3D == true && updata_param_complete == true)){
