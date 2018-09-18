@@ -313,7 +313,7 @@ char project_flag=0x01;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x02;
-#define MANUFACTURER_NAME               "wangcq327_v226_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v227_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -323,7 +323,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v228_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v229_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -3886,7 +3886,7 @@ void sensor_data_poll_handler(void* p_context)
 		}
   		NRF_LOG_INFO("----- ---------------------- TEST g[%d] s[%d] magx[%d]sensor_ok[%d]\r\n",gyro_num,gsensor_num,magnet_xyz_int[0],sensor_ok_flag);
 	}
-	if(Mode_mouse == true || 1){
+	if(Mode_mouse == true || 0){
 		static int i =0;
 		i++;
 		if(i > 10){
