@@ -41,6 +41,7 @@ BLINK_LEVEL_1,
 BLINK_LEVEL_2,
 BLINK_LEVEL_3,
 BLINK_LEVEL_4,
+OFF_LEVEL,
 };
 
 void sw3153_config(void);

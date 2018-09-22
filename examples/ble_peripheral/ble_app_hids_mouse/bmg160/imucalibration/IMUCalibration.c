@@ -19,7 +19,7 @@
 #endif
 
 
-#define CALIBRATE_GYRO			0
+#define CALIBRATE_GYRO			1
 #define CALIBRATE_ACC				1
 #define CALIBRATE_MAG				0
 
@@ -545,7 +545,7 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 				
 				
 				
-                //LOGI("gyro bias: %6d, %6d, %6d\n", (int32_t)(staticInterval.gyro[0]*10000), (int32_t)(staticInterval.gyro[1]*10000), (int32_t)(staticInterval.gyro[2]*10000));
+                LOGI("gyro bias: %6d, %6d, %6d\n", (int32_t)(staticInterval.gyro[0]*10000), (int32_t)(staticInterval.gyro[1]*10000), (int32_t)(staticInterval.gyro[2]*10000));
 
 
 #if CALIBRATE_ACC
@@ -555,6 +555,7 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 
 				if (dir >= 0 && dir != last_dir) {
 				LOGI("acc dir %d\n\r", dir);
+				SetAccCalibrateDir(dir);
 					// check time
 					if (vinterval_size == 0) {
 						firstAccTime = cnt;

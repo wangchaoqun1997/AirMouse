@@ -128,6 +128,43 @@ static void sw3153_red(void)
 		sw3153_blink_off();
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, LED_RED);
 }
+void SetSw3153Light(enum sw3153_light_type type,enum sw3153_blink_level level){
+	switch(type){
+		case GREEN:
+			if(level == OFF_LEVEL){//off
+				uint8_t data=0;
+				I2C_Read_Addr8(WD3153_ADDRESS,0x30,&data,1);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, data & (~LED_GREEN));
+			}else{//blick
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+1, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+3,  0x00);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+4,  0x00);
+			}
+			break;
+		case RED:
+			if(level == OFF_LEVEL){//off
+				uint8_t data=0;
+				I2C_Read_Addr8(WD3153_ADDRESS,0x30,&data,1);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, data & (~LED_RED));
+			}else{//blick
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+0, 0x00);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+1, 0x00);
+			}
+			break;
+		case BLUE:
+			if(level == OFF_LEVEL){//off
+				uint8_t data=0;
+				I2C_Read_Addr8(WD3153_ADDRESS,0x30,&data,1);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, data & (~LED_BLUE));
+			}else{//blick
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_CONFIG_BASE+2, WD_LED_FADE_OFF_MASK | WD_LED_FADE_ON_MASK |WD_LED_BREATHE_MODE_MASK | OUT_CURRENT);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+6, 0x00);
+				I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_TIMESET0_BASE+7, 0x00);
+			}
+			break;
+	}
+}
 static void sw3153_off(void)
 {
 		I2C_Write_Addr8(WD3153_ADDRESS,WD_REG_LED_ENABLE, 0x00);

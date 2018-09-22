@@ -976,7 +976,48 @@ void sleep_mode_enter_power(void)
 
 //--flash oper start
 static volatile uint8_t write_flag=0;
-static uint8_t cal_status=0x00;
+static uint8_t gyro_cal_status=0x00,acc_cal_status=0x00;
+static uint8_t accCalibrateDir = 0x00;
+uint8_t SetAccCalibrateDir(uint8_t dir){
+	if((accCalibrateDir >> dir ) & 0x01){
+    	NRF_LOG_INFO("accCalibrateDir flag found\r\n");
+	}else{
+		accCalibrateDir |= (0x01<<dir);
+    NRF_LOG_INFO("accCalibrateDir == 0x%x\r\n",accCalibrateDir);
+		if(accCalibrateDir & 0x30){
+			if((accCalibrateDir & 0x30) == 0x30){
+    			NRF_LOG_INFO("accCalibrateDir red off\r\n");
+				SetSw3153Light(RED,OFF_LEVEL);
+			}else{
+				SetSw3153Light(RED,BLINK_LEVEL_0);
+    			NRF_LOG_INFO("accCalibrateDir red on\r\n");
+			}
+		}
+		if(accCalibrateDir & 0xC){
+			if((accCalibrateDir & 0xC) == 0xC){
+    			NRF_LOG_INFO("accCalibrateDir green off\r\n");
+				SetSw3153Light(GREEN,OFF_LEVEL);
+			}else{
+				SetSw3153Light(GREEN,BLINK_LEVEL_0);
+    			NRF_LOG_INFO("accCalibrateDir green on\r\n");
+			}	
+		}
+		if(accCalibrateDir & 0x3){
+			if((accCalibrateDir & 0x3) == 0x3){
+    			NRF_LOG_INFO("accCalibrateDir blue off\r\n");
+				SetSw3153Light(BLUE,OFF_LEVEL);
+			}else{
+				SetSw3153Light(BLUE,BLINK_LEVEL_0);
+    			NRF_LOG_INFO("accCalibrateDir blue on\r\n");
+			}	
+		}
+	}
+	return accCalibrateDir;
+}
+void ClearAccCalibrateDir(){
+	accCalibrateDir= 0x00;
+	sw3153_light_select(BLUE_GREEN_RED, BLINK_LEVEL_NON);
+}
 #define GYRO_FILE_ID     0x1111
 #define GYRO_REC_KEY     0x2222
 
@@ -1001,9 +1042,11 @@ static void my_fds_evt_handler(fds_evt_t const * const p_fds_evt)
 			{
 				write_flag=1;
 					NRF_LOG_INFO("fds write ok ....\r\n");
-				if(cal_status==0x01){
-					NRF_LOG_INFO("sensor cal ok ,into sleep ....\r\n");
-					sleep_mode_enter_power();
+				if(gyro_cal_status==0x01){
+					if(acc_cal_status==0x01){
+						NRF_LOG_INFO("sensor cal ok ,into sleep ....\r\n");
+						sleep_mode_enter_power();
+					}
 				}
 			}
 			break;
@@ -1122,7 +1165,7 @@ static ret_code_t fds_test_init (void)
 void WriteAccBiasAndScaleToMemory(){
 	fds_test_find_and_delete(ACC_FILE_ID,ACC_REC_KEY);
 	fds_test_write((uint32_t*)calib.acc_scale,ACC_FILE_ID,ACC_REC_KEY);
-	
+	acc_cal_status=0x01;
 }
 uint32_t gyro_offset_h=0x00000000;
 uint32_t gyro_offset_l=0x00000000;
@@ -1132,7 +1175,12 @@ short apply_gyro_offset_Z;
 short apply_gsensor_offset_X;
 short apply_gsensor_offset_Y;
 short apply_gsensor_offset_Z;
-void bmi160_calibration(void)
+
+void bmi160_acc_calibration(void)
+{
+	ClearAccCalibrateDir();
+}
+void bmi160_gyro_calibration(void)
 {
 		//flash
 
@@ -1159,7 +1207,7 @@ void bmi160_calibration(void)
 	apply_gsensor_offset_Z=0x0;
 	gyro_offset_h=0x00000000;
 	gyro_offset_l=0x00000000;
-	cal_status=0x00;
+	gyro_cal_status=0x00;
 	
     NRF_LOG_INFO("sensor calibrate start !!! \r\n");
 	sw3153_light_select(RED, BLINK_LEVEL_0);
@@ -1187,16 +1235,16 @@ void bmi160_calibration(void)
 		
 	if(abs(cal_offset[0])>100 || abs(cal_offset[1])>100 || abs(cal_offset[2]>100)){
 		cal_offset[0] = cal_offset[1] = cal_offset[2] = 50;
-		cal_status=0x00;
+		gyro_cal_status=0x00;
 		//Mode_switch(MODE_DISCONNECT,false);
 		sw3153_light_select(RED, BLINK_LEVEL_0);
 		nrf_delay_ms(2000);
     	NRF_LOG_INFO("sensor calibrate fail ,into sleep !!! \r\n");
 		sleep_mode_enter_power();
 	}else{
-		cal_status=0x01;
+		gyro_cal_status=0x01;
 		gyro_offset_l = ((0xFFFF0000)&(cal_offset[1]<<16)) | ((0x0000FFFF)&cal_offset[0]);
-		gyro_offset_h = ((0xFFFF0000)&cal_status<<16)      | ((0x0000FFFF)&cal_offset[2]);
+		gyro_offset_h = ((0xFFFF0000)&gyro_cal_status<<16)      | ((0x0000FFFF)&cal_offset[2]);
     	NRF_LOG_INFO("gyro offset h[0x%x]--l[0x%x]\r\n",gyro_offset_h,gyro_offset_l);
 //flash oper
 		uint32_t err_code;
@@ -3048,7 +3096,8 @@ static void mouse_slow_stop(void)
 
 static void sensor_cal_handler(void* p_context)
 {
-	bmi160_calibration();
+	bmi160_gyro_calibration();
+	bmi160_acc_calibration();
 }
 static void sensor_cal_init(void)
 {
@@ -3705,11 +3754,11 @@ if(i==512)i=0;
 		float imudata[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		float imudata_uncalib[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		
-		if (bNewMag ) {
+		if (bNewMag || 1 ) {
 			if (bGyroCalibrated) {
-				//NRF_LOG_INFO("gyro 1: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+				//NRF_LOG_INFO("gyro start: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
 				correctGyro(imudata, calib.gyro_bias);
-				//NRF_LOG_INFO("gyro 2: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+				//NRF_LOG_INFO("gyro   end: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
 			}
 			if (bAccCalibrated || 1) {
 				//NRF_LOG_INFO("acc ----  biasx %d biasy %d biasz %d\n",(int32_t)(calib.acc_bias[0]*10000),(int32_t)(calib.acc_bias[1]*10000),(int32_t)(calib.acc_bias[2]*10000));
@@ -4016,7 +4065,6 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(ACCX,data1[0]-(int16_t)(calib.acc_bias[2]*1670.64f));
 	set_data(ACCY,data1[1]+(int16_t)(calib.acc_bias[1]*1670.64f));
 	set_data(ACCZ,data1[2]-(int16_t)(calib.acc_bias[0]*1670.64f));
-
 
 //gyro 13 13 13
 	set_data(GYROX,data1[3]);
@@ -4347,6 +4395,8 @@ int main(void)
 	InitICRegisters();
 	if(mode_will_cal){
 		sensor_cal_start();
+ClearAccCalibrateDir();
+	MadgwickAHRSupdate_start();
 		goto WHILE;
 	}
 
