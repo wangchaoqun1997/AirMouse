@@ -337,6 +337,10 @@ bool should_power_on = false;
 //######################################
 //######################################
 
+CalibResult calib;
+int bMagCalibrated = 0;
+int bGyroCalibrated = 0;
+int bAccCalibrated = 0;
 
 ble_gatts_char_handles_t custom_char_handles;
 uint8_t report_key;
@@ -973,6 +977,14 @@ void sleep_mode_enter_power(void)
 //--flash oper start
 static volatile uint8_t write_flag=0;
 static uint8_t cal_status=0x00;
+#define GYRO_FILE_ID     0x1111
+#define GYRO_REC_KEY     0x2222
+
+#define ACC_FILE_ID     0x1111
+#define ACC_REC_KEY     0x2223
+
+#define MAG_B_FILE_ID     0x4111
+#define MAG_B_REC_KEY     0x5222
 static void my_fds_evt_handler(fds_evt_t const * const p_fds_evt)
 {
 	//NRF_LOG_INFO("fds_event_handler = 0x%x\r\n",p_fds_evt->id);
@@ -988,6 +1000,7 @@ static void my_fds_evt_handler(fds_evt_t const * const p_fds_evt)
 			if (p_fds_evt->result == FDS_SUCCESS)
 			{
 				write_flag=1;
+					NRF_LOG_INFO("fds write ok ....\r\n");
 				if(cal_status==0x01){
 					NRF_LOG_INFO("sensor cal ok ,into sleep ....\r\n");
 					sleep_mode_enter_power();
@@ -998,22 +1011,18 @@ static void my_fds_evt_handler(fds_evt_t const * const p_fds_evt)
             break;
     }
 }
-static ret_code_t fds_test_write(uint32_t cal_number,uint32_t cal_data)
+static ret_code_t fds_test_write(uint32_t* writeDataPoint,uint32_t fileId,uint32_t recKey)
 {
-		#define FILE_ID     0x1111
-		#define REC_KEY     0x2222
-		static uint32_t m_deadbeef[2] = {0xDEADBEEF,0xBAADF00D};
-		m_deadbeef[0] = cal_number;
-		m_deadbeef[1] = cal_data;
+		//static uint32_t m_deadbeef[2] = {0xDEADBEEF,0xBAADF00D};
 		fds_record_t        record;
 		fds_record_desc_t   record_desc;
 		fds_record_chunk_t  record_chunk;
 		// Set up data.
-		record_chunk.p_data         = m_deadbeef;
-		record_chunk.length_words   = 2;
+		record_chunk.p_data         = writeDataPoint;
+		record_chunk.length_words   = 6;
 		// Set up record.
-		record.file_id              = FILE_ID;
-		record.key              		= REC_KEY;
+		record.file_id              = fileId;
+		record.key              		= recKey;
 		record.data.p_chunks       = &record_chunk;
 		record.data.num_chunks   = 1;
 				
@@ -1025,20 +1034,22 @@ static ret_code_t fds_test_write(uint32_t cal_number,uint32_t cal_data)
 		 NRF_LOG_INFO("Writing Record ID = %d \r\n",record_desc.record_id);
 		return NRF_SUCCESS;
 }
-static ret_code_t fds_read(uint32_t *gryo_offset)
+static ret_code_t fds_read(uint32_t *readData,uint32_t fileId,uint32_t recKey)
 {
-		#define FILE_ID     0x1111
-		#define REC_KEY     0x2222
 		fds_flash_record_t  flash_record;
 		fds_record_desc_t   record_desc;
 		fds_find_token_t    ftok ={0};//Important, make sure you zero init the ftok token
 		uint32_t *data;
 		uint32_t err_code;
-		gryo_offset[0]=0x00000000;
-		gryo_offset[1]=0x00000000;
+		readData[0]=0x00000000;
+		readData[1]=0x00000000;
+		readData[2]=0x00000000;
+		readData[3]=0x00000000;
+		readData[4]=0x00000000;
+		readData[5]=0x00000000;
 		NRF_LOG_INFO("Start searching... \r\n");
 		// Loop until all records with the given key and file ID have been found.
-		while (fds_record_find(FILE_ID, REC_KEY, &record_desc, &ftok) == FDS_SUCCESS)
+		while (fds_record_find(fileId, recKey, &record_desc, &ftok) == FDS_SUCCESS)
 		{
 				err_code = fds_record_open(&record_desc, &flash_record);
 				if ( err_code != FDS_SUCCESS)
@@ -1052,9 +1063,8 @@ static ret_code_t fds_read(uint32_t *gryo_offset)
 				for (uint8_t i=0;i<flash_record.p_header->tl.length_words;i++)
 				{
 					NRF_LOG_INFO("0x%8x ",data[i]);
+					readData[i]=data[i];
 				}
-				gryo_offset[0]=data[0];
-				gryo_offset[1]=data[1];
 				NRF_LOG_INFO("\r\n");
 				// Access the record through the flash_record structure.
 				// Close the record when done.
@@ -1068,17 +1078,15 @@ static ret_code_t fds_read(uint32_t *gryo_offset)
 		
 }
 
-static ret_code_t fds_test_find_and_delete (void)
+static ret_code_t fds_test_find_and_delete (uint32_t fileId,uint32_t recKey)
 {
-	#define FILE_ID     0x1111
-	#define REC_KEY     0x2222
 		fds_record_desc_t   record_desc;
 		fds_find_token_t    ftok;
 	
 		ftok.page=0;
 		ftok.p_addr=NULL;
 		// Loop and find records with same ID and rec key and mark them as deleted. 
-		while (fds_record_find(FILE_ID, REC_KEY, &record_desc, &ftok) == FDS_SUCCESS)
+		while (fds_record_find(fileId, recKey, &record_desc, &ftok) == FDS_SUCCESS)
 		{
 			fds_record_delete(&record_desc);
 			NRF_LOG_INFO("Deleted record ID: %d \r\n",record_desc.record_id);
@@ -1091,6 +1099,7 @@ static ret_code_t fds_test_find_and_delete (void)
 		}
 		return NRF_SUCCESS;
 }
+
 
 static ret_code_t fds_test_init (void)
 {
@@ -1110,6 +1119,11 @@ static ret_code_t fds_test_init (void)
 		return NRF_SUCCESS;
 		
 }
+void WriteAccBiasAndScaleToMemory(){
+	fds_test_find_and_delete(ACC_FILE_ID,ACC_REC_KEY);
+	fds_test_write((uint32_t*)calib.acc_scale,ACC_FILE_ID,ACC_REC_KEY);
+	
+}
 uint32_t gyro_offset_h=0x00000000;
 uint32_t gyro_offset_l=0x00000000;
 short apply_gyro_offset_X;
@@ -1123,9 +1137,9 @@ void bmi160_calibration(void)
 		//flash
 
 	//APP_ERROR_CHECK(err_code);
-	uint32_t read_gryo_offset[2]={0x00};
-	fds_test_init();
-	fds_read(read_gryo_offset);
+	uint32_t read_gryo_offset[6]={0x00};
+	//fds_test_init();
+	fds_read(read_gryo_offset,GYRO_FILE_ID,GYRO_REC_KEY);
 	if((read_gryo_offset[1] & 0xFFFF0000)){
 		sw3153_light_select(RED, BLINK_LEVEL_NON);
 		nrf_delay_ms(1500);
@@ -1186,10 +1200,17 @@ void bmi160_calibration(void)
     	NRF_LOG_INFO("gyro offset h[0x%x]--l[0x%x]\r\n",gyro_offset_h,gyro_offset_l);
 //flash oper
 		uint32_t err_code;
-		err_code =fds_test_init();
+		//err_code =fds_test_init();
 		//APP_ERROR_CHECK(err_code);
-		err_code = fds_test_find_and_delete();
-		err_code = fds_test_write(gyro_offset_l,gyro_offset_h);
+		err_code = fds_test_find_and_delete(GYRO_FILE_ID,GYRO_REC_KEY);
+		static uint32_t writeData[6]={0x0,0x0,0x0,0x0,0x0,0x0};
+		writeData[0]=gyro_offset_l;
+		writeData[1]=gyro_offset_h;
+		writeData[2]=0x11223344;
+		writeData[3]=0x11223344;
+		writeData[4]=0x11223344;
+		writeData[5]=0x11223344;
+		err_code = fds_test_write(writeData,GYRO_FILE_ID,GYRO_REC_KEY);
 		//nrf_delay_ms(2000);
 		//Mode_switch(MODE_DISCONNECT,false);
 		sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_2);
@@ -1206,13 +1227,13 @@ void bmi160_calibration(void)
 }
 
 
-void bmi160_cal_offset_apply()
+void bmi160_gyro_cal_offset_apply()
 {
 	uint32_t err_code;
-	uint32_t read_gryo_offset[2]={0x00};
-	err_code =fds_test_init();
+	uint32_t read_gryo_offset[6]={0x00};
+	//err_code =fds_test_init();
 
-	fds_read(read_gryo_offset);
+	fds_read(read_gryo_offset,GYRO_FILE_ID,GYRO_REC_KEY);
 	if(read_gryo_offset[1] & 0xFFFF0000){
 		apply_gyro_offset_X = read_gryo_offset[0] & 0x0000FFFF;
 		apply_gyro_offset_Y = (read_gryo_offset[0] & 0xFFFF0000) >> 16;
@@ -1230,6 +1251,26 @@ void bmi160_cal_offset_apply()
     	NRF_LOG_INFO("gyro offset read fail !!  h[0x%x]  l[0x%x]\r\n",read_gryo_offset[1],read_gryo_offset[0]);
 	}
 
+}
+void bmi160_acc_cal_offset_apply()
+{
+	uint32_t err_code;
+	uint32_t read_acc_offset[6]={0x00,0x0,0x0,0x0,0x0,0x0};
+	//err_code =fds_test_init();
+	fds_read(read_acc_offset,ACC_FILE_ID,ACC_REC_KEY);
+	if(read_acc_offset[0] || read_acc_offset[1] || read_acc_offset[5]){
+		calib.acc_bias[0] = ((float*)read_acc_offset)[3];
+		calib.acc_bias[1] = ((float*)read_acc_offset)[4];
+		calib.acc_bias[2] = ((float*)read_acc_offset)[5];
+		calib.acc_scale[0] = ((float*)read_acc_offset)[0];
+		calib.acc_scale[1] = ((float*)read_acc_offset)[1];
+		calib.acc_scale[2] = ((float*)read_acc_offset)[2];
+    	NRF_LOG_INFO("acc bias read ok !!  *10000  [%d] [%d] [%d]\r\n",(int32_t)(calib.acc_bias[0]*10000),(int32_t)(calib.acc_bias[1]*10000),(int32_t)(calib.acc_bias[2]*10000));
+    	NRF_LOG_INFO("acc scale read ok !!  *10000  [%d] [%d] [%d]\r\n",(int32_t)(calib.acc_scale[0]*10000),(int32_t)(calib.acc_scale[1]*10000),(int32_t)(calib.acc_scale[2]*10000));
+	}else{
+    	NRF_LOG_INFO("acc bias scale read fail !!\r\n");
+	}
+	
 }
 //--flash oper end
 static void connect_sleep_handler(void* p_context)
@@ -3573,9 +3614,7 @@ int set_data(enum DATA_TYPE type,int data)
 
 
 
-CalibResult calib;
-int bMagCalibrated = 0;
-int bGyroCalibrated = 0;
+
 
 #define MadgwickAHRSupdate_FRQ 2.5			// 400hz
 static void MadgwickAHRSupdate_start()
@@ -3616,13 +3655,13 @@ if(i==512)i=0;
 		ay = -dof3_buf[3];
 		az = dof3_buf[4];
 		
-//		NRF_LOG_INFO("acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
+		//NRF_LOG_INFO("start acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
 		
 		float gx,gy,gz;
 		gx = dof3_buf[2];
 		gy = -dof3_buf[0];
 		gz = dof3_buf[1];
-		//NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+		//NRF_LOG_INFO("start gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
 		
 		
 		
@@ -3630,11 +3669,11 @@ if(i==512)i=0;
 #endif
 #ifdef PROJECT_K02
 		float ax,ay,az;
-		ax = -dof3_buf[3];
-		ay = dof3_buf[4];
-		az = dof3_buf[5];
+		ax = -dof3_buf[3] ;
+		ay = dof3_buf[4] ;
+		az = dof3_buf[5] ;
 		
-//		NRF_LOG_INFO("acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
+	//	NRF_LOG_INFO("acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
 		
 		float gx,gy,gz;
 		gx = -dof3_buf[0];
@@ -3659,18 +3698,30 @@ if(i==512)i=0;
 		my = magnet_xyz[1];// - 8;
 		mz = -magnet_xyz[0];// + 15;
 		
-		//NRF_LOG_INFO("mag: %6d, %6d, %6d\n", (int32_t)(mx), (int32_t)(my), (int32_t)(mz));
+	//	NRF_LOG_INFO("start acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
+	//	NRF_LOG_INFO("start gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+	//	NRF_LOG_INFO("start mag: %6d, %6d, %6d\n", (int32_t)(mx), (int32_t)(my), (int32_t)(mz));
 		
 		float imudata[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		float imudata_uncalib[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		
-		if (bNewMag) {
+		if (bNewMag ) {
 			if (bGyroCalibrated) {
 				//NRF_LOG_INFO("gyro 1: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
 				correctGyro(imudata, calib.gyro_bias);
 				//NRF_LOG_INFO("gyro 2: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
 			}
-			
+			if (bAccCalibrated || 1) {
+				//NRF_LOG_INFO("acc ----  biasx %d biasy %d biasz %d\n",(int32_t)(calib.acc_bias[0]*10000),(int32_t)(calib.acc_bias[1]*10000),(int32_t)(calib.acc_bias[2]*10000));
+				//NRF_LOG_INFO("acc start: %6d, %6d, %6d\n", (int32_t)(imudata[3]*1000), (int32_t)(imudata[4]*1000), (int32_t)(imudata[5]*1000));
+				correctAcc(imudata+3, calib.acc_scale,calib.acc_bias);
+				//NRF_LOG_INFO("acc end..: %6d, %6d, %6d\n", (int32_t)(imudata[3]*1000), (int32_t)(imudata[4]*1000), (int32_t)(imudata[5]*1000));
+			}
+			if (bMagCalibrated) {
+				//NRF_LOG_INFO("gyro 1: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+				correctMag(imudata+6,calib.mag_scale,calib.mag_bias);
+				//NRF_LOG_INFO("gyro 2: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+			}
 			//MadgwickAHRSupdate(imudata);
 			MadgwickAHRSupdateWithoutMag(imudata);
 			
@@ -3679,7 +3730,14 @@ if(i==512)i=0;
 			tryCalibration(&calib, imudata_uncalib, q);
 			if (calib.bCalibrated_gyro)
 				bGyroCalibrated = 1;
+			if (calib.bCalibrated_mag)
+				bMagCalibrated = 1;
+			if (calib.bCalibrated_acc)
+				bAccCalibrated = 1;
 		}
+	//	NRF_LOG_INFO("end acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
+	//	NRF_LOG_INFO("end gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
+	//	NRF_LOG_INFO("end mag: %6d, %6d, %6d\n", (int32_t)(mx), (int32_t)(my), (int32_t)(mz));
 #define _ANGLE
 #ifdef 	_ANGLE
 //		QuaternionToDegreeFast(DegreeArray);
@@ -3955,9 +4013,9 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(MAGY,DeagreeArray_int[1]);
 	set_data(MAGZ,DeagreeArray_int[2]);
 //acc 13 13 13
-	set_data(ACCX,data1[0]);
-	set_data(ACCY,data1[1]);
-	set_data(ACCZ,data1[2]);
+	set_data(ACCX,data1[0]-(int16_t)(calib.acc_bias[2]*1670.64f));
+	set_data(ACCY,data1[1]+(int16_t)(calib.acc_bias[1]*1670.64f));
+	set_data(ACCZ,data1[2]-(int16_t)(calib.acc_bias[0]*1670.64f));
 
 
 //gyro 13 13 13
@@ -4101,8 +4159,8 @@ void bmg160_init(void)
 void sensor_poll_start();
 void sensor_cal_status()
 {
-	uint32_t read_gryo_offset[2]={0x00};
-	fds_read(read_gryo_offset);
+	uint32_t read_gryo_offset[6]={0x00};
+	fds_read(read_gryo_offset,GYRO_FILE_ID,GYRO_REC_KEY);
 	if(!(read_gryo_offset[1] & 0xFFFF0000)){
 		sw3153_light_select(RED, BLINK_LEVEL_0);
 		nrf_delay_ms(500);
@@ -4295,7 +4353,8 @@ int main(void)
 	sw3153_light_select(BLUE, BLINK_LEVEL_2);
 	InitTouchDevice();
 	advertising_start(false);
-	bmi160_cal_offset_apply();
+	bmi160_gyro_cal_offset_apply();
+	bmi160_acc_cal_offset_apply();
 	SomeTimerStart();
 	if(mode_will_test){
 		Mode_switch(MODE_TEST,false);

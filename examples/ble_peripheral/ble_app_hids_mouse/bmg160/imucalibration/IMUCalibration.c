@@ -20,8 +20,8 @@
 
 
 #define CALIBRATE_GYRO			0
-#define CALIBRATE_ACC				0
-#define CALIBRATE_MAG				1
+#define CALIBRATE_ACC				1
+#define CALIBRATE_MAG				0
 
 
 typedef struct 
@@ -95,6 +95,7 @@ int calibrateMag(float* mag_scale, float* mag_bias);
 int calibrateAcc(float* acc_scale, float* acc_bias);
 
 
+extern CalibResult calib;
 //------------------------- Functions Implementations ----------------------------------------------
 
 
@@ -152,13 +153,16 @@ int tryCalibration( CalibResult* res, float* imuData, float* q)
 		if (calibrateAcc(acc_scale, acc_bias)) {
 			res->bCalibrated_acc = 1;
 
-			res->acc_scale[0] = acc_scale[0];
-			res->acc_scale[1] = acc_scale[1];
-			res->acc_scale[2] = acc_scale[2];
+			NRF_LOG_INFO("acc ----  biasx %d biasy %d biasz %d\n",calib.acc_bias[0]*10000,calib.acc_bias[1]*10000,calib.acc_bias[2]*10000);
+			res->acc_scale[0] = calib.acc_scale[0];
+			res->acc_scale[1] = calib.acc_scale[1];
+			res->acc_scale[2] = calib.acc_scale[2];
 
-			res->acc_bias[0] = acc_bias[0];
-			res->acc_bias[1] = acc_bias[1];
-			res->acc_bias[2] = acc_bias[2];
+			res->acc_bias[0] = calib.acc_bias[0];
+			res->acc_bias[1] = calib.acc_bias[1];
+			res->acc_bias[2] = calib.acc_bias[2];
+			
+			WriteAccBiasAndScaleToMemory();
 		}
 		resetAccCalibration();
 	}
@@ -172,9 +176,11 @@ int tryCalibration( CalibResult* res, float* imuData, float* q)
 // correct acc
 void correctAcc(float* acc, float* acc_scale, float* acc_bias)
 {
-	acc[0] = acc_scale[0] * (acc[0] - acc_bias[0]);
-	acc[1] = acc_scale[1] * (acc[1] - acc_bias[1]);
-	acc[2] = acc_scale[2] * (acc[2] - acc_bias[2]);
+	//NRF_LOG_INFO("acc biasx %d biasy %d biasz %d\n",acc_bias[0],acc_bias[1],acc_bias[2]);
+	//NRF_LOG_INFO("acc scalex %d y %d z %d\n",acc_scale[0],acc_scale[1],acc_scale[2]);
+	acc[0] = calib.acc_scale[0] * (acc[0] - calib.acc_bias[0]);
+	acc[1] = calib.acc_scale[1] * (acc[1] - calib.acc_bias[1]);
+	acc[2] = calib.acc_scale[2] * (acc[2] - calib.acc_bias[2]);
 }
 
 // correct gyro
@@ -297,12 +303,12 @@ int checkMagDirection(float mx, float my, float mz)
 int checkAccDirection(float ax, float ay, float az)
 {
 
-    if (ax > 9.22f) return 0;
-	if (ax < -9.22f) return 1;
-	if (ay > 9.22f) return 2;
-	if (ay < -9.22f) return 3;
-	if (az > 9.22f) return 4;
-	if (az < -9.22f) return 5;
+    if (ax > 8.9f) return 0;
+	if (ax < -8.9f) return 1;
+	if (ay > 8.9f) return 2;
+	if (ay < -8.9f) return 3;
+	if (az > 8.9f) return 4;
+	if (az < -8.9f) return 5;
 
 
 	return -1;
@@ -536,14 +542,19 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 					gyro_bias[i] = staticInterval.gyro[i];
 				}
 				retval = 1;
-#if DEBUG_PRINT
-                LOGI("gyro bias: %6d, %6d, %6d\n", (int32_t)(staticInterval.gyro[0]*10000), (int32_t)(staticInterval.gyro[1]*10000), (int32_t)(staticInterval.gyro[2]*10000));
-#endif
+				
+				
+				
+                //LOGI("gyro bias: %6d, %6d, %6d\n", (int32_t)(staticInterval.gyro[0]*10000), (int32_t)(staticInterval.gyro[1]*10000), (int32_t)(staticInterval.gyro[2]*10000));
+
 
 #if CALIBRATE_ACC
 				static int last_dir = -1;
+                LOGI("acc -- : %6d, %6d, %6d\n", (int32_t)(staticInterval.acc[0]*100), (int32_t)(staticInterval.acc[1]*100), (int32_t)(staticInterval.acc[2]*100));
 				int dir = checkAccDirection(staticInterval.acc[0], staticInterval.acc[1], staticInterval.acc[2]);
+
 				if (dir >= 0 && dir != last_dir) {
+				LOGI("acc dir %d\n\r", dir);
 					// check time
 					if (vinterval_size == 0) {
 						firstAccTime = cnt;
@@ -551,7 +562,7 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 					else {
 						if (cnt - firstAccTime > 300*FREQ) {
 							resetAccCalibration();
-							//LOGI("resetAccCalibration\n");
+							LOGI("resetAccCalibration\n");
 						}
 					}
 
@@ -567,9 +578,9 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 						vinterval_size++; 
 						
 						resetInterval(&staticInterval, cnt+1);
-#if DEBUG_PRINT
+//
                         LOGI("StaticInterval num: %d\n", vinterval_size);
-#endif
+
 					}
 				}
 				last_dir = dir;
@@ -672,8 +683,8 @@ int calibrateAcc(float* acc_scale, float* acc_bias)
 	// show results
 #if DEBUG_PRINT
     LOGI("\n============================= Acc Calibration ==================================\n");
-    LOGI("Scale:\n %f, %f, %f\n", acc_scale[0], acc_scale[1], acc_scale[2]);
-    LOGI("Bias:\n %f, %f, %f\n", acc_bias[0], acc_bias[1], acc_bias[2]);
+    LOGI("Scale:\n %d, %d, %d\n", (int32_t )(acc_scale[0]*10000), (int32_t )(acc_scale[1]*10000),(int32_t )( acc_scale[2]*10000));
+    LOGI("Bias:\n %d, %d, %d\n",(int32_t )(acc_bias[0]*10000),(int32_t )( acc_bias[1]*10000), (int32_t )(acc_bias[2]*10000));
 
     LOGI("\nCalibrated norm: \n");
 
@@ -695,17 +706,20 @@ int calibrateAcc(float* acc_scale, float* acc_bias)
 
 	float mean = sample_sum / vinterval_size;
 	float stdVar = sqrtf((sample_sum2 - sample_sum * sample_sum / vinterval_size) / vinterval_size);
-    LOGI("Mean and Standard Variance:\n %f, %f\n", mean, stdVar);
+    LOGI("Mean and Standard Variance:\n %d, %d\n",(int32_t)( mean*10000), (int32_t)(stdVar*10000));
 #endif
 
 	// check result
 	for (i = 0; i < 3; i++) {
-		if (fabs(acc_bias[i]) > 0.3f)
+		if (fabs(acc_bias[i]) > 1.0f)
 			return 0;
-		if (fabs(acc_scale[i] - 1) > 0.1f)
+		if (fabs(acc_scale[i] - 1) > 0.15f)
 			return 0;
 	}
-
+for(i=0;i<3;i++){
+	calib.acc_bias[i] = acc_bias[i];
+	calib.acc_scale[i] = acc_scale[i];
+}
 	//// reset calibration
 	//resetAccCalibration(); 
 
