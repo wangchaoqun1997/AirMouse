@@ -227,6 +227,7 @@ APP_TIMER_DEF(m_battery_timer_id);                                              
 APP_TIMER_DEF(mouse_slow_id);
 APP_TIMER_DEF(sensor_cal_id);
 APP_TIMER_DEF(connect_sleep_id);
+APP_TIMER_DEF(calSensorSleepId);
 APP_TIMER_DEF(saadc_sample_id);
 APP_TIMER_DEF(sensor_poll_timer_id);
 APP_TIMER_DEF(touch_action_detect_id);
@@ -1024,8 +1025,8 @@ void ClearAccCalibrateDir(){
 #define ACC_FILE_ID     0x1111
 #define ACC_REC_KEY     0x2223
 
-#define MAG_B_FILE_ID     0x4111
-#define MAG_B_REC_KEY     0x5222
+#define MAG_FILE_ID     0x1111
+#define MAG_REC_KEY     0x2224
 static void my_fds_evt_handler(fds_evt_t const * const p_fds_evt)
 {
 	//NRF_LOG_INFO("fds_event_handler = 0x%x\r\n",p_fds_evt->id);
@@ -1166,6 +1167,10 @@ void WriteAccBiasAndScaleToMemory(){
 	fds_test_find_and_delete(ACC_FILE_ID,ACC_REC_KEY);
 	fds_test_write((uint32_t*)calib.acc_scale,ACC_FILE_ID,ACC_REC_KEY);
 	acc_cal_status=0x01;
+}
+void WriteMagBiasAndScaleToMemory(){
+	fds_test_find_and_delete(MAG_FILE_ID,MAG_REC_KEY);
+	fds_test_write((uint32_t*)calib.mag_scale,MAG_FILE_ID,MAG_REC_KEY);
 }
 uint32_t gyro_offset_h=0x00000000;
 uint32_t gyro_offset_l=0x00000000;
@@ -1320,6 +1325,26 @@ void bmi160_acc_cal_offset_apply()
 	}
 	
 }
+void bmi160_mag_cal_offset_apply()
+{
+	uint32_t err_code;
+	uint32_t read_mag_offset[6]={0x00,0x0,0x0,0x0,0x0,0x0};
+	//err_code =fds_test_init();
+	fds_read(read_mag_offset,MAG_FILE_ID,MAG_REC_KEY);
+	if(read_mag_offset[0] || read_mag_offset[1] || read_mag_offset[5]){
+		calib.mag_bias[0] = ((float*)read_mag_offset)[3];
+		calib.mag_bias[1] = ((float*)read_mag_offset)[4];
+		calib.mag_bias[2] = ((float*)read_mag_offset)[5];
+		calib.mag_scale[0] = ((float*)read_mag_offset)[0];
+		calib.mag_scale[1] = ((float*)read_mag_offset)[1];
+		calib.mag_scale[2] = ((float*)read_mag_offset)[2];
+    	NRF_LOG_INFO("mag bias read ok !!  *10000  [%d] [%d] [%d]\r\n",(int32_t)(calib.mag_bias[0]*10000),(int32_t)(calib.mag_bias[1]*10000),(int32_t)(calib.mag_bias[2]*10000));
+    	NRF_LOG_INFO("mag scale read ok !!  *10000  [%d] [%d] [%d]\r\n",(int32_t)(calib.mag_scale[0]*10000),(int32_t)(calib.mag_scale[1]*10000),(int32_t)(calib.mag_scale[2]*10000));
+	}else{
+    	NRF_LOG_INFO("mag bias scale read fail !!\r\n");
+	}
+	
+}
 //--flash oper end
 static void connect_sleep_handler(void* p_context)
 {
@@ -1338,6 +1363,25 @@ static void connect_sleep_stop(void)
 {
 	app_timer_stop(connect_sleep_id);
 }
+
+static void CalSensorSleepHandler(void* p_context)
+{
+	NRF_LOG_INFO("calsensor no operation to long goto sleep now ....\r\n");
+	sleep_mode_enter_power();
+}
+static void CalSensorTimeInit(void)
+{
+	app_timer_create(&calSensorSleepId,APP_TIMER_MODE_SINGLE_SHOT,CalSensorSleepHandler);
+}
+static void CalSensorTimeStart(void)
+{
+	app_timer_start(calSensorSleepId,APP_TIMER_TICKS(60000*3),NULL);//8min
+}
+static void CalSensorTimeStop(void)
+{
+	app_timer_stop(calSensorSleepId);
+}
+
 //--saadc oper start
 extern int saadc_sample_time_ms;
 static void saadc_sample_start(void)
@@ -3665,6 +3709,10 @@ int set_data(enum DATA_TYPE type,int data)
 
 
 
+static uint16_t time_stamp=0;
+extern uint32_t sensorTime;
+static uint32_t sensorCurrentTime=0,sensorLastTime=0;
+static nrf_drv_systick_state_t systickUpdateTime=0,systickLastTime=0,systickCurrentTime=0;
 #define MadgwickAHRSupdate_FRQ 2.5			// 400hz
 static void MadgwickAHRSupdate_start()
 {
@@ -3680,9 +3728,14 @@ static void MadgwickAHRSupdate_handler(void* p_context)
 	static uint32_t det_tick1=0,det_tick2=0;
 	nrf_drv_systick_get(&systick_s);
 	MadgwickAHRSupdate_start();
+
+
 #if 1
 	if(open_imu_send == true){
 		SENSOR_READ_TEST(dof3_buf,data1);
+		
+		nrf_drv_systick_get(&systickUpdateTime);
+		
 		if(dof3_buf[0] <= 0.2 && dof3_buf[1] <= 0.2 && dof3_buf[2] <= 0.2){
 			gyro_move = false;
 			//NRF_LOG_INFO("------------------------ gyro no move\n\r");
@@ -3755,24 +3808,28 @@ if(i==512)i=0;
 		float imudata_uncalib[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		
 		if (bNewMag || 1 ) {
-			if (bGyroCalibrated) {
+			if (bGyroCalibrated || calib.gyro_bias[0]*1000 ) {
 				//NRF_LOG_INFO("gyro start: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
 				correctGyro(imudata, calib.gyro_bias);
 				//NRF_LOG_INFO("gyro   end: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
 			}
-			if (bAccCalibrated || 1) {
+			if (bAccCalibrated || calib.acc_bias[0]*1000) {
 				//NRF_LOG_INFO("acc ----  biasx %d biasy %d biasz %d\n",(int32_t)(calib.acc_bias[0]*10000),(int32_t)(calib.acc_bias[1]*10000),(int32_t)(calib.acc_bias[2]*10000));
 				//NRF_LOG_INFO("acc start: %6d, %6d, %6d\n", (int32_t)(imudata[3]*1000), (int32_t)(imudata[4]*1000), (int32_t)(imudata[5]*1000));
 				correctAcc(imudata+3, calib.acc_scale,calib.acc_bias);
 				//NRF_LOG_INFO("acc end..: %6d, %6d, %6d\n", (int32_t)(imudata[3]*1000), (int32_t)(imudata[4]*1000), (int32_t)(imudata[5]*1000));
 			}
-			if (bMagCalibrated) {
-				//NRF_LOG_INFO("gyro 1: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+			if (bMagCalibrated || calib.mag_bias[0]*1000) {
+			//	NRF_LOG_INFO("mag 1: %6d, %6d, %6d\n", (int32_t)(imudata[6]*1000), (int32_t)(imudata[7]*1000), (int32_t)(imudata[8]*1000));
 				correctMag(imudata+6,calib.mag_scale,calib.mag_bias);
-				//NRF_LOG_INFO("gyro 2: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
+			//	NRF_LOG_INFO("mag 2: %6d, %6d, %6d\n", (int32_t)(imudata[6]*1000), (int32_t)(imudata[7]*1000), (int32_t)(imudata[8]*1000));
+				MadgwickAHRSupdate(imudata);
+				//MadgwickAHRSupdateWithoutMag(imudata);
+			}else{
+				MadgwickAHRSupdateWithoutMag(imudata);
 			}
 			//MadgwickAHRSupdate(imudata);
-			MadgwickAHRSupdateWithoutMag(imudata);
+			//MadgwickAHRSupdateWithoutMag(imudata);
 			
 			
 			float q[] = {q0, q1, q2, q3};
@@ -4042,11 +4099,59 @@ void sensor_data_poll_handler(void* p_context)
 	//ACCX,ACCY,ACCZ,
 	//GYROX,GYROY,GYROZ,
 	//TOUCHX,TOUCHY,
-	static uint16_t time_stamp=0;
 	void *p=sensor_data;
-	time_stamp++;
-	if(time_stamp==512)
-		time_stamp=0;
+	static int timeStampFlow=0;
+#ifdef SENSOROSC
+	if(sensorTime <= sensorCurrentTime){
+	
+	}else{
+		static bool sensorCurrentTimeInit = false;
+		static float timeStampFloat = 0;
+		if(sensorCurrentTimeInit){
+			timeStampFloat += ((sensorTime - sensorCurrentTime)*39);
+			time_stamp = (uint32_t)(timeStampFloat/1000);
+			//time_stamp +=(uint16_t) ((sensorTime - sensorCurrentTime)*39);
+			if(time_stamp >=512){
+				timeStampFloat -= 512*1000;
+				time_stamp -=512;
+				timeStampFlow++;
+			}
+		}
+		sensorCurrentTime = sensorTime;
+		if(!sensorCurrentTimeInit) {
+			time_stamp = 0;
+			sensorCurrentTimeInit = true;
+		}
+	}
+#else
+	{
+		static bool systickCurrentTimeInit = false;
+		static uint32_t systickStampFloat = 0;
+		if(systickCurrentTimeInit){
+			if(systickUpdateTime.time >= systickCurrentTime.time){
+				systickStampFloat += (16777215 + systickCurrentTime.time - systickUpdateTime.time);
+			}else{
+				systickStampFloat += (systickCurrentTime.time - systickUpdateTime.time);
+			}
+			time_stamp = (uint32_t)(systickStampFloat/64000);
+			if(time_stamp >=512){
+				systickStampFloat -= 512*64000;
+				time_stamp -=512;
+				timeStampFlow++;
+			}
+		}
+		systickCurrentTime.time = systickUpdateTime.time;
+		if(!systickCurrentTimeInit) {
+			time_stamp = 0;
+			systickCurrentTimeInit = true;
+		}
+	}
+
+#endif
+	//NRF_LOG_INFO("time_stamp == %5d * %4d\r\n",time_stamp,timeStampFlow+1);
+	//time_stamp++;
+	//if(time_stamp==512)
+	//	time_stamp=0;
 //time_stamp 0-8
 	set_data(TIME_STAMP,time_stamp);
 //packet id
@@ -4278,7 +4383,6 @@ void InitCore(bool* erase_bonds){
 	twi_init_1();
 	saadc_init();
 	nrf_drv_systick_init();
-	fds_test_init();
 
 }
 void InitButtonAndLedsGPIO(){
@@ -4394,17 +4498,22 @@ int main(void)
 
 	InitICRegisters();
 	if(mode_will_cal){
+		fds_test_init();
+		CalSensorTimeInit();
+		CalSensorTimeStart();
 		sensor_cal_start();
-ClearAccCalibrateDir();
-	MadgwickAHRSupdate_start();
+		ClearAccCalibrateDir();
+		MadgwickAHRSupdate_start();
 		goto WHILE;
 	}
 
 	sw3153_light_select(BLUE, BLINK_LEVEL_2);
 	InitTouchDevice();
 	advertising_start(false);
+	fds_test_init();
 	bmi160_gyro_cal_offset_apply();
 	bmi160_acc_cal_offset_apply();
+	bmi160_mag_cal_offset_apply();
 	SomeTimerStart();
 	if(mode_will_test){
 		Mode_switch(MODE_TEST,false);

@@ -21,7 +21,7 @@
 
 #define CALIBRATE_GYRO			1
 #define CALIBRATE_ACC				1
-#define CALIBRATE_MAG				0
+#define CALIBRATE_MAG				1
 
 
 typedef struct 
@@ -124,13 +124,14 @@ int tryCalibration( CalibResult* res, float* imuData, float* q)
 		if (calibrateMag(mag_scale, mag_bias)) {
 			res->bCalibrated_mag = 1;
 
-			res->mag_scale[0] = mag_scale[0];
-			res->mag_scale[1] = mag_scale[1];
-			res->mag_scale[2] = mag_scale[2];
+			res->mag_scale[0] = calib.mag_scale[0];
+			res->mag_scale[1] = calib.mag_scale[1];
+			res->mag_scale[2] = calib.mag_scale[2];
 
-			res->mag_bias[0] = mag_bias[0];
-			res->mag_bias[1] = mag_bias[1];
-			res->mag_bias[2] = mag_bias[2];
+			res->mag_bias[0] = calib.mag_bias[0];
+			res->mag_bias[1] = calib.mag_bias[1];
+			res->mag_bias[2] = calib.mag_bias[2];
+			WriteMagBiasAndScaleToMemory();
 		}
 		
 	}
@@ -477,6 +478,7 @@ int checkMagCalibration(float* mag, float* q)
 }
 
 
+extern bool mode_will_cal;
 int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 {
 	int i;
@@ -545,17 +547,18 @@ int checkGyroAndAccCalibration(float* gyro, float* acc, float* gyro_bias)
 				
 				
 				
-                LOGI("gyro bias: %6d, %6d, %6d\n", (int32_t)(staticInterval.gyro[0]*10000), (int32_t)(staticInterval.gyro[1]*10000), (int32_t)(staticInterval.gyro[2]*10000));
+                //LOGI("gyro bias: %6d, %6d, %6d\n", (int32_t)(staticInterval.gyro[0]*10000), (int32_t)(staticInterval.gyro[1]*10000), (int32_t)(staticInterval.gyro[2]*10000));
 
 
 #if CALIBRATE_ACC
 				static int last_dir = -1;
-                LOGI("acc -- : %6d, %6d, %6d\n", (int32_t)(staticInterval.acc[0]*100), (int32_t)(staticInterval.acc[1]*100), (int32_t)(staticInterval.acc[2]*100));
+                //LOGI("acc -- : %6d, %6d, %6d\n", (int32_t)(staticInterval.acc[0]*100), (int32_t)(staticInterval.acc[1]*100), (int32_t)(staticInterval.acc[2]*100));
 				int dir = checkAccDirection(staticInterval.acc[0], staticInterval.acc[1], staticInterval.acc[2]);
 
 				if (dir >= 0 && dir != last_dir) {
 				LOGI("acc dir %d\n\r", dir);
-				SetAccCalibrateDir(dir);
+				if(mode_will_cal == true)
+					SetAccCalibrateDir(dir);
 					// check time
 					if (vinterval_size == 0) {
 						firstAccTime = cnt;
@@ -807,7 +810,10 @@ int calibrateMag(float* mag_scale, float* mag_bias)
     LOGI("Scale: \n%6d, %6d, %6d\n", (int32_t)(mag_scale[0]*1000), (int32_t)(mag_scale[1]*1000), (int32_t)(mag_scale[2]*1000));
     LOGI("Bias: \n%6d, %6d, %6d\n", (int32_t)(mag_bias[0]*1000), (int32_t)(mag_bias[1]*1000), (int32_t)(mag_bias[2]*1000));
     LOGI("\n");
-
+for(i=0;i<3;i++){
+	calib.mag_bias[i] = mag_bias[i];
+	calib.mag_scale[i] = mag_scale[i];
+}
 	float sample_sum = 0;
 	float sample_sum2 = 0;
 	for (i = 0; i < vmags_size; i++)

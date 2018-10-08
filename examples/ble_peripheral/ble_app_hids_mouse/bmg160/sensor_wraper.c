@@ -137,6 +137,7 @@ int  SENSOR_READ_TEST_3(s16 * buf)
 }
 int buf_need_resent[6]={0};
 extern bool gyro_resent_flag;
+uint32_t sensorTime=0;
 int  SENSOR_READ_TEST(float * buf,int16_t *data)
 { 
 #ifdef TIME_DUR_DEBUG	 
@@ -144,13 +145,12 @@ int  SENSOR_READ_TEST(float * buf,int16_t *data)
 	//duringUs=get_during_us();
 	start_during();
 #endif
-	static uint32_t sensorTime=0;
 	//MPU6050_ONCE(sensor_data);
 
 	bmi160_read_gyro_xyz(&g_gyroxyz);
 	bmi160_read_accel_xyz(&g_accelxyz);
 	bmi160_get_sensor_time(&sensorTime);
-    NRF_LOG_INFO("read sensortime  [%d] ----- \r\n",sensorTime);
+    //NRF_LOG_INFO("read sensortime  [%d] ----- \r\n",sensorTime);
 	if(abs(g_gyroxyz.y) >=32767 || abs(g_gyroxyz.x) >=32767|| abs(g_gyroxyz.z) >=32767 ){
 	
     NRF_LOG_INFO("read gyro after x[%d]  y[%d] z[%d] ----- \r\n",g_gyroxyz.y,g_gyroxyz.x,g_gyroxyz.z);
