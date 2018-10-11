@@ -314,7 +314,7 @@ char project_flag=0x01;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x02;
-#define MANUFACTURER_NAME               "wangcq327_v229_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v230_K02"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -324,7 +324,7 @@ char project_flag=0x02;
 static enum Mode_select MODE_INIT = MODE_3D;   // the init mode of connection
 static bool report_system_in_3D_mode = false;  // if use the function of transfer key to system in 3D mode
 char project_flag=0x03;
-#define MANUFACTURER_NAME               "wangcq327_v231_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "wangcq327_v232_K07"  //vX.X.X  0<=X<=9  the max version is wangcq327_v9.9.9_...                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(8, UNIT_1_25_MS)             /**< Maximum connection interval (15 ms). */
 //#define TRANSFER_FORMAT_1
 #endif
@@ -1568,38 +1568,6 @@ uint32_t custom_on_send(uint16_t conn_handle,ble_bas_t * p_bas,int8_t *send_data
 		if(err_code == 19){
 			send_lost ++;
     		NRF_LOG_INFO("----- ---------------------- send error [19] lost[%d] all[%d] !\r\n",send_lost,send_all);
-		}
-		if(err_code ==19 && (send_data[0]==GYRO_DATA)){
-			gyro_resent_flag=true;
-		    static int t;
-    		NRF_LOG_INFO("----- ---------------------- gyro send error %d [%d]\r\n",err_code,t++);
-		}else if(err_code == 0 && (send_data[0]==GYRO_DATA)){
-			gyro_resent_flag=false;
-		}
-		if(err_code == 19 && ((send_data[0] == KEY_DATA)||(send_data[0] == TOUCH_MOVE))){
-			if(send_data[0]==TOUCH_MOVE){
-				touch_action_detect_stop();
-			}
-    		//NRF_LOG_INFO("----- ---------------------- key/touch[0x%x] error %d %d\r\n",send_data[0],err_code,i++);
-			nrf_delay_ms(50);
-			err_code = sd_ble_gatts_hvx(conn_handle,&params);
-			if(err_code == 19){
-    			NRF_LOG_INFO("----- ----------------------key  error_code resend %d error\r\n",err_code);
-			}else{
-    			NRF_LOG_INFO("----- ----------------------key  error_code resend %d ok\r\n",err_code);
-			}
-			if(send_data[0]==TOUCH_MOVE){
-				touch_action_detect_start();
-				step_Y=step_temp_Y = (Touch_Info.Y_Axis-Touch_Info.Y_Axis_Second) / ONE_STEP;
-				step_X=step_temp_X = (Touch_Info.X_Axis-Touch_Info.X_Axis_Second) / ONE_STEP;
-				if(Touch_Info.Touch_Status == 0){
-					touch_action_detect_flag=0;
-					step_temp_Y=0;
-					step_Y=0;
-					step_temp_X=0;
-					step_X=0;
-				}
-			}
 		}
     }
 	return err_code;
@@ -3864,7 +3832,7 @@ if(i==512)i=0;
 		Q03[2] =  -q3;
 		Q03[3] =  q2;
 		//NRF_LOG_INFO("start  q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(Q03[0]*1000),(int32_t)(Q03[1]*1000),(int32_t)(Q03[2]*1000),(int32_t)(Q03[3]*1000));
-#if 1
+	#if 1
 		quaternion2AxisAngle(Q03,DegreeArray);
 		//NRF_LOG_INFO("               Deagree [%5d][%5d][%5d]\r\n",(int16_t) (DegreeArray[0]*10),(int16_t) (DegreeArray[1]*10),(int16_t) (DegreeArray[2]*10));
 		{
@@ -3873,10 +3841,10 @@ if(i==512)i=0;
 		//NRF_LOG_INFO("end    q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(q[0]*1000),(int32_t)(q[1]*1000),(int32_t)(q[2]*1000),(int32_t)(q[3]*1000));
 		quatToEuler1(q,DegreeArray);
 		}
-#else		
+	#else		
 	//	quatToEuler1(Q03,DegreeArray);
-#endif
-#if 0
+	#endif
+	#if 0
 		if(bsp_button_is_pressed(5) == 1){
 			quaternion2AxisAngle(Q03,DegreeArray);
 			//NRF_LOG_INFO("o               Deagree [%5d][%5d][%5d]\r\n",(int16_t) (DegreeArray[0]*10),(int16_t) (DegreeArray[1]*10),(int16_t) (DegreeArray[2]*10));
@@ -3892,22 +3860,22 @@ if(i==512)i=0;
 			NRF_LOG_INFO("end     q[0,1,2,3]*1000 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(Q03[0]*1000),(int32_t)(Q03[1]*1000),(int32_t)(Q03[2]*1000),(int32_t)(Q03[3]*1000));
 			//NRF_LOG_INFO("e               Deagree [%5d][%5d][%5d]\r\n",(int16_t) (DegreeArray[0]*10),(int16_t) (DegreeArray[1]*10),(int16_t) (DegreeArray[2]*10));
 		}
-#endif
+	#endif
 		
 
 		{
-//#define __AVG
-#ifndef __AVG
+	//#define __AVG
+	#ifndef __AVG
 		DeagreeArray_int[0] =  (int16_t) (DegreeArray[0]*10);
 		DeagreeArray_int[1] =  (int16_t) (DegreeArray[1]*10);
 		DeagreeArray_int[2] =  (int16_t) (DegreeArray[2]*10);
-#else
+	#else
 		//NRF_LOG_INFO("gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
 
 			DeagreeArray_int_buffer[0] = (int16_t) (DegreeArray[0]*10);
 			DeagreeArray_int_buffer[1] = (int16_t) (DegreeArray[1]*10);
 			DeagreeArray_int_buffer[2] = (int16_t) (DegreeArray[2]*10);
-#define BUFFER_SIZE 30
+		#define BUFFER_SIZE 30
 		static int16_t avg_buffer[3][BUFFER_SIZE]=0;
 		static char time=0;
 		if(time==BUFFER_SIZE)time=0;
@@ -3929,7 +3897,7 @@ if(i==512)i=0;
 			DeagreeArray_int[1] = sum[1]/BUFFER_SIZE;
 			DeagreeArray_int[2] = sum[2]/BUFFER_SIZE;
 		}
-#endif
+	#endif
 		}
 
 		//NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
@@ -3951,9 +3919,9 @@ if(i==512)i=0;
 			DeagreeArray_int[0] = DeagreeArray_int_buffer[0];
 			DeagreeArray_int[1] = DeagreeArray_int_buffer[1];
 			DeagreeArray_int[2] = DeagreeArray_int_buffer[2];			
-#define __AVG
-#ifdef __AVG
-#define BUFFER_SIZE 10
+	#define __AVG
+	#ifdef __AVG
+		#define BUFFER_SIZE 10
 		static int16_t avg_buffer[3][BUFFER_SIZE]=0;
 		static char time=0;
 		if(time==BUFFER_SIZE)time=0;
@@ -3971,12 +3939,12 @@ if(i==512)i=0;
 			DeagreeArray_int[0] = sum[0]/BUFFER_SIZE;
 			DeagreeArray_int[1] = sum[1]/BUFFER_SIZE;
 			DeagreeArray_int[2] = sum[2]/BUFFER_SIZE;
-#endif
+	#endif
 			}
 		
 #endif
-		//NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
-			//NRF_LOG_INFO("  q0-3 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(q0*1000),(int32_t)(q1*1000),(int32_t)(q2*1000),(int32_t)(q3*1000));
+//		NRF_LOG_INFO("  Deagree [%5d][%5d][%5d]\r\n",DeagreeArray_int[0],DeagreeArray_int[1],DeagreeArray_int[2]);
+//			NRF_LOG_INFO("  q0-3 [%5d][%5d][%5d][%5d]\r\n",(int32_t)(q0*1000),(int32_t)(q1*1000),(int32_t)(q2*1000),(int32_t)(q3*1000));
 	}
 #endif
 //#define OPEN_LOG_TIME1
