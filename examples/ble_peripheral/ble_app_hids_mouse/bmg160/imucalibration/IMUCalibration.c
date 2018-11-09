@@ -20,8 +20,8 @@
 
 
 #define CALIBRATE_GYRO			1
-#define CALIBRATE_ACC				1
-#define CALIBRATE_MAG				1
+#define CALIBRATE_ACC				0
+#define CALIBRATE_MAG				0
 
 
 typedef struct 

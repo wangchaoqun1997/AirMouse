@@ -328,7 +328,7 @@ void read_qmcX983_xyz(int *data)
 	data[2] = output[QMCX983_AXIS_Z];
 	char databuf1 = 0x09;
 	I2C_RxData(&databuf1, 1);
-//	MSE_LOG("QMCX983 data [%d, %d, %d ,0x%x] _A\n", data[0], data[1], data[2],databuf1);
+	MSE_LOG("QMCX983 data [%d, %d, %d ,0x%x] _A\n", data[0], data[1], data[2],databuf1);
 	return ;
 }
 
