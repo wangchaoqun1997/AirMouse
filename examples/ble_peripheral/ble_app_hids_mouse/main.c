@@ -3775,7 +3775,7 @@ if(i==512)i=0;
 		float imudata[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		float imudata_uncalib[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		
-		if (bNewMag) {
+		if (bNewMag || 1) {
 			if (bGyroCalibrated || calib.gyro_bias[0]*1000 ) {
 				//NRF_LOG_INFO("gyro start: %6d, %6d, %6d\n", (int32_t)(imudata[0]*1000), (int32_t)(imudata[1]*1000), (int32_t)(imudata[2]*1000));
 				correctGyro(imudata, calib.gyro_bias);
