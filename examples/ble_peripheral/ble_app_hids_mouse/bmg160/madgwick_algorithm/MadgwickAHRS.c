@@ -192,7 +192,7 @@ void MadgwickAHRSupdate(float* data)
 	
 	float magNorm2 = mx*mx + my*my + mz*mz;
 	float accNorm2 = ax*ax + ay*ay + az*az;
-	if (cnt > 2.0f*sampleFreq || magNorm2 > 1) {
+	if (cnt > 0.1f*sampleFreq || magNorm2 > 1) {
 		beta = 0.05f;
 		//NRF_LOG_INFO("gyro norm2: %6d\n\r",(int32_t)(gyroNorm2*10000));
 		if (gyroNorm2 < 1e-3) {
@@ -205,14 +205,15 @@ void MadgwickAHRSupdate(float* data)
 	}
 	else {
 		
-		if (accNorm2 > 170 || accNorm2 < 50)
-			beta = 0.1f;
-		else {
-			beta = 0.5f - 0.3f * cnt1 / sampleFreq;
-			if (beta < 0.05f)
-				beta = 0.05f;
-		}
-//		beta = 0.1f;
+//		if (accNorm2 > 170 || accNorm2 < 50)
+//			beta = 0.1f;
+//		else {
+//			beta = 0.5f - 0.3f * cnt1 / sampleFreq;
+//			if (beta < 0.05f)
+//				beta = 0.05f;
+//		}
+		
+		beta = 0.1f;
 	}
 
 	// Rate of change of quaternion from gyroscope
