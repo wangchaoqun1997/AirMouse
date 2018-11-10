@@ -977,9 +977,12 @@ void sleep_mode_enter_power(void)
 
 //--flash oper start
 static volatile uint8_t write_flag=0;
-static uint8_t gyro_cal_status=0x00,acc_cal_status=0x00;
+static uint8_t gyro_cal_status=0x00,acc_cal_status=0x00,mag_cal_status=0x00;
 static uint8_t accCalibrateDir = 0x00;
 uint8_t SetAccCalibrateDir(uint8_t dir){
+	if(mag_cal_status == 0x00)
+			return 0x00;
+
 	if((accCalibrateDir >> dir ) & 0x01){
     	NRF_LOG_INFO("accCalibrateDir flag found\r\n");
 	}else{
@@ -1044,7 +1047,7 @@ static void my_fds_evt_handler(fds_evt_t const * const p_fds_evt)
 				write_flag=1;
 					NRF_LOG_INFO("fds write ok ....\r\n");
 				if(gyro_cal_status==0x01){
-					if(acc_cal_status==0x01){
+					if(acc_cal_status==0x01 && mag_cal_status==0x01){
 						NRF_LOG_INFO("sensor cal ok ,into sleep ....\r\n");
 						sleep_mode_enter_power();
 					}
@@ -1171,6 +1174,11 @@ void WriteAccBiasAndScaleToMemory(){
 void WriteMagBiasAndScaleToMemory(){
 	fds_test_find_and_delete(MAG_FILE_ID,MAG_REC_KEY);
 	fds_test_write((uint32_t*)calib.mag_scale,MAG_FILE_ID,MAG_REC_KEY);
+
+	//sw3153_light_select(GREEN, BLINK_LEVEL_0);
+	//nrf_delay_ms(2000);
+	ClearAccCalibrateDir();
+	mag_cal_status=0x01;
 }
 uint32_t gyro_offset_h=0x00000000;
 uint32_t gyro_offset_l=0x00000000;
@@ -1180,10 +1188,44 @@ short apply_gyro_offset_Z;
 short apply_gsensor_offset_X;
 short apply_gsensor_offset_Y;
 short apply_gsensor_offset_Z;
+bool sensor_cal_status()
+{
+	bool isCalib=true;
+	uint32_t read_mag_offset[6]={0x00};
+	fds_read(read_mag_offset,GYRO_FILE_ID,GYRO_REC_KEY);
+	if(!(read_mag_offset[1] & 0xFFFF0000)){
+		isCalib = false;
+		NRF_LOG_INFO("Error Do Not Calib Gyro\r\n");
+	}
+	
+	fds_read(read_mag_offset,ACC_FILE_ID,ACC_REC_KEY);
+	if((abs( (int32_t)(((float*)read_mag_offset)[1] * 10000) )>13000) ||(abs( (int32_t)(((float*)read_mag_offset)[1] * 10000) )<8000) ){
+		isCalib = false;
+		NRF_LOG_INFO("Error Do Not Calib Acc [%d]\r\n",(int32_t)(((float*)read_mag_offset)[1] * 10000));
+	}
+	fds_read(read_mag_offset,MAG_FILE_ID,MAG_REC_KEY);
+	if((abs( (int32_t)(((float*)read_mag_offset)[1] * 10000) )>13000) ||(abs( (int32_t)(((float*)read_mag_offset)[1] * 10000) )<8000) ){
+		isCalib = false;
+		NRF_LOG_INFO("Error Do Not Calib Mag [%d]\r\n",(int32_t)(((float*)read_mag_offset)[1] * 10000));
+	}	
+	if(isCalib == false){
+		sw3153_light_select(RED, BLINK_LEVEL_0);
+		nrf_delay_ms(1000);
+		return false;
+	}else{
+		return true;
+	}
+	
+}
+
+
+void qmx983_mag_calibration(void)
+{
+}
 
 void bmi160_acc_calibration(void)
 {
-	ClearAccCalibrateDir();
+	//ClearAccCalibrateDir();
 }
 void bmi160_gyro_calibration(void)
 {
@@ -1193,9 +1235,9 @@ void bmi160_gyro_calibration(void)
 	uint32_t read_gryo_offset[6]={0x00};
 	//fds_test_init();
 	fds_read(read_gryo_offset,GYRO_FILE_ID,GYRO_REC_KEY);
-	if((read_gryo_offset[1] & 0xFFFF0000)){
+	if(sensor_cal_status()){
 		sw3153_light_select(RED, BLINK_LEVEL_NON);
-		nrf_delay_ms(1500);
+		nrf_delay_ms(2000);
 		if(! bsp_button_is_pressed(1/*back*/)){
     		NRF_LOG_INFO("haved apply offset not apply this time\r\n");
 			sleep_mode_enter_power();
@@ -1244,8 +1286,8 @@ void bmi160_gyro_calibration(void)
 		//Mode_switch(MODE_DISCONNECT,false);
 		sw3153_light_select(RED, BLINK_LEVEL_0);
 		nrf_delay_ms(2000);
-    	NRF_LOG_INFO("sensor calibrate fail ,into sleep !!! \r\n");
-		sleep_mode_enter_power();
+    	//NRF_LOG_INFO("sensor calibrate fail ,into sleep !!! \r\n");
+		//sleep_mode_enter_power();
 	}else{
 		gyro_cal_status=0x01;
 		gyro_offset_l = ((0xFFFF0000)&(cal_offset[1]<<16)) | ((0x0000FFFF)&cal_offset[0]);
@@ -1266,7 +1308,7 @@ void bmi160_gyro_calibration(void)
 		err_code = fds_test_write(writeData,GYRO_FILE_ID,GYRO_REC_KEY);
 		//nrf_delay_ms(2000);
 		//Mode_switch(MODE_DISCONNECT,false);
-		sw3153_light_select(BLUE_GREEN, BLINK_LEVEL_2);
+		sw3153_light_select(GREEN, BLINK_LEVEL_NON);
 		//sleep_mode_enter_power();
 	}
 
@@ -4278,16 +4320,6 @@ void bmg160_init(void)
 #endif
 }
 void sensor_poll_start();
-void sensor_cal_status()
-{
-	uint32_t read_gryo_offset[6]={0x00};
-	fds_read(read_gryo_offset,GYRO_FILE_ID,GYRO_REC_KEY);
-	if(!(read_gryo_offset[1] & 0xFFFF0000)){
-		sw3153_light_select(RED, BLINK_LEVEL_0);
-		nrf_delay_ms(500);
-	}
-
-}
 
 void DeviceAddressSet(bool erase_bonds){
 	if(erase_bonds == false)
@@ -4392,7 +4424,6 @@ void InitICRegisters(){
 	SENSOR_INIT();
 	qmcX983_init();
 	qst_ical_init();
-	sensor_cal_status();
 }
 void SomeTimerStart(){
     BatteryLevelTimersStart();
@@ -4469,12 +4500,14 @@ int main(void)
 		fds_test_init();
 		CalSensorTimeInit();
 		CalSensorTimeStart();
+		sensor_poll_start();
 		sensor_cal_start();
 		ClearAccCalibrateDir();
 		MadgwickAHRSupdate_start();
 		goto WHILE;
 	}
 
+	sensor_cal_status();
 	sw3153_light_select(BLUE, BLINK_LEVEL_2);
 	InitTouchDevice();
 	advertising_start(false);
