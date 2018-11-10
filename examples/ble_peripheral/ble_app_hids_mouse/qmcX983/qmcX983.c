@@ -145,7 +145,7 @@ int qmcX983_set_range(short range)
 }
 int qmcX983_set_ratio(char ratio)
 {
-#define QMCX983_SETRESET_FREQ_FAST  0x80
+#define QMCX983_SETRESET_FREQ_FAST  0x01
 	int err = 0;
 
 	unsigned char data[2];
@@ -328,7 +328,7 @@ void read_qmcX983_xyz(int *data)
 	data[2] = output[QMCX983_AXIS_Z];
 	char databuf1 = 0x09;
 	I2C_RxData(&databuf1, 1);
-	MSE_LOG("QMCX983 data [%d, %d, %d ,0x%x] _A\n", data[0], data[1], data[2],databuf1);
+	//MSE_LOG("QMCX983 data [%d, %d, %d ,0x%x] _A\n", data[0], data[1], data[2],databuf1);
 	return ;
 }
 
@@ -965,9 +965,9 @@ static void qmcX983_fix(void)
 	data[0] = 0xb0;
 	err = I2C_TxData(data, 2);
 
-	data[1] = 0x80;
-	data[0] = 0x1b;
-	err = I2C_TxData(data, 2);
+	//data[1] = 0x80;
+	//data[0] = 0x1b;
+	//err = I2C_TxData(data, 2);
 
 }
 

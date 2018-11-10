@@ -3764,13 +3764,13 @@ if(i==512)i=0;
 
 
 		float mx,my,mz;
-		mx = magnet_xyz[2];// + 49;
+		mx = magnet_xyz[2] ;// 49;
 		my = magnet_xyz[1];// - 5;
 		mz = -magnet_xyz[0];// + 20;
 		
 	//	NRF_LOG_INFO("start acc: %6d, %6d, %6d\n", (int32_t)(ax*1000), (int32_t)(ay*1000), (int32_t)(az*1000));
 	//	NRF_LOG_INFO("start gyro: %6d, %6d, %6d\n", (int32_t)(gx*1000), (int32_t)(gy*1000), (int32_t)(gz*1000));
-	NRF_LOG_INFO("start mag: %6d, %6d, %6d\n", (int32_t)(mx), (int32_t)(my), (int32_t)(mz));
+	//NRF_LOG_INFO("start mag: %6d, %6d, %6d\n", (int32_t)(mx), (int32_t)(my), (int32_t)(mz));
 		
 		float imudata[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
 		float imudata_uncalib[] = {gx,gy,gz,ax,ay,az,mx*0.01f,my*0.01f,mz*0.01f};
@@ -3787,16 +3787,16 @@ if(i==512)i=0;
 				correctAcc(imudata+3, calib.acc_scale,calib.acc_bias);
 				//NRF_LOG_INFO("acc end..: %6d, %6d, %6d\n", (int32_t)(imudata[3]*1000), (int32_t)(imudata[4]*1000), (int32_t)(imudata[5]*1000));
 			}
-//			if (0 && (bMagCalibrated || calib.mag_bias[0]*1000)) {
-//			//	NRF_LOG_INFO("mag 1: %6d, %6d, %6d\n", (int32_t)(imudata[6]*1000), (int32_t)(imudata[7]*1000), (int32_t)(imudata[8]*1000));
-//				correctMag(imudata+6,calib.mag_scale,calib.mag_bias);
+			if ((bMagCalibrated || calib.mag_bias[0]*1000)) {
+			//	NRF_LOG_INFO("mag 1: %6d, %6d, %6d\n", (int32_t)(imudata[6]*1000), (int32_t)(imudata[7]*1000), (int32_t)(imudata[8]*1000));
+				correctMag(imudata+6,calib.mag_scale,calib.mag_bias);
 //			//	NRF_LOG_INFO("mag 2: %6d, %6d, %6d\n", (int32_t)(imudata[6]*1000), (int32_t)(imudata[7]*1000), (int32_t)(imudata[8]*1000));
-//				MadgwickAHRSupdate(imudata);
+				MadgwickAHRSupdate(imudata);
 //				//MadgwickAHRSupdateWithoutMag(imudata);
-//			}else{
-//				MadgwickAHRSupdateWithoutMag(imudata);
-//			}
-			MadgwickAHRSupdate(imudata);
+			}else{
+				MadgwickAHRSupdateWithoutMag(imudata);
+			}
+		//	MadgwickAHRSupdate(imudata);
 			//MadgwickAHRSupdateWithoutMag(imudata);
 			
 			
@@ -3985,14 +3985,14 @@ void sensor_data_poll_handler(void* p_context)
 	float magnet_xyz_float[3];
 	int8_t accuracy=0;
 	read_qmcX983_xyz(magnet_xyz_int);
-	magnet_xyz_float[0]= magnet_xyz_int[0] * 0.1f;
-	magnet_xyz_float[1]= magnet_xyz_int[1] * 0.1f;
-	magnet_xyz_float[2]= magnet_xyz_int[2] * 0.1f;
-	convert_magnetic(magnet_xyz_float,magnet_xyz,&accuracy);
+	//magnet_xyz_float[0]= magnet_xyz_int[0] * 0.1f;
+	//magnet_xyz_float[1]= magnet_xyz_int[1] * 0.1f;
+	//magnet_xyz_float[2]= magnet_xyz_int[2] * 0.1f;
+	//convert_magnetic(magnet_xyz_float,magnet_xyz,&accuracy);
 	
-	//magnet_xyz[0]= magnet_xyz_int[0] * 0.1f;
-	//magnet_xyz[1]= magnet_xyz_int[1] * 0.1f;
-	//magnet_xyz[2]= magnet_xyz_int[2] * 0.1f;
+	magnet_xyz[0]= magnet_xyz_int[0] * 0.1f;
+	magnet_xyz[1]= magnet_xyz_int[1] * 0.1f;
+	magnet_xyz[2]= magnet_xyz_int[2] * 0.1f;
 	
 	bNewMag = true;
 //#ifndef MAG_HAVE
@@ -4000,7 +4000,7 @@ void sensor_data_poll_handler(void* p_context)
 //	magnet_xyz[1]=0.00;
 //	magnet_xyz[2]=0.00;
 //#endif
-//	NRF_LOG_INFO("---convert_magnetic [%d][%d][%d]\r\n",(int32_t)(magnet_xyz[0]*10),(int32_t)(magnet_xyz[1]*10),(int32_t)(magnet_xyz[2]*10));
+//NRF_LOG_INFO("---convert_magnetic [%d][%d][%d]\r\n",(int32_t)(magnet_xyz[0]*10),(int32_t)(magnet_xyz[1]*10),(int32_t)(magnet_xyz[2]*10));
 	//magnet_xyz[0]=(magnet_xyz_int[0]+100)*1.0;
 	//magnet_xyz[1]=(magnet_xyz_int[1]-100)*1.0;
 	//magnet_xyz[2]=(magnet_xyz_int[2]-300)*1.0;
