@@ -230,10 +230,11 @@ int qmcX983_disable()
 
 	return 0;
 }
-
+extern bool isHaveMag;
 void qmcX983_init()
 {
 	uint8_t databuf[2];
+	isHaveMag = true;
 	databuf[0] = 0x0d;
 	if(I2C_RxData(databuf, 1)<0){
 		MSE_ERR("QMCX983 I2C_RxData error!\n");
@@ -266,6 +267,7 @@ void qmcX983_init()
 	}
 	else 
 	{
+		isHaveMag = false;
 		MSE_LOG("QMCX983 check ID faild!\n");
 	}
 	qmcX983_enable();
