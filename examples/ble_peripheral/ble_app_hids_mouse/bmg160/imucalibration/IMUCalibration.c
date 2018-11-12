@@ -133,10 +133,12 @@ int tryCalibration( CalibResult* res, float* imuData, float* q)
 			res->mag_bias[2] = calib.mag_bias[2];
 		
 			if(calib.mag_scale[0])
-			if( ((int32_t)(calib.mag_scale[0]*10000) < 8000) || ((int32_t)(calib.mag_scale[1]*10000) < 8000) || ((int32_t)(calib.mag_scale[2]*10000) < 8000) ){
-			
-			}else{
-				WriteMagBiasAndScaleToMemory();
+			if(\
+							(((int32_t)(calib.mag_scale[0]*10000) > 9000) && ((int32_t)(calib.mag_scale[0]*10000) < 11500))&& \
+							(((int32_t)(calib.mag_scale[1]*10000) > 9000) && ((int32_t)(calib.mag_scale[1]*10000) < 11500))&& \
+							(((int32_t)(calib.mag_scale[2]*10000) > 9000) && ((int32_t)(calib.mag_scale[2]*10000) < 11500)) \
+				){	
+					WriteMagBiasAndScaleToMemory();
 			}
 		}
 		
@@ -168,9 +170,11 @@ int tryCalibration( CalibResult* res, float* imuData, float* q)
 			res->acc_bias[0] = calib.acc_bias[0];
 			res->acc_bias[1] = calib.acc_bias[1];
 			res->acc_bias[2] = calib.acc_bias[2];
-			if( ((int32_t)(calib.acc_scale[0]*10000) < 8000) || ((int32_t)(calib.acc_scale[1]*10000) < 8000) || ((int32_t)(calib.acc_scale[2]*10000) < 8000) ){
-			
-			}else{	
+			if(\
+							(((int32_t)(calib.acc_scale[0]*10000) > 9500) && ((int32_t)(calib.acc_scale[0]*10000) < 10200))&& \
+							(((int32_t)(calib.acc_scale[1]*10000) > 9500) && ((int32_t)(calib.acc_scale[1]*10000) < 10200))&& \
+							(((int32_t)(calib.acc_scale[2]*10000) > 9500) && ((int32_t)(calib.acc_scale[2]*10000) < 10200)) \
+				){	
 				WriteAccBiasAndScaleToMemory();
 			}
 		}
