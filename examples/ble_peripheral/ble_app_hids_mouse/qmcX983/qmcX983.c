@@ -230,18 +230,14 @@ int qmcX983_disable()
 
 	return 0;
 }
-extern bool isHaveMag;
 int8_t qmcX983_init()
 {
 	uint8_t databuf[2];
-	int err=0;
-	isHaveMag = true;
+	int err=-1;
 	databuf[0] = 0x0d;
 	if(I2C_RxData(databuf, 1)<0){
 		MSE_ERR("QMCX983 I2C_RxData error!\n");
-		err = -1;
-		return err;
-	}
+			}
 
 	MSE_ERR("QMCX983 I2C_RxData 0x%x\n",databuf[0]);
 	if (databuf[0] == 0xff )
@@ -267,14 +263,17 @@ int8_t qmcX983_init()
 	{
 		chip_id = QMC7983_LOW_SETRESET;
 		MSE_LOG("QMCX983 I2C driver registered!\n");
+		err = 0;
+
 	}
 	else 
 	{
-		isHaveMag = false;
 		MSE_LOG("QMCX983 check ID faild!\n");
 	}
-	qmcX983_enable();
-	qmcX983_read_reg();
+	if(err == 0){
+		qmcX983_enable();
+		qmcX983_read_reg();
+	}
 	return err;
 }
  /*Status registers */

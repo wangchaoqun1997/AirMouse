@@ -991,6 +991,8 @@ bool isHaveMag = true;
 static uint8_t gyro_cal_status=0x00,acc_cal_status=0x00,mag_cal_status=0x00;
 static uint8_t accCalibrateDir = 0x00;
 uint8_t SetAccCalibrateDir(uint8_t dir){
+	
+	if(mode_will_test) return 0x00;
 	if(mag_cal_status == 0x00)
 			return 0x00;
 
@@ -1030,6 +1032,7 @@ uint8_t SetAccCalibrateDir(uint8_t dir){
 	return accCalibrateDir;
 }
 void ClearAccCalibrateDir(){
+	if(mode_will_test) return;
 	accCalibrateDir= 0x00;
 	sw3153_light_select(BLUE_GREEN_RED, BLINK_LEVEL_NON);
 }
@@ -3296,15 +3299,17 @@ Touch_Info.Y_Axis_Second = 250 - Touch_Info.Y_Axis_Second;
 						}					
 				}
 
-#if 0
+#if 1
+if(mode_will_test){
 if(Touch_Info.Touch_Status == 1){
 
-set_enable_pin(LED_EN,0);
-NRF_LOG_INFO("sensor interrupt hander--------------push %d %d\r\n",Touch_Info.Finger_ID,iii++);
+set_enable_pin(LED_EN,1);
+//NRF_LOG_INFO("sensor interrupt hander--------------push %d %d\r\n",Touch_Info.Finger_ID,iii++);
 }else if(Touch_Info.Touch_Status == 0){
 
-set_enable_pin(LED_EN,1);
-NRF_LOG_INFO("sensor interrupt hander-------------- up %d\r\n",Touch_Info.Finger_ID);
+set_enable_pin(LED_EN,0);
+//NRF_LOG_INFO("sensor interrupt hander-------------- up %d\r\n",Touch_Info.Finger_ID);
+}
 }
 #endif
 
@@ -4471,6 +4476,8 @@ void InitICRegisters(){
 		magIC=AK09918;
 		AKECS_Reset();
 		AKECS_SetMode_Con4Measure();
+	}else{
+		isHaveMag = false;
 	}
 
 

@@ -89,7 +89,7 @@ static long AKI2C_TxData(char *txData, int length)
 #define QMCX983_AXIS_Z            2
 
 static int cvt_map[3]={2,1,0};
-static int cvt_sign[3]={1,-1,1};
+static int cvt_sign[3]={-1,-1,-1};
 long AKECS_GetData(int *data)
 {
 
