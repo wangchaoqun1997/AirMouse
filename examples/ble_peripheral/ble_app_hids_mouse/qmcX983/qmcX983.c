@@ -210,12 +210,12 @@ void qmcX983_read_reg()
 	for(int i=0;i<=0x0D;i++){
 		uint8_t data=i;
 		I2C_RxData(&data,1);
-		MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
+		//MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
 	}	
 	for(int i=0x1b;i<=0x1b;i++){
 		uint8_t data=i;
 		I2C_RxData(&data,1);
-		MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
+		//MSE_ERR("QMCX983 read reg 0x%x 0x%x\r\n",i,data);
 	}
 }
 int qmcX983_disable()
@@ -231,13 +231,16 @@ int qmcX983_disable()
 	return 0;
 }
 extern bool isHaveMag;
-void qmcX983_init()
+int8_t qmcX983_init()
 {
 	uint8_t databuf[2];
+	int err=0;
 	isHaveMag = true;
 	databuf[0] = 0x0d;
 	if(I2C_RxData(databuf, 1)<0){
 		MSE_ERR("QMCX983 I2C_RxData error!\n");
+		err = -1;
+		return err;
 	}
 
 	MSE_ERR("QMCX983 I2C_RxData 0x%x\n",databuf[0]);
@@ -272,6 +275,7 @@ void qmcX983_init()
 	}
 	qmcX983_enable();
 	qmcX983_read_reg();
+	return err;
 }
  /*Status registers */
 #define STA_REG_ONE    0x06

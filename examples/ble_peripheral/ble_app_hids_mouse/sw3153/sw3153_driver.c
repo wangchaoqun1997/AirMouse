@@ -34,14 +34,14 @@ uint8_t sw3153_read_chipid(void)
 uint8_t sw3153_read_reg(void)
 {
 	uint8_t data=0;
-	NRF_LOG_INFO("sw3153 reg START -----------------\r\n");
+	//NRF_LOG_INFO("sw3153 reg START -----------------\r\n");
 	for(int i=0;i<4;i++){
 		I2C_Read_Addr8(WD3153_ADDRESS,i,&data,1);
-		NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x\r\n",i,data);
+		//NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x\r\n",i,data);
 	}
 	for(int i=0x30;i<0x40;i++){
 		I2C_Read_Addr8(WD3153_ADDRESS,i,&data,1);
-		NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x\r\n",i,data);
+		//NRF_LOG_INFO("sw3153 reg 0x%x: 0x%x\r\n",i,data);
 	}
 	return data;
 }

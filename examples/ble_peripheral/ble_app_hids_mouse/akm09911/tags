@@ -1,0 +1,422 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ACC_DATA_FLAG	akm09911.h	118;"	d
+ACC_DATA_READY	akm09911.h	123;"	d
+AK09911_FUSE_ASAX	akm09911.h	43;"	d
+AK09911_FUSE_ASAY	akm09911.h	44;"	d
+AK09911_FUSE_ASAZ	akm09911.h	45;"	d
+AK09911_MODE_FUSE_ACCESS	akm09911.h	52;"	d
+AK09911_MODE_POWERDOWN	akm09911.h	53;"	d
+AK09911_MODE_SELF_TEST	akm09911.h	51;"	d
+AK09911_MODE_SNG_MEASURE	akm09911.h	50;"	d
+AK09911_REGS_SIZE	akm09911.h	56;"	d
+AK09911_REG_CNTL1	akm09911.h	36;"	d
+AK09911_REG_CNTL2	akm09911.h	37;"	d
+AK09911_REG_CNTL3	akm09911.h	38;"	d
+AK09911_REG_HXH	akm09911.h	29;"	d
+AK09911_REG_HXL	akm09911.h	28;"	d
+AK09911_REG_HYH	akm09911.h	31;"	d
+AK09911_REG_HYL	akm09911.h	30;"	d
+AK09911_REG_HZH	akm09911.h	33;"	d
+AK09911_REG_HZL	akm09911.h	32;"	d
+AK09911_REG_INFO1	akm09911.h	25;"	d
+AK09911_REG_INFO2	akm09911.h	26;"	d
+AK09911_REG_ST1	akm09911.h	27;"	d
+AK09911_REG_ST2	akm09911.h	35;"	d
+AK09911_REG_TMPS	akm09911.h	34;"	d
+AK09911_REG_WIA1	akm09911.h	23;"	d
+AK09911_REG_WIA2	akm09911.h	24;"	d
+AK09911_RESET_DATA	akm09911.h	54;"	d
+AK09911_WIA1_VALUE	akm09911.h	57;"	d
+AK09911_WIA2_VALUE	akm09911.h	58;"	d
+AK8963_FUSE_ASAX	akm09911.h	78;"	d
+AK8963_FUSE_ASAY	akm09911.h	79;"	d
+AK8963_FUSE_ASAZ	akm09911.h	80;"	d
+AK8963_MODE_FUSE_ACCESS	akm09911.h	84;"	d
+AK8963_MODE_POWERDOWN	akm09911.h	85;"	d
+AK8963_MODE_SELF_TEST	akm09911.h	83;"	d
+AK8963_MODE_SNG_MEASURE	akm09911.h	82;"	d
+AK8963_REGS_SIZE	akm09911.h	88;"	d
+AK8963_REG_ASTC	akm09911.h	73;"	d
+AK8963_REG_CNTL1	akm09911.h	71;"	d
+AK8963_REG_CNTL2	akm09911.h	72;"	d
+AK8963_REG_HXH	akm09911.h	65;"	d
+AK8963_REG_HXL	akm09911.h	64;"	d
+AK8963_REG_HYH	akm09911.h	67;"	d
+AK8963_REG_HYL	akm09911.h	66;"	d
+AK8963_REG_HZH	akm09911.h	69;"	d
+AK8963_REG_HZL	akm09911.h	68;"	d
+AK8963_REG_I2CDIS	akm09911.h	76;"	d
+AK8963_REG_INFO	akm09911.h	62;"	d
+AK8963_REG_ST1	akm09911.h	63;"	d
+AK8963_REG_ST2	akm09911.h	70;"	d
+AK8963_REG_TS1	akm09911.h	74;"	d
+AK8963_REG_TS2	akm09911.h	75;"	d
+AK8963_REG_WIA	akm09911.h	61;"	d
+AK8963_RESET_DATA	akm09911.h	86;"	d
+AK8963_WIA_VALUE	akm09911.h	89;"	d
+AKECS_CheckDevice	akm09911.c	/^static int AKECS_CheckDevice(void)$/;"	f	file:
+AKECS_GetCloseStatus	akm09911.c	/^static int AKECS_GetCloseStatus(void)$/;"	f	file:
+AKECS_GetData	akm09911.c	/^static long AKECS_GetData(char *rbuf, int size)$/;"	f	file:
+AKECS_GetOpenStatus	akm09911.c	/^static int AKECS_GetOpenStatus(void)$/;"	f	file:
+AKECS_GetRawData	akm09911.c	/^static int AKECS_GetRawData(char *rbuf, int size)$/;"	f	file:
+AKECS_Reset	akm09911.c	/^static long AKECS_Reset(int hard)$/;"	f	file:
+AKECS_SaveData	akm09911.c	/^static void AKECS_SaveData(int *buf)$/;"	f	file:
+AKECS_SetMode	akm09911.c	/^static long AKECS_SetMode(char mode)$/;"	f	file:
+AKECS_SetMode_FUSEAccess	akm09911.c	/^static long AKECS_SetMode_FUSEAccess(void)$/;"	f	file:
+AKECS_SetMode_PowerDown	akm09911.c	/^static int AKECS_SetMode_PowerDown(void)$/;"	f	file:
+AKECS_SetMode_SelfTest	akm09911.c	/^static long AKECS_SetMode_SelfTest(void)$/;"	f	file:
+AKECS_SetMode_SngMeasure	akm09911.c	/^static long AKECS_SetMode_SngMeasure(void)$/;"	f	file:
+AKI2C_RxData	akm09911.c	/^static long AKI2C_RxData(char *rxData, int length)$/;"	f	file:
+AKI2C_TxData	akm09911.c	/^static long AKI2C_TxData(char *txData, int length)$/;"	f	file:
+AKM09911_BUFSIZE	akm09911.h	12;"	d
+AKM09911_DEBUG	akm09911.c	28;"	d	file:
+AKM09911_DEFAULT_DELAY	akm09911.c	30;"	d	file:
+AKM09911_DEV_NAME	akm09911.c	26;"	d	file:
+AKM09911_H	akm09911.h	5;"	d
+AKM09911_I2C_ADDRESS	akm09911.h	11;"	d
+AKM09911_I2C_NAME	akm09911.h	9;"	d
+AKM09911_RETRY_COUNT	akm09911.c	29;"	d	file:
+AKM_DRDY_IS_HIGH	akm09911.h	101;"	d
+AKM_FUSE_1ST_ADDR	akm09911.h	110;"	d
+AKM_I2C_NAME	akm09911.h	93;"	d
+AKM_MEASURE_TIME_US	akm09911.h	100;"	d
+AKM_MISCDEV_NAME	akm09911.h	94;"	d
+AKM_MODE_FUSE_ACCESS	akm09911.h	114;"	d
+AKM_MODE_POWERDOWN	akm09911.h	115;"	d
+AKM_MODE_SELF_TEST	akm09911.h	113;"	d
+AKM_MODE_SNG_MEASURE	akm09911.h	112;"	d
+AKM_NUM_SENSORS	akm09911.h	121;"	d
+AKM_REGS_1ST_ADDR	akm09911.h	109;"	d
+AKM_REGS_SIZE	akm09911.h	108;"	d
+AKM_REG_MODE	akm09911.h	97;"	d
+AKM_REG_RESET	akm09911.h	98;"	d
+AKM_REG_STATUS	akm09911.h	99;"	d
+AKM_RESET_DATA	akm09911.h	116;"	d
+AKM_RWBUF_SIZE	akm09911.h	107;"	d
+AKM_SENSOR_CONF_SIZE	akm09911.h	103;"	d
+AKM_SENSOR_DATA_SIZE	akm09911.h	104;"	d
+AKM_SENSOR_INFO_SIZE	akm09911.h	102;"	d
+AKM_SYSCLS_NAME	akm09911.h	95;"	d
+AKM_SYSDEV_NAME	akm09911.h	96;"	d
+AKM_YPR_DATA_SIZE	akm09911.h	106;"	d
+AMK_CTR_DEBUG	akm09911.c	/^	AMK_CTR_DEBUG  = 0X08,$/;"	e	enum:__anon1	file:
+AMK_DATA_DEBUG	akm09911.c	/^	AMK_DATA_DEBUG = 0X02,$/;"	e	enum:__anon1	file:
+AMK_FUN_DEBUG	akm09911.c	/^	AMK_FUN_DEBUG  = 0x01,$/;"	e	enum:__anon1	file:
+AMK_HWM_DEBUG	akm09911.c	/^	AMK_HWM_DEBUG  = 0X04,$/;"	e	enum:__anon1	file:
+AMK_I2C_DEBUG	akm09911.c	/^	AMK_I2C_DEBUG  = 0x10,$/;"	e	enum:__anon1	file:
+AMK_TRC	akm09911.c	/^} AMK_TRC;$/;"	v	typeref:enum:__anon1
+CALIBRATION_DATA_SIZE	akm09911.h	16;"	d
+CONVERT_M	akm09911.h	135;"	d
+CONVERT_M_DIV	akm09911.h	136;"	d
+CONVERT_O	akm09911.h	137;"	d
+CONVERT_O_DIV	akm09911.h	138;"	d
+CONVERT_Q16	akm09911.h	140;"	d
+CONVERT_Q16_DIV	akm09911.h	141;"	d
+CSPEC_SPI_USE	akm09911.h	145;"	d
+DBGFLAG	akm09911.h	150;"	d
+DBGPRINT	akm09911.h	198;"	d
+DBG_LEVEL0	akm09911.h	146;"	d
+DBG_LEVEL1	akm09911.h	147;"	d
+DBG_LEVEL2	akm09911.h	148;"	d
+DBG_LEVEL3	akm09911.h	149;"	d
+DEBUG	akm09911.c	25;"	d	file:
+DRIVER_VERSION	akm09911.c	/^MODULE_VERSION(DRIVER_VERSION);$/;"	v
+DRIVER_VERSION	akm09911.c	27;"	d	file:
+ECS_IOCTL_GETDATA	akm09911.h	178;"	d
+ECS_IOCTL_GET_ACCEL	akm09911.h	189;"	d
+ECS_IOCTL_GET_CLOSE_STATUS	akm09911.h	181;"	d
+ECS_IOCTL_GET_CONF	akm09911.h	192;"	d
+ECS_IOCTL_GET_DELAY	akm09911.h	183;"	d
+ECS_IOCTL_GET_DELAY_09911	akm09911.h	194;"	d
+ECS_IOCTL_GET_LAYOUT	akm09911.h	186;"	d
+ECS_IOCTL_GET_LAYOUT_09911	akm09911.h	195;"	d
+ECS_IOCTL_GET_MATRIX	akm09911.h	185;"	d
+ECS_IOCTL_GET_OPEN_STATUS	akm09911.h	180;"	d
+ECS_IOCTL_GET_OSENSOR_STATUS	akm09911.h	182;"	d
+ECS_IOCTL_GET_OUTBIT	akm09911.h	188;"	d
+ECS_IOCTL_GET_PROJECT_NAME	akm09911.h	184;"	d
+ECS_IOCTL_READ	akm09911.h	175;"	d
+ECS_IOCTL_RESET	akm09911.h	176;"	d
+ECS_IOCTL_SET_MODE	akm09911.h	177;"	d
+ECS_IOCTL_SET_YPR	akm09911.h	179;"	d
+ECS_IOCTL_SET_YPR_09911	akm09911.h	193;"	d
+ECS_IOCTL_WRITE	akm09911.h	174;"	d
+FST_AK09911	akm09911.c	/^int FST_AK09911(void)$/;"	f
+FST_AK8963	akm09911.c	/^int FST_AK8963(void)$/;"	f
+FUSION_DATA_FLAG	akm09911.h	120;"	d
+FUSION_DATA_READY	akm09911.h	125;"	d
+FctShipmntTestProcess_Body	akm09911.c	/^int FctShipmntTestProcess_Body(void)$/;"	f
+MAGN_ERR	akm09911.c	35;"	d	file:
+MAGN_ERR	akm09911.c	39;"	d	file:
+MAGN_LOG	akm09911.c	36;"	d	file:
+MAGN_LOG	akm09911.c	40;"	d	file:
+MAGN_TAG	akm09911.c	34;"	d	file:
+MAGN_TAG	akm09911.c	38;"	d	file:
+MAG_DATA_FLAG	akm09911.h	119;"	d
+MAG_DATA_READY	akm09911.h	124;"	d
+MSENSOR	akm09911.h	172;"	d
+RWBUF_SIZE	akm09911.h	15;"	d
+SENSOR_DATA_SIZE	akm09911.h	14;"	d
+TEST_DATA	akm09911.c	/^int TEST_DATA(const char testno[], const char testname[], const int testdata,$/;"	f
+TLIMIT_HI_ASAX	akm09911.h	346;"	d
+TLIMIT_HI_ASAX_09911	akm09911.h	226;"	d
+TLIMIT_HI_ASAY	akm09911.h	350;"	d
+TLIMIT_HI_ASAY_09911	akm09911.h	230;"	d
+TLIMIT_HI_ASAZ	akm09911.h	354;"	d
+TLIMIT_HI_ASAZ_09911	akm09911.h	234;"	d
+TLIMIT_HI_RST_ASTC	akm09911.h	336;"	d
+TLIMIT_HI_RST_CNTL	akm09911.h	332;"	d
+TLIMIT_HI_RST_HXH	akm09911.h	308;"	d
+TLIMIT_HI_RST_HXL	akm09911.h	304;"	d
+TLIMIT_HI_RST_HYH	akm09911.h	316;"	d
+TLIMIT_HI_RST_HYL	akm09911.h	312;"	d
+TLIMIT_HI_RST_HZH	akm09911.h	324;"	d
+TLIMIT_HI_RST_HZL	akm09911.h	320;"	d
+TLIMIT_HI_RST_I2CDIS_USEI2C	akm09911.h	340;"	d
+TLIMIT_HI_RST_I2CDIS_USESPI	akm09911.h	342;"	d
+TLIMIT_HI_RST_INFO	akm09911.h	296;"	d
+TLIMIT_HI_RST_ST1	akm09911.h	300;"	d
+TLIMIT_HI_RST_ST2	akm09911.h	328;"	d
+TLIMIT_HI_RST_WIA	akm09911.h	292;"	d
+TLIMIT_HI_RST_WIA1_09911	akm09911.h	217;"	d
+TLIMIT_HI_RST_WIA2_09911	akm09911.h	221;"	d
+TLIMIT_HI_SLF_RVHX	akm09911.h	393;"	d
+TLIMIT_HI_SLF_RVHX_09911	akm09911.h	269;"	d
+TLIMIT_HI_SLF_RVHY	akm09911.h	398;"	d
+TLIMIT_HI_SLF_RVHY_09911	akm09911.h	274;"	d
+TLIMIT_HI_SLF_RVHZ	akm09911.h	403;"	d
+TLIMIT_HI_SLF_RVHZ_09911	akm09911.h	279;"	d
+TLIMIT_HI_SLF_ST1	akm09911.h	388;"	d
+TLIMIT_HI_SLF_ST1_09911	akm09911.h	264;"	d
+TLIMIT_HI_SLF_ST2	akm09911.h	408;"	d
+TLIMIT_HI_SLF_ST2_09911	akm09911.h	284;"	d
+TLIMIT_HI_SNG_HX	akm09911.h	368;"	d
+TLIMIT_HI_SNG_HX_09911	akm09911.h	244;"	d
+TLIMIT_HI_SNG_HY	akm09911.h	373;"	d
+TLIMIT_HI_SNG_HY_09911	akm09911.h	249;"	d
+TLIMIT_HI_SNG_HZ	akm09911.h	378;"	d
+TLIMIT_HI_SNG_HZ_09911	akm09911.h	254;"	d
+TLIMIT_HI_SNG_ST1	akm09911.h	363;"	d
+TLIMIT_HI_SNG_ST1_09911	akm09911.h	239;"	d
+TLIMIT_HI_SNG_ST2	akm09911.h	383;"	d
+TLIMIT_HI_SNG_ST2_09911	akm09911.h	259;"	d
+TLIMIT_HI_WR_CNTL	akm09911.h	358;"	d
+TLIMIT_LO_ASAX	akm09911.h	345;"	d
+TLIMIT_LO_ASAX_09911	akm09911.h	225;"	d
+TLIMIT_LO_ASAY	akm09911.h	349;"	d
+TLIMIT_LO_ASAY_09911	akm09911.h	229;"	d
+TLIMIT_LO_ASAZ	akm09911.h	353;"	d
+TLIMIT_LO_ASAZ_09911	akm09911.h	233;"	d
+TLIMIT_LO_RST_ASTC	akm09911.h	335;"	d
+TLIMIT_LO_RST_CNTL	akm09911.h	331;"	d
+TLIMIT_LO_RST_HXH	akm09911.h	307;"	d
+TLIMIT_LO_RST_HXL	akm09911.h	303;"	d
+TLIMIT_LO_RST_HYH	akm09911.h	315;"	d
+TLIMIT_LO_RST_HYL	akm09911.h	311;"	d
+TLIMIT_LO_RST_HZH	akm09911.h	323;"	d
+TLIMIT_LO_RST_HZL	akm09911.h	319;"	d
+TLIMIT_LO_RST_I2CDIS_USEI2C	akm09911.h	339;"	d
+TLIMIT_LO_RST_I2CDIS_USESPI	akm09911.h	341;"	d
+TLIMIT_LO_RST_INFO	akm09911.h	295;"	d
+TLIMIT_LO_RST_ST1	akm09911.h	299;"	d
+TLIMIT_LO_RST_ST2	akm09911.h	327;"	d
+TLIMIT_LO_RST_WIA	akm09911.h	291;"	d
+TLIMIT_LO_RST_WIA1_09911	akm09911.h	216;"	d
+TLIMIT_LO_RST_WIA2_09911	akm09911.h	220;"	d
+TLIMIT_LO_SLF_RVHX	akm09911.h	392;"	d
+TLIMIT_LO_SLF_RVHX_09911	akm09911.h	268;"	d
+TLIMIT_LO_SLF_RVHY	akm09911.h	397;"	d
+TLIMIT_LO_SLF_RVHY_09911	akm09911.h	273;"	d
+TLIMIT_LO_SLF_RVHZ	akm09911.h	402;"	d
+TLIMIT_LO_SLF_RVHZ_09911	akm09911.h	278;"	d
+TLIMIT_LO_SLF_ST1	akm09911.h	387;"	d
+TLIMIT_LO_SLF_ST1_09911	akm09911.h	263;"	d
+TLIMIT_LO_SLF_ST2	akm09911.h	407;"	d
+TLIMIT_LO_SLF_ST2_09911	akm09911.h	283;"	d
+TLIMIT_LO_SNG_HX	akm09911.h	367;"	d
+TLIMIT_LO_SNG_HX_09911	akm09911.h	243;"	d
+TLIMIT_LO_SNG_HY	akm09911.h	372;"	d
+TLIMIT_LO_SNG_HY_09911	akm09911.h	248;"	d
+TLIMIT_LO_SNG_HZ	akm09911.h	377;"	d
+TLIMIT_LO_SNG_HZ_09911	akm09911.h	253;"	d
+TLIMIT_LO_SNG_ST1	akm09911.h	362;"	d
+TLIMIT_LO_SNG_ST1_09911	akm09911.h	238;"	d
+TLIMIT_LO_SNG_ST2	akm09911.h	382;"	d
+TLIMIT_LO_SNG_ST2_09911	akm09911.h	258;"	d
+TLIMIT_LO_WR_CNTL	akm09911.h	357;"	d
+TLIMIT_NO_ASAX	akm09911.h	343;"	d
+TLIMIT_NO_ASAX_09911	akm09911.h	223;"	d
+TLIMIT_NO_ASAY	akm09911.h	347;"	d
+TLIMIT_NO_ASAY_09911	akm09911.h	227;"	d
+TLIMIT_NO_ASAZ	akm09911.h	351;"	d
+TLIMIT_NO_ASAZ_09911	akm09911.h	231;"	d
+TLIMIT_NO_RST_ASTC	akm09911.h	333;"	d
+TLIMIT_NO_RST_CNTL	akm09911.h	329;"	d
+TLIMIT_NO_RST_HXH	akm09911.h	305;"	d
+TLIMIT_NO_RST_HXL	akm09911.h	301;"	d
+TLIMIT_NO_RST_HYH	akm09911.h	313;"	d
+TLIMIT_NO_RST_HYL	akm09911.h	309;"	d
+TLIMIT_NO_RST_HZH	akm09911.h	321;"	d
+TLIMIT_NO_RST_HZL	akm09911.h	317;"	d
+TLIMIT_NO_RST_I2CDIS	akm09911.h	337;"	d
+TLIMIT_NO_RST_INFO	akm09911.h	293;"	d
+TLIMIT_NO_RST_ST1	akm09911.h	297;"	d
+TLIMIT_NO_RST_ST2	akm09911.h	325;"	d
+TLIMIT_NO_RST_WIA	akm09911.h	289;"	d
+TLIMIT_NO_RST_WIA1_09911	akm09911.h	214;"	d
+TLIMIT_NO_RST_WIA2_09911	akm09911.h	218;"	d
+TLIMIT_NO_SLF_RVHX	akm09911.h	390;"	d
+TLIMIT_NO_SLF_RVHX_09911	akm09911.h	266;"	d
+TLIMIT_NO_SLF_RVHY	akm09911.h	395;"	d
+TLIMIT_NO_SLF_RVHY_09911	akm09911.h	271;"	d
+TLIMIT_NO_SLF_RVHZ	akm09911.h	400;"	d
+TLIMIT_NO_SLF_RVHZ_09911	akm09911.h	276;"	d
+TLIMIT_NO_SLF_ST1	akm09911.h	385;"	d
+TLIMIT_NO_SLF_ST1_09911	akm09911.h	261;"	d
+TLIMIT_NO_SLF_ST2	akm09911.h	405;"	d
+TLIMIT_NO_SLF_ST2_09911	akm09911.h	281;"	d
+TLIMIT_NO_SNG_HX	akm09911.h	365;"	d
+TLIMIT_NO_SNG_HX_09911	akm09911.h	241;"	d
+TLIMIT_NO_SNG_HY	akm09911.h	370;"	d
+TLIMIT_NO_SNG_HY_09911	akm09911.h	246;"	d
+TLIMIT_NO_SNG_HZ	akm09911.h	375;"	d
+TLIMIT_NO_SNG_HZ_09911	akm09911.h	251;"	d
+TLIMIT_NO_SNG_ST1	akm09911.h	360;"	d
+TLIMIT_NO_SNG_ST1_09911	akm09911.h	236;"	d
+TLIMIT_NO_SNG_ST2	akm09911.h	380;"	d
+TLIMIT_NO_SNG_ST2_09911	akm09911.h	256;"	d
+TLIMIT_NO_WR_CNTL	akm09911.h	355;"	d
+TLIMIT_TN_ASAX	akm09911.h	344;"	d
+TLIMIT_TN_ASAX_09911	akm09911.h	224;"	d
+TLIMIT_TN_ASAY	akm09911.h	348;"	d
+TLIMIT_TN_ASAY_09911	akm09911.h	228;"	d
+TLIMIT_TN_ASAZ	akm09911.h	352;"	d
+TLIMIT_TN_ASAZ_09911	akm09911.h	232;"	d
+TLIMIT_TN_REVISION	akm09911.h	288;"	d
+TLIMIT_TN_REVISION_09911	akm09911.h	213;"	d
+TLIMIT_TN_RST_ASTC	akm09911.h	334;"	d
+TLIMIT_TN_RST_CNTL	akm09911.h	330;"	d
+TLIMIT_TN_RST_HXH	akm09911.h	306;"	d
+TLIMIT_TN_RST_HXL	akm09911.h	302;"	d
+TLIMIT_TN_RST_HYH	akm09911.h	314;"	d
+TLIMIT_TN_RST_HYL	akm09911.h	310;"	d
+TLIMIT_TN_RST_HZH	akm09911.h	322;"	d
+TLIMIT_TN_RST_HZL	akm09911.h	318;"	d
+TLIMIT_TN_RST_I2CDIS	akm09911.h	338;"	d
+TLIMIT_TN_RST_INFO	akm09911.h	294;"	d
+TLIMIT_TN_RST_ST1	akm09911.h	298;"	d
+TLIMIT_TN_RST_ST2	akm09911.h	326;"	d
+TLIMIT_TN_RST_WIA	akm09911.h	290;"	d
+TLIMIT_TN_RST_WIA1_09911	akm09911.h	215;"	d
+TLIMIT_TN_RST_WIA2_09911	akm09911.h	219;"	d
+TLIMIT_TN_SLF_RVHX	akm09911.h	391;"	d
+TLIMIT_TN_SLF_RVHX_09911	akm09911.h	267;"	d
+TLIMIT_TN_SLF_RVHY	akm09911.h	396;"	d
+TLIMIT_TN_SLF_RVHY_09911	akm09911.h	272;"	d
+TLIMIT_TN_SLF_RVHZ	akm09911.h	401;"	d
+TLIMIT_TN_SLF_RVHZ_09911	akm09911.h	277;"	d
+TLIMIT_TN_SLF_ST1	akm09911.h	386;"	d
+TLIMIT_TN_SLF_ST1_09911	akm09911.h	262;"	d
+TLIMIT_TN_SLF_ST2	akm09911.h	406;"	d
+TLIMIT_TN_SLF_ST2_09911	akm09911.h	282;"	d
+TLIMIT_TN_SNG_HX	akm09911.h	366;"	d
+TLIMIT_TN_SNG_HX_09911	akm09911.h	242;"	d
+TLIMIT_TN_SNG_HY	akm09911.h	371;"	d
+TLIMIT_TN_SNG_HY_09911	akm09911.h	247;"	d
+TLIMIT_TN_SNG_HZ	akm09911.h	376;"	d
+TLIMIT_TN_SNG_HZ_09911	akm09911.h	252;"	d
+TLIMIT_TN_SNG_ST1	akm09911.h	361;"	d
+TLIMIT_TN_SNG_ST1_09911	akm09911.h	237;"	d
+TLIMIT_TN_SNG_ST2	akm09911.h	381;"	d
+TLIMIT_TN_SNG_ST2_09911	akm09911.h	257;"	d
+TLIMIT_TN_WR_CNTL	akm09911.h	356;"	d
+akm09911_ReadChipInfo	akm09911.c	/^static int akm09911_ReadChipInfo(char *buf, int bufsize)$/;"	f	file:
+akm09911_attr_list	akm09911.c	/^static struct driver_attribute *akm09911_attr_list[] = {$/;"	v	typeref:struct:driver_attribute	file:
+akm09911_compat_ioctl	akm09911.c	/^static long akm09911_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)$/;"	f	file:
+akm09911_create_attr	akm09911.c	/^static int akm09911_create_attr(struct device_driver *driver)$/;"	f	file:
+akm09911_delete_attr	akm09911.c	/^static int akm09911_delete_attr(struct device_driver *driver)$/;"	f	file:
+akm09911_device	akm09911.c	/^static struct miscdevice akm09911_device = {$/;"	v	typeref:struct:miscdevice	file:
+akm09911_exit	akm09911.c	/^module_exit(akm09911_exit);$/;"	v
+akm09911_exit	akm09911.c	/^static void __exit akm09911_exit(void)$/;"	f	file:
+akm09911_fops	akm09911.c	/^static const struct file_operations akm09911_fops = {$/;"	v	typeref:struct:file_operations	file:
+akm09911_gravity_operate	akm09911.c	/^int akm09911_gravity_operate(void *self, uint32_t command, void *buff_in, int size_in,$/;"	f
+akm09911_gyroscope_operate	akm09911.c	/^int akm09911_gyroscope_operate(void *self, uint32_t command, void *buff_in, int size_in,$/;"	f
+akm09911_i2c_data	akm09911.c	/^struct akm09911_i2c_data {$/;"	s	file:
+akm09911_i2c_detect	akm09911.c	/^static int akm09911_i2c_detect(struct i2c_client *client, struct i2c_board_info *info)$/;"	f	file:
+akm09911_i2c_driver	akm09911.c	/^static struct i2c_driver akm09911_i2c_driver = {$/;"	v	typeref:struct:i2c_driver	file:
+akm09911_i2c_id	akm09911.c	/^static const struct i2c_device_id akm09911_i2c_id[] = {{AKM09911_DEV_NAME, 0}, {} };$/;"	v	typeref:struct:i2c_device_id	file:
+akm09911_i2c_probe	akm09911.c	/^static int akm09911_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)$/;"	f	file:
+akm09911_i2c_remove	akm09911.c	/^static int akm09911_i2c_remove(struct i2c_client *client)$/;"	f	file:
+akm09911_init	akm09911.c	/^module_init(akm09911_init);$/;"	v
+akm09911_init	akm09911.c	/^static int __init akm09911_init(void)$/;"	f	file:
+akm09911_init_flag	akm09911.c	/^static int akm09911_init_flag;$/;"	v	file:
+akm09911_init_info	akm09911.c	/^static struct mag_init_info akm09911_init_info = {$/;"	v	typeref:struct:mag_init_info	file:
+akm09911_linear_accelration_operate	akm09911.c	/^int akm09911_linear_accelration_operate(void *self, uint32_t command, void *buff_in, int size_in,$/;"	f
+akm09911_local_init	akm09911.c	/^static int akm09911_local_init(void)$/;"	f	file:
+akm09911_m_enable	akm09911.c	/^static int akm09911_m_enable(int en)$/;"	f	file:
+akm09911_m_get_data	akm09911.c	/^static int akm09911_m_get_data(int *x , int *y, int *z, int *status)$/;"	f	file:
+akm09911_m_open_report_data	akm09911.c	/^static int akm09911_m_open_report_data(int open)$/;"	f	file:
+akm09911_m_set_delay	akm09911.c	/^static int akm09911_m_set_delay(u64 ns)$/;"	f	file:
+akm09911_o_enable	akm09911.c	/^static int akm09911_o_enable(int en)$/;"	f	file:
+akm09911_o_get_data	akm09911.c	/^static int akm09911_o_get_data(int *x , int *y, int *z, int *status)$/;"	f	file:
+akm09911_o_open_report_data	akm09911.c	/^static int akm09911_o_open_report_data(int open)$/;"	f	file:
+akm09911_o_set_delay	akm09911.c	/^static int akm09911_o_set_delay(u64 ns)$/;"	f	file:
+akm09911_open	akm09911.c	/^static int akm09911_open(struct inode *inode, struct file *file)$/;"	f	file:
+akm09911_operate	akm09911.c	/^int akm09911_operate(void *self, uint32_t command, void *buff_in, int size_in,$/;"	f
+akm09911_orientation_operate	akm09911.c	/^int akm09911_orientation_operate(void *self, uint32_t command, void *buff_in, int size_in,$/;"	f
+akm09911_platform_data	akm09911.h	/^struct akm09911_platform_data {$/;"	s
+akm09911_power	akm09911.c	/^static void akm09911_power(struct mag_hw *hw, unsigned int on)$/;"	f	file:
+akm09911_release	akm09911.c	/^static int akm09911_release(struct inode *inode, struct file *file)$/;"	f	file:
+akm09911_remove	akm09911.c	/^static int akm09911_remove(void)$/;"	f	file:
+akm09911_resume	akm09911.c	/^static int akm09911_resume(struct i2c_client *client)$/;"	f	file:
+akm09911_rotation_vector_operate	akm09911.c	/^int akm09911_rotation_vector_operate(void *self, uint32_t command, void *buff_in, int size_in,$/;"	f
+akm09911_suspend	akm09911.c	/^static int akm09911_suspend(struct i2c_client *client, pm_message_t msg)$/;"	f	file:
+akm09911_unlocked_ioctl	akm09911.c	/^static long akm09911_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)$/;"	f	file:
+akmd_delay	akm09911.c	/^static short akmd_delay = AKM09911_DEFAULT_DELAY;$/;"	v	file:
+client	akm09911.c	/^	struct i2c_client *client;$/;"	m	struct:akm09911_i2c_data	typeref:struct:akm09911_i2c_data::i2c_client	file:
+cvt	akm09911.c	/^	struct hwmsen_convert   cvt;$/;"	m	struct:akm09911_i2c_data	typeref:struct:akm09911_i2c_data::hwmsen_convert	file:
+dev_open_count	akm09911.c	/^static atomic_t dev_open_count;$/;"	v	file:
+factory_mode	akm09911.c	/^static int factory_mode;$/;"	v	file:
+get_cust_mag	akm09911.c	/^struct mag_hw *get_cust_mag(void)$/;"	f
+gpio_DRDY	akm09911.h	/^	int gpio_DRDY;$/;"	m	struct:akm09911_platform_data
+gpio_RSTN	akm09911.h	/^	int gpio_RSTN;$/;"	m	struct:akm09911_platform_data
+hw	akm09911.c	/^	struct mag_hw *hw;$/;"	m	struct:akm09911_i2c_data	typeref:struct:akm09911_i2c_data::mag_hw	file:
+hw	akm09911.c	/^static struct mag_hw *hw = &mag_cust;$/;"	v	typeref:struct:mag_hw	file:
+layout	akm09911.c	/^	atomic_t layout;$/;"	m	struct:akm09911_i2c_data	file:
+layout	akm09911.h	/^	char layout;$/;"	m	struct:akm09911_platform_data
+mEnabled	akm09911.c	/^static int mEnabled;$/;"	v	file:
+m_flag	akm09911.c	/^static atomic_t m_flag = ATOMIC_INIT(0);$/;"	v	file:
+mag_cust	akm09911.c	/^struct mag_hw mag_cust;$/;"	v	typeref:struct:mag_hw
+mag_i2c_read_block	akm09911.c	/^static int mag_i2c_read_block(struct i2c_client *client, u8 addr, u8 *data, u8 len)$/;"	f	file:
+mag_i2c_write_block	akm09911.c	/^static int mag_i2c_write_block(struct i2c_client *client, u8 addr, u8 *data, u8 len)$/;"	f	file:
+mag_of_match	akm09911.c	/^static const struct of_device_id mag_of_match[] = {$/;"	v	typeref:struct:of_device_id	file:
+o_flag	akm09911.c	/^static atomic_t o_flag = ATOMIC_INIT(0);$/;"	v	file:
+obj-y	Makefile	/^obj-y	:=  akm09911.o/;"	m
+open_flag	akm09911.c	/^static atomic_t open_flag = ATOMIC_INIT(0);$/;"	v	file:
+outbit	akm09911.h	/^	char outbit;$/;"	m	struct:akm09911_platform_data
+sense_data	akm09911.c	/^static char sense_data[SENSOR_DATA_SIZE];$/;"	v	file:
+sense_data_mutex	akm09911.c	/^static struct mutex sense_data_mutex;$/;"	v	typeref:struct:mutex	file:
+sensor_data	akm09911.c	/^static int sensor_data[CALIBRATION_DATA_SIZE];$/;"	v	file:
+sensor_data_mutex	akm09911.c	/^static struct mutex sensor_data_mutex;$/;"	v	typeref:struct:mutex	file:
+show_chip_orientation	akm09911.c	/^static ssize_t show_chip_orientation(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_chipinfo_value	akm09911.c	/^static ssize_t show_chipinfo_value(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_daemon_name	akm09911.c	/^static ssize_t show_daemon_name(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_layout_value	akm09911.c	/^static ssize_t show_layout_value(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_posturedata_value	akm09911.c	/^static ssize_t show_posturedata_value(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_power_status	akm09911.c	/^static ssize_t show_power_status(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_regiter_map	akm09911.c	/^static ssize_t show_regiter_map(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_sensordata_value	akm09911.c	/^static ssize_t show_sensordata_value(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_shipment_test	akm09911.c	/^static ssize_t show_shipment_test(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_status_value	akm09911.c	/^static ssize_t show_status_value(struct device_driver *ddri, char *buf)$/;"	f	file:
+show_trace_value	akm09911.c	/^static ssize_t show_trace_value(struct device_driver *ddri, char *buf)$/;"	f	file:
+store_chip_orientation	akm09911.c	/^static ssize_t store_chip_orientation(struct device_driver *ddri, const char *buf, size_t tCount)$/;"	f	file:
+store_layout_value	akm09911.c	/^static ssize_t store_layout_value(struct device_driver *ddri, const char *buf, size_t count)$/;"	f	file:
+store_shipment_test	akm09911.c	/^static ssize_t store_shipment_test(struct device_driver *ddri, const char *buf, size_t count)$/;"	f	file:
+store_trace_value	akm09911.c	/^static ssize_t store_trace_value(struct device_driver *ddri, const char *buf, size_t count)$/;"	f	file:
+this_client	akm09911.c	/^static struct i2c_client *this_client;$/;"	v	typeref:struct:i2c_client	file:
+trace	akm09911.c	/^	atomic_t trace;$/;"	m	struct:akm09911_i2c_data	file:

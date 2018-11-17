@@ -298,8 +298,8 @@ MODE_DISCONNECT,
 //###################################
 //-----------you work here -------------
 //#define PROJECT_HaloMini
-#define PROJECT_K02
-//#define PROJECT_K07
+//#define PROJECT_K02
+#define PROJECT_K07
 
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
@@ -337,6 +337,12 @@ bool should_power_on = false;
 //######################################
 //######################################
 //######################################
+enum MagIC{
+Null=0,
+QMC7983=100,
+AK09918=200,
+};
+enum MagIC magIC = Null;
 
 CalibResult calib;
 int bMagCalibrated = 0;
@@ -942,7 +948,11 @@ static void devices_suspend()
 //gpio
 	bsp_board_leds_off();
 //mag
-	qmcX983_disable();
+	if(magIC == QMC7983){
+		qmcX983_disable();
+	}else if(magIC == AK09918){
+		AKECS_SetMode_PowerDown();
+	}
 //BMI160 IC
 	bmi160_suspend();
 
@@ -4046,7 +4056,11 @@ void sensor_data_poll_handler(void* p_context)
 	int magnet_xyz_int[3];
 	float magnet_xyz_float[3];
 	int8_t accuracy=0;
-	read_qmcX983_xyz(magnet_xyz_int);
+	if(magIC == QMC7983){
+		read_qmcX983_xyz(magnet_xyz_int);
+	}else if(magIC == AK09918){
+		AKECS_GetData(magnet_xyz_int);
+	}
 	//magnet_xyz_float[0]= magnet_xyz_int[0] * 0.1f;
 	//magnet_xyz_float[1]= magnet_xyz_int[1] * 0.1f;
 	//magnet_xyz_float[2]= magnet_xyz_int[2] * 0.1f;
@@ -4448,8 +4462,18 @@ void InitTouchDevice(){
 }
 void InitICRegisters(){
 	SENSOR_INIT();
-	qmcX983_init();
-	qst_ical_init();
+	if(0==qmcX983_init()){
+    	NRF_LOG_INFO("----- mag use QMC7983 \r\n");
+		magIC=QMC7983;
+		qst_ical_init();
+	}else if(0==AKECS_CheckDevice()){
+    	NRF_LOG_INFO("----- mag use AK09918 \r\n");
+		magIC=AK09918;
+		AKECS_Reset();
+		AKECS_SetMode_Con4Measure();
+	}
+
+
 }
 void SomeTimerStart(){
     BatteryLevelTimersStart();

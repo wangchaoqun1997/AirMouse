@@ -3263,6 +3263,16 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>AK09918</GroupName>
+          <Files>
+            <File>
+              <FileName>akm09911_MCU.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\akm09911\akm09911_MCU.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
         <Group>
@@ -6522,6 +6532,16 @@
               <FileName>lib_ical.lib</FileName>
               <FileType>4</FileType>
               <FilePath>..\..\..\qmcX983\lib_ical.lib</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>AK09918</GroupName>
+          <Files>
+            <File>
+              <FileName>akm09911_MCU.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\akm09911\akm09911_MCU.c</FilePath>
             </File>
           </Files>
         </Group>
