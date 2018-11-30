@@ -4240,7 +4240,9 @@ void sensor_data_poll_handler(void* p_context)
 	set_data(KEY_S_MOV,touch_sum[1]);
 	touch_sum[1] = (0x00);
 	set_data(KEY_S_BACK,simple_back_key);
+#ifdef PROJECT_K07
 	set_data(KEY_ENTER,simple_enter_key);
+#endif
 	set_data(KEY_S_TG,simple_trigger);
 	set_data(KEY_S_POWER,simple_power);
 	set_data(KEY_VOL,simple_vol);
