@@ -89,20 +89,25 @@ static long AKI2C_TxData(char *txData, int length)
 #define QMCX983_AXIS_Z            2
 
 static int cvt_map[3]={2,1,0};
-static int cvt_sign[3]={-1,-1,-1};
+static int cvt_sign[3]={1,-1,1}; //x y z
 long AKECS_GetData(int *data)
 {
 
 
 	int  ret;
-	char rbuf[8]={0};
+	static char rbuf0;
+	static char rbuf[8]={0};
+	rbuf0 = rbuf[0];
 	rbuf[0] = AK09911_REG_ST1;
 	ret = AKI2C_RxData(rbuf, 1);
 
 	if((rbuf[0] & 0x01) != 0x01){
 		nrf_delay_ms(1);
 		if((rbuf[0] & 0x01) != 0x01){
-			return -1;
+			MAG_ERR("AKM8975 data not ready\n");
+		//	return -1;
+			rbuf[0] = rbuf0;
+			goto lastTime;
 		}
 	}
 	nrf_delay_us(20);
@@ -115,7 +120,7 @@ long AKECS_GetData(int *data)
 
 	//MAGN_LOG("Get device data1: %d, %d, %d, %d !\n",rbuf[0], rbuf[1],rbuf[2],rbuf[3]);
 	//MAGN_LOG("Get device data2: %d, %d, %d, %d !\n",rbuf[4], rbuf[5],rbuf[6],rbuf[7]);
-
+lastTime:
 	int hw_d[3] = {0};
 	int output[3]={0};
 	hw_d[0] = (short) (((rbuf[1]) << 8) | rbuf[0]);
