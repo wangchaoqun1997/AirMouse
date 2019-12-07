@@ -471,7 +471,7 @@ int checkMagCalibration(float* mag, float* q)
 			magDirArray[nDir] = 1;
 			mag_dir_cnt++;
 			
-			//LOGI("nDir: %d, %d\n", nDir, mag_dir_cnt);
+			LOGI("nDir: %d, %d\n", nDir, mag_dir_cnt);
 		}
 	}
 	

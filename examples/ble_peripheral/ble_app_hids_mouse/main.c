@@ -298,8 +298,8 @@ MODE_DISCONNECT,
 //###################################
 //-----------you work here -------------
 //#define PROJECT_HaloMini
-//#define PROJECT_K02
-#define PROJECT_K07
+#define PROJECT_K02
+//#define PROJECT_K07
 
 #ifdef PROJECT_HaloMini
 static enum Mode_select MODE_INIT = MODE_2D;
@@ -341,6 +341,7 @@ enum MagIC{
 Null=0,
 QMC7983=100,
 AK09918=200,
+ST480MC=300,
 };
 enum MagIC magIC = Null;
 
@@ -3766,6 +3767,7 @@ static void MadgwickAHRSupdate_start()
 volatile float DegreeArray[3];
 volatile int16_t DeagreeArray_int[3],DeagreeArray_int_buffer[3];;
 extern volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame
+ extern bool isST480MCReadOK;
 static void MadgwickAHRSupdate_handler(void* p_context)
 {	static nrf_drv_systick_state_t systick_s;
 	static nrf_drv_systick_state_t systick_s_end;
@@ -3773,7 +3775,6 @@ static void MadgwickAHRSupdate_handler(void* p_context)
 	static uint32_t det_tick1=0,det_tick2=0;
 	nrf_drv_systick_get(&systick_s);
 	MadgwickAHRSupdate_start();
-
 
 #if 1
 	if(open_imu_send == true){
@@ -3864,7 +3865,7 @@ if(i==512)i=0;
 				correctAcc(imudata+3, calib.acc_scale,calib.acc_bias);
 				//NRF_LOG_INFO("acc end..: %6d, %6d, %6d\n", (int32_t)(imudata[3]*1000), (int32_t)(imudata[4]*1000), (int32_t)(imudata[5]*1000));
 			}
-			if ((bMagCalibrated || calib.mag_bias[0]*1000)) {
+			if (isST480MCReadOK == true && (bMagCalibrated || calib.mag_bias[0]*1000)) {
 			//	NRF_LOG_INFO("mag 1: %6d, %6d, %6d\n", (int32_t)(imudata[6]*1000), (int32_t)(imudata[7]*1000), (int32_t)(imudata[8]*1000));
 				correctMag(imudata+6,calib.mag_scale,calib.mag_bias);
 //			//	NRF_LOG_INFO("mag 2: %6d, %6d, %6d\n", (int32_t)(imudata[6]*1000), (int32_t)(imudata[7]*1000), (int32_t)(imudata[8]*1000));
@@ -4065,6 +4066,9 @@ void sensor_data_poll_handler(void* p_context)
 		read_qmcX983_xyz(magnet_xyz_int);
 	}else if(magIC == AK09918){
 		AKECS_GetData(magnet_xyz_int);
+	}else{
+	
+	readST480MC(magnet_xyz_int);
 	}
 	//magnet_xyz_float[0]= magnet_xyz_int[0] * 0.1f;
 	//magnet_xyz_float[1]= magnet_xyz_int[1] * 0.1f;
@@ -4479,9 +4483,10 @@ void InitICRegisters(){
 		AKECS_Reset();
 		AKECS_SetMode_Con4Measure();
 	}else{
-		isHaveMag = false;
+		magIC=ST480MC;
+		initST480MC();
+		//isHaveMag = false;
 	}
-
 
 }
 void SomeTimerStart(){
